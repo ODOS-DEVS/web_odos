@@ -52,17 +52,40 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. Edit `app/p
 
 ```text
 .
-├── .github/workflows/ci.yml  # Continuous integration
 ├── app/
-│   ├── globals.css           # Global styles and Tailwind import
-│   ├── layout.tsx            # Root application layout
-│   └── page.tsx              # Home page
-├── public/                   # Static assets
-├── next.config.ts            # Next.js configuration
-├── postcss.config.mjs        # Tailwind PostCSS configuration
-├── pnpm-lock.yaml            # Reproducible dependency lockfile
-└── tsconfig.json             # TypeScript configuration
+│   ├── (store)/              # Storefront routes (header + footer): home, products/[id], stores/[slug],
+│   │                         #   cart, checkout (+ /success), orders (+ [id])
+│   ├── (auth)/               # login / signup, split-screen layout
+│   ├── globals.css           # Design tokens (light + dark), motion utilities, viewport variants
+│   └── layout.tsx            # Root layout, metadata, theme script, QueryProvider
+├── components/               # ui/ layout/ home/ product/ store/ cart/ checkout/ orders/ auth/ providers/
+├── hooks/                    # TanStack Query hooks (use-catalog, use-orders, use-auth, use-delivery-quote), use-cart, use-theme
+├── services/                 # Fetchers per API area (*.service.ts), http.ts client, mappers.ts, queries.ts
+├── libs/
+│   ├── api-endpoint.ts       # Every backend URL in one place
+│   ├── query-client*.ts      # Query client (browser singleton / per-request on the server)
+│   └── …                     # format, cart, checkout, orders, auth-session, theme helpers
+└── types/                    # UI models + `api.ts` aliases over the generated `api-schema.d.ts`
 ```
+
+## Backend API
+
+The app talks to the live ODOS backend (`https://appbe.odos.market`, OpenAPI at `/openapi.json`).
+
+- **Data flow:** `libs/api-endpoint.ts` → `services/*.service.ts` (typed fetchers, return UI models) →
+  `services/queries.ts` (query keys + options) → `hooks/*` (TanStack Query) → components.
+  Catalogue pages prefetch on the server and hydrate the client cache, so they are fully server-rendered for SEO.
+- **CORS:** the backend only allows whitelisted browser origins. The browser therefore calls the same-origin
+  `/api/*`, which `next.config.ts` proxies to the backend. Server-side fetches call it directly.
+- **HTTP client:** one axios instance in `utils/axios.ts` (timeout, bearer-token and 401 interceptors), wrapped by
+  `services/http.ts`, which turns failures into a typed `ApiError`. On the server axios runs on `fetch`, so Next's data
+  cache still applies.
+- **Devtools:** the React Query devtools are mounted in development only — click the floating button at the bottom-right
+  of any page to inspect the cache (queries, freshness, refetching).
+- **Auth:** bearer token (no refresh endpoint — users log in again when it expires), stored in `localStorage`.
+- **Types:** `pnpm api:types` regenerates `types/api-schema.d.ts` from the live spec.
+- **Config:** copy `.env.example` to `.env`. All environment variables are read in one place, `utils/config.ts`
+  (`NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_SITE_URL`); import `CONFIG` from there instead of reading `process.env`.
 
 ## Styling
 
