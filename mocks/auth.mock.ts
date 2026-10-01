@@ -1,5 +1,5 @@
-import { clearSession, setSession } from "@/libs/auth-session";
-import type { UserCreate, UserRead } from "@/types/api";
+import { clearSession, getSession, setSession, updateSessionUser } from "@/libs/auth-session";
+import type { UserCreate, UserRead, UserUpdate } from "@/types/api";
 
 /** Temporary dummy account standing in for `authService`. Delete along with `mocks/`. */
 
@@ -56,4 +56,22 @@ export function mockSignup(input: UserCreate) {
 
 export function mockLogout() {
   clearSession();
+}
+
+/** Merges the patch into the current session user and persists it, same shape as a real PATCH /me. */
+export function mockUpdateMe(input: UserUpdate): UserRead {
+  const current = getSession()?.user ?? MOCK_USER;
+  const updated: UserRead = {
+    ...current,
+    full_name: input.full_name?.trim() || current.full_name,
+    phone_number: input.phone_number !== undefined ? input.phone_number : current.phone_number,
+    city: input.city !== undefined ? input.city : current.city,
+    region: input.region !== undefined ? input.region : current.region,
+    allow_notifications: input.allow_notifications ?? current.allow_notifications,
+    discount_notifications: input.discount_notifications ?? current.discount_notifications,
+    store_notifications: input.store_notifications ?? current.store_notifications,
+    updated_at: new Date().toISOString(),
+  };
+  updateSessionUser(updated);
+  return updated;
 }
