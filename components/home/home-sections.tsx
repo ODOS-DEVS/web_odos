@@ -1,9 +1,15 @@
 "use client";
 
 import { Zap } from "lucide-react";
+import { BestDeals } from "@/components/home/best-deals";
 import { CategoryStrip } from "@/components/home/category-strip";
+import { Faq } from "@/components/home/faq";
 import { Hero } from "@/components/home/hero";
 import { HowItWorks } from "@/components/home/how-it-works";
+import { MarketNearYou } from "@/components/home/market-near-you";
+import { PromoBanners } from "@/components/home/promo-banners";
+import { PromoCollage } from "@/components/home/promo-collage";
+import { WeeklyDealBanner } from "@/components/home/weekly-deal-banner";
 import { ProductGrid, ProductGridSkeleton } from "@/components/product/product-grid";
 import { StoreCard, StoreCardSkeleton } from "@/components/store/store-card";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +65,14 @@ export function HomeSections() {
       )}
 
       <Container className="mt-20">
+        <PromoBanners />
+      </Container>
+
+      <Container className="mt-20">
+        <BestDeals products={flash} stores={storeMap} />
+      </Container>
+
+      <Container className="mt-20">
         <SectionHeading
           title="Stores near you"
           description="Independent vendors, each with their own riders and delivery rates."
@@ -86,6 +100,10 @@ export function HomeSections() {
         )}
       </Container>
 
+      <Container className="mt-20">
+        <PromoCollage />
+      </Container>
+
       {popular.length > 0 && (
         <Container className="mt-20">
           <SectionHeading title="Popular right now" href="/products?tag=popular" />
@@ -104,7 +122,17 @@ export function HomeSections() {
         )}
       </Container>
 
+      <div className="mt-20">
+        <WeeklyDealBanner />
+      </div>
+
+      <Container className="mt-20">
+        <MarketNearYou stores={stores.data ?? []} />
+      </Container>
+
       <HowItWorks />
+
+      <Faq />
     </>
   );
 }

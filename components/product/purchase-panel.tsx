@@ -92,13 +92,14 @@ function ColorGroup({
 
 export function PurchasePanel({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
-  const [size, setSize] = useState<string | null>(null);
-  const [color, setColor] = useState<string | null>(null);
+  // Default to the first option, same as the card's quick-add — picking a size/colour is optional,
+  // not a prerequisite for adding to cart.
+  const [size, setSize] = useState<string | null>(product.sizes[0] ?? null);
+  const [color, setColor] = useState<string | null>(product.colors[0] ?? null);
 
   const soldOut = product.stock <= 0;
   const max = Math.min(Math.max(product.stock, 1), 20);
   const lowStock = !soldOut && product.stock <= 5;
-  const missing = [product.sizes.length > 0 && !size && "a size", product.colors.length > 0 && !color && "a colour"].filter(Boolean);
 
   return (
     <div className="space-y-5">
@@ -112,7 +113,7 @@ export function PurchasePanel({ product }: { product: Product }) {
           quantity={quantity}
           size={size}
           color={color}
-          disabled={soldOut || missing.length > 0}
+          disabled={soldOut}
           className="min-w-52 flex-1"
         />
       </div>
@@ -120,8 +121,6 @@ export function PurchasePanel({ product }: { product: Product }) {
       <p className="text-sm text-muted" aria-live="polite">
         {soldOut ? (
           "Currently sold out"
-        ) : missing.length > 0 ? (
-          `Choose ${missing.join(" and ")} to add this to your cart`
         ) : lowStock ? (
           <span className="font-medium text-warning">Only {product.stock} left in stock</span>
         ) : (

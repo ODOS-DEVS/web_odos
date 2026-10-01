@@ -3,6 +3,7 @@ import { Container } from "@/components/ui/container";
 import { AccountMenu } from "./account-menu";
 import { CartButton } from "./cart-button";
 import { CategoryNav } from "./category-nav";
+import { FavoritesButton } from "./favorites-button";
 import { SearchForm } from "./search-form";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -20,6 +21,7 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center gap-1 md:ml-0">
           <AccountMenu />
           <ThemeToggle />
+          <FavoritesButton />
           <CartButton />
         </div>
       </Container>

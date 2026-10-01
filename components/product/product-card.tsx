@@ -11,6 +11,7 @@ import { Media } from "@/components/ui/media";
 import { Price } from "@/components/ui/price";
 import { Rating } from "@/components/ui/rating";
 import { QuickAddButton } from "./add-to-cart-button";
+import { FavoriteButton } from "./favorite-button";
 
 export function ProductCard({ product, storeName, priority }: { product: Product; storeName?: string; priority?: boolean }) {
   const off = discountPercent(product.price, product.compareAtPrice);
@@ -45,6 +46,7 @@ export function ProductCard({ product, storeName, priority }: { product: Product
           {soldOut && <Badge tone="danger">Sold out</Badge>}
         </div>
         {!soldOut && <QuickAddButton product={product} className="absolute right-3 bottom-3" />}
+        <FavoriteButton product={product} className="absolute top-3 right-3" />
 
         {hasMultiple && (
           <>

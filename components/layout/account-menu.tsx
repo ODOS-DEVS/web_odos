@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, Package, User } from "lucide-react";
 import { toast } from "sonner";
 import { ButtonLink } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useSession } from "@/hooks/use-auth";
 import { mockLogout } from "@/mocks/auth.mock";
 import { useFakeMutation } from "@/mocks/mutation";
@@ -16,6 +17,7 @@ export function AccountMenu() {
   const logout = useFakeMutation(mockLogout);
   const router = useRouter();
   const menu = useRef<HTMLDetailsElement>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (!session) {
     return (
@@ -41,43 +43,67 @@ export function AccountMenu() {
   const close = () => menu.current?.removeAttribute("open");
 
   return (
-    <details ref={menu} className="group relative">
-      <summary
-        className="press grid size-10 cursor-pointer list-none place-items-center rounded-full bg-accent-soft text-sm font-semibold text-accent marker:hidden [&::-webkit-details-marker]:hidden"
-        aria-label={`Account menu for ${name}`}
-      >
-        {name.trim().charAt(0).toUpperCase() || "?"}
-      </summary>
-      <div className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-line bg-surface p-2 shadow-lg">
-        <div className="border-b border-line px-3 py-2.5">
-          <p className="truncate text-sm font-semibold">{name}</p>
-          <p className="truncate text-xs text-muted">{email}</p>
+    <>
+      <details ref={menu} className="group relative">
+        <summary
+          className="press grid size-10 cursor-pointer list-none place-items-center rounded-full bg-accent-soft text-sm font-semibold text-accent marker:hidden [&::-webkit-details-marker]:hidden"
+          aria-label={`Account menu for ${name}`}
+        >
+          {name.trim().charAt(0).toUpperCase() || "?"}
+        </summary>
+        <div className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-line bg-surface p-2 shadow-lg">
+          <div className="border-b border-line px-3 py-2.5">
+            <p className="truncate text-sm font-semibold">{name}</p>
+            <p className="truncate text-xs text-muted">{email}</p>
+          </div>
+          <Link
+            href="/account"
+            onClick={close}
+            className="press mt-1 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
+          >
+            <User className="size-4 text-muted" aria-hidden />
+            Your profile
+          </Link>
+          <Link
+            href="/orders"
+            onClick={close}
+            className="press flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
+          >
+            <Package className="size-4 text-muted" aria-hidden />
+            Your orders
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              close();
+              setConfirmOpen(true);
+            }}
+            className="press flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-surface-muted"
+          >
+            <LogOut className="size-4 text-muted" aria-hidden />
+            Log out
+          </button>
         </div>
-        <Link
-          href="/orders"
-          onClick={close}
-          className="press mt-1 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
-        >
-          <Package className="size-4 text-muted" aria-hidden />
-          Your orders
-        </Link>
-        <button
-          type="button"
-          onClick={() => {
-            close();
-            logout.mutate(undefined, {
-              onSuccess: () => {
-                toast.success("You’re logged out");
-                router.refresh();
-              },
-            });
-          }}
-          className="press flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-surface-muted"
-        >
-          <LogOut className="size-4 text-muted" aria-hidden />
-          Log out
-        </button>
-      </div>
-    </details>
+      </details>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Log out of ODOS?"
+        description={`You’re signed in as ${email}. You can always log back in.`}
+        confirmLabel="Log out"
+        cancelLabel="Cancel"
+        pending={logout.isPending}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() =>
+          logout.mutate(undefined, {
+            onSuccess: () => {
+              setConfirmOpen(false);
+              toast.success("You’re logged out");
+              router.refresh();
+            },
+          })
+        }
+      />
+    </>
   );
 }

@@ -12,6 +12,8 @@ export type ProductFilters = {
   category?: string;
   /** Store slug. */
   store?: string;
+  /** Market slug — stores are each tied to at most one physical market. */
+  market?: string;
   tag?: ProductTag;
   freeDelivery?: boolean;
   sort?: ProductSort;
@@ -31,6 +33,7 @@ export function filterProducts(products: Product[], stores: Store[], filters: Pr
     }
     if (filters.category && !p.categorySlugs.includes(filters.category)) return false;
     if (filters.store && p.storeId !== storeId) return false;
+    if (filters.market && (p.storeId ? storeById.get(p.storeId)?.marketSlug : undefined) !== filters.market) return false;
     if (filters.tag && !p.tags.includes(filters.tag)) return false;
     if (filters.freeDelivery && !isFreeDeliveryStore(p.storeId ? storeById.get(p.storeId) : undefined)) return false;
     return true;

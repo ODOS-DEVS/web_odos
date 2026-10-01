@@ -156,6 +156,20 @@ h3 {
   animation: slide-in-left 280ms var(--ease-snap) both;
 }
 
+/* Drawer panels that slide in from the right edge (e.g. the favorites drawer). */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@utility slide-in-right {
+  animation: slide-in-right 280ms var(--ease-snap) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -164,6 +178,9 @@ h3 {
     animation: none;
   }
   .slide-in-left {
+    animation: none;
+  }
+  .slide-in-right {
     animation: none;
   }
   .press:active:not(:disabled) {

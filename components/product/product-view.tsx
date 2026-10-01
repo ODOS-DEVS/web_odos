@@ -4,9 +4,9 @@ import Link from "next/link";
 import { Check, ChevronRight, Star } from "lucide-react";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductGrid } from "@/components/product/product-grid";
+import { ProductInfoGrid } from "@/components/product/product-info-grid";
 import { PurchasePanel } from "@/components/product/purchase-panel";
 import { ReviewsList } from "@/components/product/reviews-list";
-import { DeliveryNote } from "@/components/store/delivery-note";
 import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
 import { Media } from "@/components/ui/media";
@@ -97,14 +97,14 @@ export function ProductView({ id }: { id: string }) {
           <div className="mt-8">
             <PurchasePanel product={p} />
           </div>
-
-          {store && (
-            <div className="mt-8">
-              <DeliveryNote store={store} />
-            </div>
-          )}
         </div>
       </div>
+
+      {store && (
+        <section className="mt-14">
+          <ProductInfoGrid store={store} />
+        </section>
+      )}
 
       <section className="mt-20" aria-labelledby="reviews-heading">
         <div className="mb-6 flex items-end justify-between gap-4">

@@ -19,6 +19,7 @@ import { mockCheckout } from "@/mocks/payments.mock";
 import { fakeQuery } from "@/mocks/query";
 import { ApiError } from "@/services/http";
 import { ChoiceCard } from "./choice-card";
+import { PAYMENT_METHODS, PaymentMethodPicker } from "./payment-method-picker";
 
 function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
   return (
@@ -44,6 +45,7 @@ function CheckoutForm() {
   const [region, setRegion] = useState<string>(user?.region ?? "Greater Accra");
   const [notes, setNotes] = useState("");
   const [method, setMethod] = useState<DeliverySpeed>("economy");
+  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS.find((m) => m.isDefault) ?? PAYMENT_METHODS[0]);
 
   // Region (not city) drives pricing, so typing a city doesn't fire a new quote per keystroke.
   const quote = fakeQuery(
@@ -93,9 +95,9 @@ function CheckoutForm() {
         address_city: city.trim(),
         address_region: region,
         delivery_instructions: notes.trim() || null,
-        // Hosted card / mobile-money page. `payment_type` is free text on the API (≤30 chars).
-        payment_type: "card",
-        payment_label: "Card or mobile money",
+        // `payment_type` is free text on the API (≤30 chars).
+        payment_type: paymentMethod.kind,
+        payment_label: paymentMethod.label,
         callback_url: `${window.location.origin}/checkout/success`,
         cancel_url: `${window.location.origin}/checkout`,
       },
@@ -187,9 +189,7 @@ function CheckoutForm() {
         </Step>
 
         <Step number={3} title="Payment">
-          <p className="text-sm leading-6 text-muted">
-            You’ll pay securely on the next screen with a card or mobile money. Your order is confirmed as soon as the payment goes through.
-          </p>
+          <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
         </Step>
       </div>
 

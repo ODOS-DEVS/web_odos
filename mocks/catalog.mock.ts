@@ -67,7 +67,7 @@ export const MOCK_STORES: Store[] = [
     deliveryFeeFrom: 15,
     isOnVacation: false,
     vacationMessage: null,
-    marketSlug: null,
+    marketSlug: "kanta",
   },
   {
     id: "store-nova",
@@ -88,7 +88,7 @@ export const MOCK_STORES: Store[] = [
     deliveryFeeFrom: 20,
     isOnVacation: false,
     vacationMessage: null,
-    marketSlug: null,
+    marketSlug: "spare-parts",
   },
   {
     id: "store-glow",
@@ -109,7 +109,7 @@ export const MOCK_STORES: Store[] = [
     deliveryFeeFrom: 10,
     isOnVacation: false,
     vacationMessage: null,
-    marketSlug: null,
+    marketSlug: "madina",
   },
   {
     id: "store-nest",
@@ -130,7 +130,7 @@ export const MOCK_STORES: Store[] = [
     deliveryFeeFrom: 18,
     isOnVacation: true,
     vacationMessage: "Back and shipping again from Monday.",
-    marketSlug: null,
+    marketSlug: "tudu",
   },
   {
     id: "store-savannah",
@@ -151,7 +151,7 @@ export const MOCK_STORES: Store[] = [
     deliveryFeeFrom: 15,
     isOnVacation: false,
     vacationMessage: null,
-    marketSlug: null,
+    marketSlug: "lapaz",
   },
   {
     id: "store-terra",
@@ -172,8 +172,19 @@ export const MOCK_STORES: Store[] = [
     deliveryFeeFrom: 20,
     isOnVacation: false,
     vacationMessage: null,
-    marketSlug: null,
+    marketSlug: "campus",
   },
+];
+
+export type Market = { slug: string; title: string };
+
+export const MOCK_MARKETS: Market[] = [
+  { slug: "kanta", title: "Kanta" },
+  { slug: "lapaz", title: "Lapaz" },
+  { slug: "spare-parts", title: "Spare-parts" },
+  { slug: "tudu", title: "Tudu" },
+  { slug: "campus", title: "Campus" },
+  { slug: "madina", title: "Madina" },
 ];
 
 const now = Date.now();
