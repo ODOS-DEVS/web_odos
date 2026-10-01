@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { Store as StoreIcon } from "lucide-react";
 import { StoreCard, StoreCardSkeleton } from "@/components/store/store-card";
 import { Container } from "@/components/ui/container";
+import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
 import { MOCK_STORES } from "@/mocks/catalog.mock";
 import { fakeQuery } from "@/mocks/query";
@@ -29,11 +30,7 @@ export function StoresView() {
       ) : stores.isError ? (
         <QueryError error={stores.error} onRetry={() => stores.refetch()} title="We couldn’t load stores" />
       ) : stores.data.length === 0 ? (
-        <div className="grid place-items-center rounded-3xl border border-dashed border-line px-6 py-20 text-center">
-          <StoreIcon className="size-10 text-muted" aria-hidden />
-          <h2 className="mt-4 text-xl font-semibold">No stores yet</h2>
-          <p className="mt-2 text-sm text-muted">Check back soon.</p>
-        </div>
+        <EmptyState icon={<StoreIcon className="size-10 text-muted" aria-hidden />} title="No stores yet" description="Check back soon." />
       ) : (
         <ul className="grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
           {stores.data.map((store, index) => (

@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { LockKeyhole } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useMounted } from "@/hooks/use-mounted";
 import { useSession } from "@/hooks/use-auth";
 
@@ -19,20 +20,21 @@ export function RequireLogin({ children, next, message = "Log in to continue." }
 
   const query = `?next=${encodeURIComponent(next)}`;
   return (
-    <div className="grid place-items-center rounded-3xl border border-dashed border-line px-6 py-20 text-center">
-      <span className="grid size-14 place-items-center rounded-full bg-surface-muted">
-        <LockKeyhole className="size-6 text-muted" aria-hidden />
-      </span>
-      <h2 className="mt-5 text-xl font-semibold">Log in to continue</h2>
-      <p className="mt-2 max-w-sm text-sm text-muted">{message}</p>
-      <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <ButtonLink href={`/login${query}`} size="lg">
-          Log in
-        </ButtonLink>
-        <ButtonLink href={`/signup${query}`} size="lg" variant="outline">
-          Create an account
-        </ButtonLink>
-      </div>
-    </div>
+    <EmptyState
+      icon={<LockKeyhole className="size-6 text-muted" aria-hidden />}
+      iconBadge
+      title="Log in to continue"
+      description={message}
+      action={
+        <div className="flex flex-wrap justify-center gap-3">
+          <ButtonLink href={`/login${query}`} size="lg">
+            Log in
+          </ButtonLink>
+          <ButtonLink href={`/signup${query}`} size="lg" variant="outline">
+            Create an account
+          </ButtonLink>
+        </div>
+      }
+    />
   );
 }

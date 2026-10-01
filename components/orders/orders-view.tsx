@@ -6,6 +6,7 @@ import { RequireLogin } from "@/components/auth/require-login";
 import { FilterChip } from "@/components/product/filter-chip";
 import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
 import { isActive } from "@/libs/orders";
 import { MOCK_ORDERS } from "@/mocks/orders.mock";
@@ -43,13 +44,12 @@ function OrdersList({ status }: { status?: string }) {
       ))}
     </ul>
   ) : (
-    <div className="mt-6 grid place-items-center rounded-3xl border border-dashed border-line px-6 py-20 text-center">
-      <PackageOpen className="size-10 text-muted" aria-hidden />
-      <h2 className="mt-4 text-xl font-semibold">No orders here yet</h2>
-      <ButtonLink href="/products" className="mt-6">
-        Start shopping
-      </ButtonLink>
-    </div>
+    <EmptyState
+      icon={<PackageOpen className="size-10 text-muted" aria-hidden />}
+      title="No orders here yet"
+      className="mt-6"
+      action={<ButtonLink href="/products">Start shopping</ButtonLink>}
+    />
   );
 }
 

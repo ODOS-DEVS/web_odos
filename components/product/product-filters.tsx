@@ -1,7 +1,6 @@
-import type { ReactNode } from "react";
 import type { Category, Store } from "@/types/catalog";
 import { buildHref } from "@/libs/url";
-import { FilterChip } from "./filter-chip";
+import { FilterChip, FilterGroup } from "./filter-chip";
 
 export type ActiveFilters = {
   q?: string;
@@ -11,18 +10,6 @@ export type ActiveFilters = {
   free?: string;
   sort?: string;
 };
-
-function Group({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <h2 className="mb-2.5 text-xs font-semibold tracking-wide text-muted uppercase">{label}</h2>
-      {/* Horizontal scroller on small screens, wrapping list in the sidebar. */}
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
-        {children}
-      </div>
-    </div>
-  );
-}
 
 export function ProductFilters({
   active,
@@ -37,7 +24,7 @@ export function ProductFilters({
 
   return (
     <aside aria-label="Filters" className="space-y-6">
-      <Group label="Category">
+      <FilterGroup label="Category">
         <FilterChip href={href({ category: undefined })} active={!active.category}>
           All
         </FilterChip>
@@ -50,9 +37,9 @@ export function ProductFilters({
             {category.name}
           </FilterChip>
         ))}
-      </Group>
+      </FilterGroup>
 
-      <Group label="Store">
+      <FilterGroup label="Store">
         <FilterChip href={href({ store: undefined })} active={!active.store}>
           All stores
         </FilterChip>
@@ -61,9 +48,9 @@ export function ProductFilters({
             {store.name}
           </FilterChip>
         ))}
-      </Group>
+      </FilterGroup>
 
-      <Group label="Delivery">
+      <FilterGroup label="Delivery">
         <FilterChip href={href({ free: active.free ? undefined : "1" })} active={Boolean(active.free)}>
           Free delivery
         </FilterChip>
@@ -73,7 +60,7 @@ export function ProductFilters({
         >
           On sale
         </FilterChip>
-      </Group>
+      </FilterGroup>
     </aside>
   );
 }

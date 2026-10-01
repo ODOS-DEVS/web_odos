@@ -7,8 +7,8 @@ import { LogoBadge, type Logo } from "@/components/checkout/logo-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
 import { usePaymentMethods, type SavedPaymentMethod } from "@/hooks/use-payment-methods";
-import { cn } from "@/libs/cn";
 
 const NETWORKS: { id: string; label: string; logo: Logo }[] = [
   { id: "mtn", label: "MTN MoMo", logo: { kind: "image", src: "/payment-logos/mtn-official.png", alt: "MTN" } },
@@ -43,35 +43,19 @@ function AddMethodForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={onSubmit} className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
       <div className="mb-4 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setType("momo")}
-          className={cn("press rounded-full border px-3.5 py-2 text-sm", type === "momo" ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground")}
-        >
+        <TogglePill selected={type === "momo"} onClick={() => setType("momo")}>
           Mobile money
-        </button>
-        <button
-          type="button"
-          onClick={() => setType("card")}
-          className={cn("press rounded-full border px-3.5 py-2 text-sm", type === "card" ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground")}
-        >
+        </TogglePill>
+        <TogglePill selected={type === "card"} onClick={() => setType("card")}>
           Card
-        </button>
+        </TogglePill>
       </div>
 
       {type === "momo" ? (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             {NETWORKS.map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                onClick={() => setNetwork(n)}
-                className={cn("press flex items-center gap-2 rounded-full border py-1.5 pr-4 pl-1.5 text-sm", network.id === n.id ? "border-foreground" : "border-line hover:border-foreground")}
-              >
-                <LogoBadge logo={n.logo} className="size-6" />
-                {n.label}
-              </button>
+              <LogoPill key={n.id} selected={network.id === n.id} logo={n.logo} label={n.label} onClick={() => setNetwork(n)} />
             ))}
           </div>
           <Field id="momo-phone" label="Phone number" type="tel" required placeholder="024 000 0000" value={phone} onChange={(e) => setPhone(e.target.value)} />

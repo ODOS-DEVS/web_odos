@@ -8,6 +8,7 @@ import type { DeliverySpeed } from "@/types/delivery";
 import { RequireLogin } from "@/components/auth/require-login";
 import { OrderSummary } from "@/components/cart/order-summary";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Field, inputClass } from "@/components/ui/field";
 import { useSession } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
@@ -61,14 +62,13 @@ function CheckoutForm() {
 
   if (lines.length === 0 && !checkout.isPending && !checkout.isSuccess) {
     return (
-      <div className="grid place-items-center rounded-3xl border border-dashed border-line px-6 py-24 text-center">
-        <ShoppingBag className="size-10 text-muted" aria-hidden />
-        <h2 className="mt-4 text-xl font-semibold">Nothing to check out</h2>
-        <p className="mt-2 text-sm text-muted">Add something to your cart first.</p>
-        <ButtonLink href="/products" className="mt-6">
-          Browse products
-        </ButtonLink>
-      </div>
+      <EmptyState
+        icon={<ShoppingBag className="size-10 text-muted" aria-hidden />}
+        title="Nothing to check out"
+        description="Add something to your cart first."
+        className="py-24"
+        action={<ButtonLink href="/products">Browse products</ButtonLink>}
+      />
     );
   }
 

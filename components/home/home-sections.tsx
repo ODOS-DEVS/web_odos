@@ -1,7 +1,6 @@
 "use client";
 
 import { Zap } from "lucide-react";
-import { BestDeals } from "@/components/home/best-deals";
 import { CategoryStrip } from "@/components/home/category-strip";
 import { Faq } from "@/components/home/faq";
 import { Hero } from "@/components/home/hero";
@@ -68,9 +67,12 @@ export function HomeSections() {
         <PromoBanners />
       </Container>
 
-      <Container className="mt-20">
-        <BestDeals products={flash} stores={storeMap} />
-      </Container>
+      {flash.length > 0 && (
+        <Container className="mt-20">
+          <SectionHeading title="Best deals" href="/products?tag=flash" />
+          <ProductGrid products={flash.slice(0, 4)} stores={storeMap} />
+        </Container>
+      )}
 
       <Container className="mt-20">
         <SectionHeading

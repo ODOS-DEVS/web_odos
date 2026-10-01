@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useScrollLockedEscape } from "@/hooks/use-scroll-locked-escape";
 import { Button } from "./button";
 
 /** Centered "are you sure?" modal — confirm/cancel only, no form fields. */
@@ -24,19 +24,7 @@ export function ConfirmDialog({
   onCancel: () => void;
   pending?: boolean;
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open, onCancel]);
+  useScrollLockedEscape(open, onCancel);
 
   if (!open || typeof document === "undefined") return null;
 

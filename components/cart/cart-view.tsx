@@ -8,6 +8,7 @@ import { mockStoreMap } from "@/mocks/catalog.mock";
 import { mockDeliveryQuote } from "@/mocks/delivery.mock";
 import { fakeQuery } from "@/mocks/query";
 import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { CartGroup } from "./cart-group";
 import { OrderSummary } from "./order-summary";
 
@@ -37,16 +38,18 @@ export function CartView() {
 
   if (groups.length === 0) {
     return (
-      <div className="grid place-items-center rounded-3xl border border-dashed border-line px-6 py-24 text-center">
-        <span className="grid size-16 place-items-center rounded-full bg-surface-muted">
-          <ShoppingBag className="size-7 text-muted" aria-hidden />
-        </span>
-        <h2 className="mt-5 text-xl font-semibold">Your cart is empty</h2>
-        <p className="mt-2 max-w-sm text-sm text-muted">Add items from any store. You can mix vendors and check out once.</p>
-        <ButtonLink href="/products" className="mt-6" size="lg">
-          Browse products
-        </ButtonLink>
-      </div>
+      <EmptyState
+        icon={<ShoppingBag className="size-7 text-muted" aria-hidden />}
+        iconBadge
+        title="Your cart is empty"
+        description="Add items from any store. You can mix vendors and check out once."
+        className="py-24"
+        action={
+          <ButtonLink href="/products" size="lg">
+            Browse products
+          </ButtonLink>
+        }
+      />
     );
   }
 
