@@ -3,13 +3,12 @@
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { ArrowUpRight, Wallet } from "lucide-react";
-import { LogoBadge } from "@/components/checkout/logo-badge";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
+import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
 import { useWallet } from "@/hooks/use-wallet";
 import { useFakeMutation } from "@/mocks/mutation";
-import { cn } from "@/libs/cn";
 import { formatDateTime, formatMoney } from "@/libs/format";
 
 const QUICK_AMOUNTS = [50, 100, 200, 500];
@@ -48,17 +47,9 @@ function TopUpForm() {
 
       <div className="mt-4 flex flex-wrap gap-2">
         {QUICK_AMOUNTS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setAmount(value)}
-            className={cn(
-              "press rounded-full border px-4 py-2 text-sm font-medium",
-              amount === value ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground",
-            )}
-          >
+          <TogglePill key={value} selected={amount === value} onClick={() => setAmount(value)}>
             {formatMoney(value)}
-          </button>
+          </TogglePill>
         ))}
       </div>
 
@@ -83,18 +74,7 @@ function TopUpForm() {
           <p className="mb-2 text-sm font-medium">Pay with</p>
           <div className="flex flex-wrap gap-2">
             {methods.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMethodId(m.id)}
-                className={cn(
-                  "press flex items-center gap-2 rounded-full border py-1.5 pr-4 pl-1.5 text-sm",
-                  methodId === m.id ? "border-foreground" : "border-line hover:border-foreground",
-                )}
-              >
-                <LogoBadge logo={m.logo} className="size-6" />
-                {m.label}
-              </button>
+              <LogoPill key={m.id} selected={methodId === m.id} logo={m.logo} label={m.label} onClick={() => setMethodId(m.id)} />
             ))}
           </div>
         </div>

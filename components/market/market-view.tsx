@@ -5,6 +5,7 @@ import { SearchX, Store as StoreIcon } from "lucide-react";
 import { ProductGrid, ProductGridSkeleton } from "@/components/product/product-grid";
 import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
 import { filterProducts } from "@/libs/catalog";
 import { cn } from "@/libs/cn";
@@ -99,19 +100,19 @@ export function MarketView({ filters }: { filters: MarketActiveFilters }) {
               {results.length > 0 ? (
                 <ProductGrid products={results} stores={storeMap} columns={3} />
               ) : (
-                <div className="grid place-items-center rounded-3xl border border-dashed border-line px-6 py-20 text-center">
-                  <SearchX className="size-10 text-muted" aria-hidden />
-                  <h3 className="mt-4 text-xl font-semibold">Nothing matches those filters</h3>
-                  <p className="mt-2 max-w-sm text-sm text-muted">Try another category or clear delivery filters.</p>
-                </div>
+                <EmptyState
+                  icon={<SearchX className="size-10 text-muted" aria-hidden />}
+                  title="Nothing matches those filters"
+                  description="Try another category or clear delivery filters."
+                />
               )}
             </>
           ) : (
-            <div className="grid place-items-center rounded-3xl border border-dashed border-line px-6 py-20 text-center">
-              <SearchX className="size-10 text-muted" aria-hidden />
-              <h3 className="mt-4 text-xl font-semibold">No stores in this market yet</h3>
-              <p className="mt-2 max-w-sm text-sm text-muted">Try a different category or market.</p>
-            </div>
+            <EmptyState
+              icon={<SearchX className="size-10 text-muted" aria-hidden />}
+              title="No stores in this market yet"
+              description="Try a different category or market."
+            />
           )}
         </section>
       </div>

@@ -1,8 +1,7 @@
-import type { ReactNode } from "react";
 import type { Category, Store } from "@/types/catalog";
 import type { Market } from "@/mocks/catalog.mock";
 import { buildHref } from "@/libs/url";
-import { FilterChip } from "@/components/product/filter-chip";
+import { FilterChip, FilterGroup } from "@/components/product/filter-chip";
 
 export type MarketActiveFilters = {
   category?: string;
@@ -11,17 +10,6 @@ export type MarketActiveFilters = {
   free?: string;
   sale?: string;
 };
-
-function Group({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <h2 className="mb-2.5 text-xs font-semibold tracking-wide text-muted uppercase">{label}</h2>
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
-        {children}
-      </div>
-    </div>
-  );
-}
 
 export function MarketFilters({
   active,
@@ -38,7 +26,7 @@ export function MarketFilters({
 
   return (
     <aside aria-label="Filters" className="space-y-6">
-      <Group label="Category">
+      <FilterGroup label="Category">
         <FilterChip href={href({ category: undefined })} active={!active.category}>
           All
         </FilterChip>
@@ -47,9 +35,9 @@ export function MarketFilters({
             {category.name}
           </FilterChip>
         ))}
-      </Group>
+      </FilterGroup>
 
-      <Group label="Store">
+      <FilterGroup label="Store">
         <FilterChip href={href({ store: undefined })} active={!active.store}>
           All Stores
         </FilterChip>
@@ -58,9 +46,9 @@ export function MarketFilters({
             {store.name}
           </FilterChip>
         ))}
-      </Group>
+      </FilterGroup>
 
-      <Group label="Market">
+      <FilterGroup label="Market">
         <FilterChip href={href({ market: undefined })} active={!active.market}>
           All Markets
         </FilterChip>
@@ -69,16 +57,16 @@ export function MarketFilters({
             {market.title}
           </FilterChip>
         ))}
-      </Group>
+      </FilterGroup>
 
-      <Group label="Delivery">
+      <FilterGroup label="Delivery">
         <FilterChip href={href({ free: active.free ? undefined : "1" })} active={Boolean(active.free)}>
           Free delivery
         </FilterChip>
         <FilterChip href={href({ sale: active.sale ? undefined : "1" })} active={Boolean(active.sale)}>
           On sale
         </FilterChip>
-      </Group>
+      </FilterGroup>
     </aside>
   );
 }

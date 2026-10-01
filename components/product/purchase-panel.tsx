@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import type { Product } from "@/types/catalog";
 import { QuantityStepper } from "@/components/ui/quantity-stepper";
+import { TogglePill } from "@/components/ui/toggle-pill";
 import { formatMoneyCompact } from "@/libs/format";
 import { swatchColor } from "@/libs/color";
 import { cn } from "@/libs/cn";
@@ -26,18 +27,9 @@ function SizeGroup({
       </legend>
       <div className="flex flex-wrap gap-2">
         {options.map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={value === option}
-            onClick={() => onChange(option)}
-            className={cn(
-              "press min-w-11 rounded-full border px-3.5 py-2 text-sm pointer-coarse:min-h-11",
-              value === option ? "border-foreground bg-foreground text-background" : "border-line bg-surface hover:border-foreground",
-            )}
-          >
+          <TogglePill key={option} selected={value === option} onClick={() => onChange(option)}>
             {option}
-          </button>
+          </TogglePill>
         ))}
       </div>
     </fieldset>

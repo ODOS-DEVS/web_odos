@@ -6,6 +6,7 @@ import { FilterChip } from "@/components/product/filter-chip";
 import { ProductGrid, ProductGridSkeleton } from "@/components/product/product-grid";
 import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
 import { filterProducts, type ProductSort } from "@/libs/catalog";
 import { buildHref } from "@/libs/url";
@@ -81,14 +82,12 @@ export function ProductsView({ filters }: { filters: ActiveFilters }) {
           ) : results.length > 0 ? (
             <ProductGrid products={results} stores={storeMap} columns={3} />
           ) : (
-            <div className="grid place-items-center rounded-3xl border border-dashed border-line px-6 py-20 text-center">
-              <SearchX className="size-10 text-muted" aria-hidden />
-              <h2 className="mt-4 text-xl font-semibold">Nothing matches those filters</h2>
-              <p className="mt-2 max-w-sm text-sm text-muted">Try removing a filter or searching for something else.</p>
-              <ButtonLink href="/products" className="mt-6">
-                Clear all filters
-              </ButtonLink>
-            </div>
+            <EmptyState
+              icon={<SearchX className="size-10 text-muted" aria-hidden />}
+              title="Nothing matches those filters"
+              description="Try removing a filter or searching for something else."
+              action={<ButtonLink href="/products">Clear all filters</ButtonLink>}
+            />
           )}
         </section>
       </div>
