@@ -1,64 +1,17 @@
+import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { Media } from "@/components/ui/media";
+import Image from "next/image";
 import { cn } from "@/libs/cn";
+import { TILES, type Tile } from "@/mocks/home.mock";
 
-type Tile = {
-  id: string;
-  href: string;
-  eyebrow: string;
-  emphasis: string;
-  title: string;
-  imageSeed: string;
-  bg: string;
-  layout: "full-bleed" | "half-image";
-  align?: "center" | "top";
-};
-
-const TILES: Tile[] = [
-  {
-    id: "smart-watch",
-    href: "/products?tag=flash",
-    eyebrow: "Sell On",
-    emphasis: "35% Off",
-    title: "Smart Watch",
-    imageSeed: "odos-collage-shopping",
-    bg: "#1a1a1a",
-    layout: "full-bleed",
-    align: "center",
-  },
-  {
-    id: "winter-collection",
-    href: "/products?tag=flash",
-    eyebrow: "Sell On",
-    emphasis: "42% Off",
-    title: "Winter Collection",
-    imageSeed: "odos-collage-winter-watch",
-    bg: "#0d3240",
-    layout: "half-image",
-    align: "top",
-  },
-  {
-    id: "kids-fashion",
-    href: "/products?category=fashion",
-    eyebrow: "New Collection",
-    emphasis: "",
-    title: "Kid's Fashion",
-    imageSeed: "odos-collage-kids-fashion",
-    bg: "#f3f1ea",
-    layout: "half-image",
-    align: "top",
-  },
-];
-
-/** A tall hero tile beside two stacked half-image tiles — a second promo collage, denser than `PromoBanners`. */
 export function PromoCollage() {
   const [hero, ...rest] = TILES;
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <PromoTileCard tile={hero} className="min-h-80 lg:min-h-0" />
+      <PromoTileCard tile={hero} className="min-h-[460px]" />
       <div className="grid grid-cols-1 gap-4">
         {rest.map((tile) => (
-          <PromoTileCard key={tile.id} tile={tile} className="min-h-48" />
+          <PromoTileCard key={tile.id} tile={tile} />
         ))}
       </div>
     </div>
@@ -66,52 +19,93 @@ export function PromoCollage() {
 }
 
 function PromoTileCard({ tile, className }: { tile: Tile; className?: string }) {
-  const light = tile.bg === "#f3f1ea";
-  const textTone = light ? "text-[#16140f]" : "text-white";
+  if (tile.layout === "hero") {
+    return (
+      <div className={cn("flex flex-col rounded-3xl p-4", tile.bgClass, className)}>
+        <div className="relative w-full h-56 sm:h-[60%] min-h-[240px] shrink-0 overflow-hidden rounded-2xl mb-4 sm:mb-5">
+          <Image
+            src={tile.imageSrc}
+            alt={tile.title}
+            fill
+            className="object-cover"
+            sizes="(min-width: 1024px) 50vw, 100vw"
+          />
+        </div>
+        
+        <div className="flex flex-col justify-end flex-grow px-2 pb-2">
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-sm font-bold uppercase tracking-wider text-[#ea6734]">
+              {tile.eyebrow}
+            </p>
+            <ButtonLink
+              href={tile.href}
+              size="sm"
+              className="hidden sm:flex w-fit gap-2 rounded-full border-none bg-white/10 text-white hover:bg-white/20 px-4 transition-colors"
+            >
+              Shop this deal
+              <ArrowRight className="size-4 text-[#ea6734]" aria-hidden />
+            </ButtonLink>
+          </div>
+          
+          <h3 className="text-5xl sm:text-[68px] font-extrabold uppercase text-white mb-2 leading-none tracking-tight">
+            {tile.title}
+          </h3>
+          
+          <div className="flex justify-between items-end">
+            <div className="flex items-center gap-3">
+              <span className="text-xl sm:text-2xl font-bold text-white">{tile.price}</span>
+              <span className="text-base text-white/50 line-through decoration-1">{tile.originalPrice}</span>
+            </div>
+            <ButtonLink
+              href={tile.href}
+              size="sm"
+              className="sm:hidden flex w-fit gap-2 rounded-full border-none bg-white/10 text-white hover:bg-white/20 px-4 transition-colors"
+            >
+              Shop this deal
+              <ArrowRight className="size-4 text-[#ea6734]" aria-hidden />
+            </ButtonLink>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      className={cn("relative isolate overflow-hidden rounded-3xl", className)}
-      style={{ backgroundColor: tile.bg }}
-    >
-      {tile.layout === "full-bleed" ? (
-        <>
-          <Media src={`https://picsum.photos/seed/${tile.imageSeed}/1000/1200`} name={tile.title} className="absolute inset-0 size-full" />
-          <div className="absolute inset-0 bg-black/45" />
-        </>
-      ) : (
-        <div className="absolute inset-y-0 right-0 w-[55%]">
-          <Media src={`https://picsum.photos/seed/${tile.imageSeed}/800/800`} name={tile.title} className="size-full" sizes="(min-width: 1024px) 25vw, 50vw" />
-          <div
-            className="absolute inset-0 bg-linear-to-r"
-            style={{ backgroundImage: `linear-gradient(to right, ${tile.bg}, ${tile.bg}1a, transparent)` }}
-          />
-        </div>
+      className={cn(
+        "flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-4 rounded-3xl h-full",
+        tile.bgClass,
+        className
       )}
+    >
+      <div className="relative w-full sm:w-[45%] aspect-[4/3] sm:aspect-[5/4] shrink-0 overflow-hidden rounded-2xl">
+        <Image
+          src={tile.imageSrc}
+          alt={tile.title}
+          fill
+          className="object-cover"
+          sizes="(min-width: 1024px) 25vw, 50vw"
+        />
+      </div>
 
-      <div
-        className={cn(
-          "relative z-10 flex h-full max-w-[70%] flex-col gap-3 p-6 sm:p-8",
-          tile.align === "center" ? "justify-center" : "justify-start",
-        )}
-      >
-        <p className={cn("text-base font-medium sm:text-lg", light ? "text-[#16140f]/80" : "text-white/90")}>
+      <div className="flex flex-col justify-center py-2 pr-2 sm:pr-4 w-full">
+        <p className="text-xs font-bold uppercase tracking-wider text-[#ea6734] mb-1.5">
           {tile.eyebrow}
-          {tile.emphasis && <span className="font-semibold text-[#4da3ff]"> {tile.emphasis}</span>}
         </p>
-        <h3 className={cn("text-2xl leading-tight font-semibold sm:text-3xl", textTone)}>{tile.title}</h3>
+        <h3 className="text-2xl sm:text-[28px] font-extrabold uppercase text-white mb-1.5">
+          {tile.title}
+        </h3>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-base sm:text-lg font-bold text-white">{tile.price}</span>
+          <span className="text-sm text-white/50 line-through decoration-1">{tile.originalPrice}</span>
+        </div>
         <ButtonLink
           href={tile.href}
           size="sm"
-          variant="outline"
-          className={cn(
-            "mt-1 w-fit text-xs tracking-wide uppercase",
-            light
-              ? "border-[#16140f]/30 bg-transparent text-[#16140f] hover:border-[#16140f] hover:bg-[#16140f]/5"
-              : "border-white/40 bg-transparent text-white hover:border-white hover:bg-white/10",
-          )}
+          className="w-fit gap-1.5 rounded-full border-none bg-white/10 text-white hover:bg-white/20 px-4 py-1.5 transition-colors text-xs"
         >
-          Shop now
+          Shop this deal
+          <ArrowRight className="size-3.5 text-[#ea6734]" aria-hidden />
         </ButtonLink>
       </div>
     </div>

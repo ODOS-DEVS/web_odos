@@ -1,40 +1,9 @@
 import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { Media } from "@/components/ui/media";
+import Image from "next/image";
 import { cn } from "@/libs/cn";
+import { PROMOS, type Promo } from "@/mocks/home.mock";
 
-type Promo = {
-  id: string;
-  href: string;
-  eyebrow: string;
-  emphasis: string;
-  title: string;
-  imageSeed: string;
-  tone: "dark" | "light";
-};
-
-const PROMOS: Promo[] = [
-  {
-    id: "smart-watch",
-    href: "/products?tag=flash",
-    eyebrow: "Sell On",
-    emphasis: "35% Off",
-    title: "Smart Watch",
-    imageSeed: "odos-promo-smart-watch",
-    tone: "dark",
-  },
-  {
-    id: "kids-fashion",
-    href: "/products?category=fashion",
-    eyebrow: "New Collection",
-    emphasis: "",
-    title: "Kid's Fashion",
-    imageSeed: "odos-promo-kids-fashion",
-    tone: "light",
-  },
-];
-
-/** Two wide promo tiles — fixed dark/light branding so they read the same in both themes. */
 export function PromoBanners() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -46,51 +15,41 @@ export function PromoBanners() {
 }
 
 function PromoCard({ promo }: { promo: Promo }) {
-  const dark = promo.tone === "dark";
-
   return (
     <div
       className={cn(
-        "relative isolate min-h-64 overflow-hidden rounded-3xl sm:min-h-72",
-        dark ? "bg-[#111110]" : "bg-[#f3f1ea]",
+        "flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-3 sm:p-4 rounded-3xl",
+        promo.bgClass
       )}
     >
-      <div className="absolute inset-y-0 right-0 w-[58%]">
-        <Media
-          src={`https://picsum.photos/seed/${promo.imageSeed}/900/900`}
-          name={promo.title}
-          className="size-full"
-          sizes="(min-width: 640px) 30vw, 60vw"
-        />
-        <div
-          className={cn(
-            "absolute inset-0 bg-linear-to-r",
-            dark ? "from-[#111110] via-[#111110]/10 to-transparent" : "from-[#f3f1ea] via-[#f3f1ea]/10 to-transparent",
-          )}
+      <div className="relative w-full sm:w-[45%] aspect-square shrink-0 overflow-hidden rounded-2xl">
+        <Image
+          src={promo.imageSrc}
+          alt={promo.title}
+          fill
+          className="object-cover"
+          sizes="(min-width: 640px) 25vw, 50vw"
         />
       </div>
 
-      <div className="relative z-10 flex h-full max-w-[65%] flex-col justify-center gap-4 p-8 sm:p-10">
-        <p className={cn("text-base font-medium sm:text-lg", dark ? "text-white/90" : "text-[#16140f]/80")}>
+      <div className="flex flex-col justify-center py-2 sm:py-6 pr-2 sm:pr-4 w-full">
+        <p className="text-xs font-bold uppercase tracking-wider text-[#ea6734] mb-1 sm:mb-2">
           {promo.eyebrow}
-          {promo.emphasis && <span className="font-semibold text-accent"> {promo.emphasis}</span>}
         </p>
-        <h3 className={cn("text-3xl leading-tight font-semibold sm:text-4xl", dark ? "text-white" : "text-[#16140f]")}>
+        <h3 className="text-2xl sm:text-4xl font-extrabold uppercase text-white mb-1 sm:mb-2">
           {promo.title}
         </h3>
+        <div className="flex items-center gap-2 mb-4 sm:mb-6">
+          <span className="text-lg sm:text-xl font-bold text-white">{promo.price}</span>
+          <span className="text-base sm:text-lg text-white/50 line-through decoration-1">{promo.originalPrice}</span>
+        </div>
         <ButtonLink
           href={promo.href}
           size="sm"
-          variant="outline"
-          className={cn(
-            "mt-2 w-fit",
-            dark
-              ? "border-white/40 bg-transparent text-white hover:border-white hover:bg-white/10"
-              : "border-[#16140f]/30 bg-transparent text-[#16140f] hover:border-[#16140f] hover:bg-[#16140f]/5",
-          )}
+          className="w-fit gap-2 rounded-full border-none bg-white/10 text-white hover:bg-white/20 px-4 sm:px-5 transition-colors"
         >
-          Shop now
-          <ArrowRight className="size-4" aria-hidden />
+          Shop this deal
+          <ArrowRight className="size-4 text-[#ea6734]" aria-hidden />
         </ButtonLink>
       </div>
     </div>
