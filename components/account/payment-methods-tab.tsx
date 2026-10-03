@@ -16,6 +16,17 @@ const NETWORKS: { id: string; label: string; logo: Logo }[] = [
   { id: "at", label: "AT Money", logo: { kind: "image", src: "/payment-logos/at-official.png", alt: "AT" } },
 ];
 
+const VISA_LOGO: Logo = { kind: "image", src: "/payment-logos/visa-official.svg", alt: "Visa" };
+const MASTERCARD_LOGO: Logo = { kind: "image", src: "/payment-logos/mastercard-official.svg", alt: "Mastercard" };
+
+/** Identifies the card network from its IIN/BIN prefix so we can show the real brand mark instead of a placeholder. */
+function detectCardBrand(cardNumber: string): { label: string; logo: Logo } {
+  const digits = cardNumber.replace(/\D/g, "");
+  if (/^4/.test(digits)) return { label: "Visa", logo: VISA_LOGO };
+  if (/^5[1-5]/.test(digits) || /^2(2[2-9]\d|[3-6]\d\d|7[01]\d|720)/.test(digits)) return { label: "Mastercard", logo: MASTERCARD_LOGO };
+  return { label: "Card", logo: { kind: "monogram", text: "••", bg: "#1f2937", fg: "#ffffff" } };
+}
+
 function AddMethodForm({ onDone }: { onDone: () => void }) {
   const { add } = usePaymentMethods();
   const [type, setType] = useState<"momo" | "card">("momo");
@@ -23,17 +34,20 @@ function AddMethodForm({ onDone }: { onDone: () => void }) {
   const [phone, setPhone] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const brand = detectCardBrand(cardNumber);
+    const last4 = cardNumber.trim().slice(-4) || "0000";
     const method: Omit<SavedPaymentMethod, "id"> =
       type === "momo"
         ? { kind: "momo", label: network.label, subtitle: `${network.label} · ${phone.trim()}`, logo: network.logo }
         : {
             kind: "card",
-            label: `**** ${cardNumber.trim().slice(-4) || "0000"}`,
-            subtitle: `Card · ${expiry.trim() || "--/--"}`,
-            logo: { kind: "monogram", text: "••", bg: "#1f2937", fg: "#ffffff" },
+            label: `**** ${last4}`,
+            subtitle: `${brand.label} Debit/Credit · ${last4} · ${expiry.trim() || "--/--"}`,
+            logo: brand.logo,
           };
     add(method);
     toast.success("Payment method added");
@@ -44,10 +58,10 @@ function AddMethodForm({ onDone }: { onDone: () => void }) {
     <form onSubmit={onSubmit} className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
       <div className="mb-4 flex gap-2">
         <TogglePill selected={type === "momo"} onClick={() => setType("momo")}>
-          Mobile money
+          Mobile Money
         </TogglePill>
         <TogglePill selected={type === "card"} onClick={() => setType("card")}>
-          Card
+          Bank Card
         </TogglePill>
       </div>
 
@@ -62,8 +76,17 @@ function AddMethodForm({ onDone }: { onDone: () => void }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field id="card-number" label="Card number" required placeholder="4242 4242 4242 4242" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} className="sm:col-span-2" />
+          <div className="sm:col-span-2">
+            <Field id="card-number" label="Card number" required placeholder="4242 4242 4242 4242" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} />
+            {cardNumber.trim() && (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <LogoBadge logo={detectCardBrand(cardNumber).logo} className="size-5" />
+                <span className="text-xs text-muted">{detectCardBrand(cardNumber).label}</span>
+              </div>
+            )}
+          </div>
           <Field id="card-expiry" label="Expiry" required placeholder="MM/YY" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
+          <Field id="card-cvv" label="CVV" type="password" inputMode="numeric" maxLength={4} required placeholder="123" value={cvv} onChange={(e) => setCvv(e.target.value)} />
         </div>
       )}
 

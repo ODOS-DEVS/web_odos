@@ -35,8 +35,8 @@ const SEED: SavedPaymentMethod[] = [
     id: "card",
     kind: "card",
     label: "**** 8451",
-    subtitle: "Mastercard Debit/Credit · 8451 01/33",
-    logo: { kind: "monogram", text: "••", bg: "#1f2937", fg: "#ffffff" },
+    subtitle: "Mastercard Debit/Credit · 8451 · 01/33",
+    logo: { kind: "image", src: "/payment-logos/mastercard-official.svg", alt: "Mastercard" },
   },
 ];
 
@@ -61,7 +61,7 @@ const usePaymentMethodsStore = create<PaymentMethodsState>()(
           methods: state.methods.map((m) => ({ ...m, isDefault: m.id === id })),
         })),
     }),
-    { name: "odos-payment-methods-v1" },
+    { name: "odos-payment-methods-v3" },
   ),
 );
 

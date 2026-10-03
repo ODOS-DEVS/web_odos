@@ -1,11 +1,10 @@
 import { PAYMENTS_ENDPOINTS } from "@/libs/api-endpoint";
-import type { components } from "@/types/api-schema";
+import type { CheckoutSessionCreate, CheckoutSessionRead, PaymentVerificationRead } from "@/types/api";
 import type { Order } from "@/types/order";
 import { apiFetch } from "./http";
 import { toOrder } from "./mappers";
 
-export type CheckoutSessionCreate = components["schemas"]["CheckoutSessionCreate"];
-export type CheckoutSessionRead = components["schemas"]["CheckoutSessionRead"];
+export type { CheckoutSessionCreate, CheckoutSessionRead };
 
 export const paymentsService = {
   /**
@@ -16,7 +15,7 @@ export const paymentsService = {
     apiFetch<CheckoutSessionRead>(PAYMENTS_ENDPOINTS.checkout, { method: "POST", body: input }),
 
   async verify(reference: string): Promise<PaymentVerification> {
-    const result = await apiFetch<components["schemas"]["PaymentVerificationRead"]>(PAYMENTS_ENDPOINTS.verify(reference), {
+    const result = await apiFetch<PaymentVerificationRead>(PAYMENTS_ENDPOINTS.verify(reference), {
       method: "POST",
     });
     return {
