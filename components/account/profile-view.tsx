@@ -1,10 +1,16 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Suspense, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Camera } from "lucide-react";
 import type { UserRead, UserUpdate } from "@/types/api";
+import { AddressTab } from "@/components/account/address-tab";
+import { HelpSupportTab } from "@/components/account/help-support-tab";
 import { PaymentMethodsTab } from "@/components/account/payment-methods-tab";
+import { ReturnsTab } from "@/components/account/returns-tab";
+import { ReviewsTab } from "@/components/account/reviews-tab";
+import { VouchersTab } from "@/components/account/vouchers-tab";
 import { WalletTab } from "@/components/account/wallet-tab";
 import { RequireLogin } from "@/components/auth/require-login";
 import { Button } from "@/components/ui/button";
@@ -22,6 +28,11 @@ const TABS = [
   { id: "profile", label: "Profile" },
   { id: "payment", label: "Payment methods" },
   { id: "wallet", label: "Wallet" },
+  { id: "address", label: "Address" },
+  { id: "returns", label: "Returns" },
+  { id: "reviews", label: "Reviews" },
+  { id: "vouchers", label: "Vouchers" },
+  { id: "help", label: "Help & Support" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -262,9 +273,25 @@ function ProfileDetailsForm({ user }: { user: UserRead }) {
   );
 }
 
+function isTabId(value: string | null): value is TabId {
+  return TABS.some((t) => t.id === value);
+}
+
 function ProfileTabs() {
   const user = useSession()?.user;
-  const [tab, setTab] = useState<TabId>("profile");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const tabParam = searchParams.get("tab");
+  const tab: TabId = isTabId(tabParam) ? tabParam : "profile";
+
+  // Keeps the active tab in the URL, so a refresh (or a shared link) lands back on the same one.
+  const setTab = (next: TabId) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "profile") params.delete("tab");
+    else params.set("tab", next);
+    router.replace(params.size > 0 ? `/account?${params.toString()}` : "/account", { scroll: false });
+  };
 
   // Only ever mounts inside `RequireLogin`'s authenticated branch, so `user` is always set here.
   if (!user) return null;
@@ -304,6 +331,11 @@ function ProfileTabs() {
         {tab === "profile" && <ProfileDetailsForm user={user} />}
         {tab === "payment" && <PaymentMethodsTab />}
         {tab === "wallet" && <WalletTab />}
+        {tab === "address" && <AddressTab />}
+        {tab === "returns" && <ReturnsTab />}
+        {tab === "reviews" && <ReviewsTab />}
+        {tab === "vouchers" && <VouchersTab />}
+        {tab === "help" && <HelpSupportTab />}
       </div>
     </div>
   );
@@ -312,9 +344,11 @@ function ProfileTabs() {
 export function ProfileView() {
   return (
     <Container className="max-w-4xl py-8 sm:py-12">
-      <h1 className="mb-8 text-3xl font-semibold sm:text-4xl">Your profile</h1>
-      <RequireLogin next="/account" message="Log in to view and update your profile.">
-        <ProfileTabs />
+      <h1 className="mb-8 text-3xl font-semibold sm:text-4xl">Account</h1>
+      <RequireLogin next="/account" message="Log in to view and update your account.">
+        <Suspense fallback={<div className="h-72 animate-pulse rounded-3xl bg-surface-muted" aria-busy="true" />}>
+          <ProfileTabs />
+        </Suspense>
       </RequireLogin>
     </Container>
   );

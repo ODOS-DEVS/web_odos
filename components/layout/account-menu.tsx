@@ -62,7 +62,7 @@ export function AccountMenu() {
             className="press mt-1 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
           >
             <User className="size-4 text-muted" aria-hidden />
-            Your profile
+            Account
           </Link>
           <Link
             href="/orders"
