@@ -258,6 +258,138 @@ export const MOCK_PRODUCTS: Product[] = [
     createdAt: daysAgo(20),
   },
   {
+    id: "prod-leather-sandals-2",
+    name: "Woven Slide Sandals",
+    description: "Lightweight woven slides perfect for the beach or casual wear.",
+    price: 150,
+    compareAtPrice: 190,
+    discountLabel: "21% off",
+    storeId: "store-atelier",
+    categoryName: "Fashion",
+    categorySlugs: ["fashion"],
+    subcategory: "Shoes",
+    rating: 4.4,
+    reviewCount: 5,
+    stock: 20,
+    images: [img("odos-prod-slide-sandals"), img("odos-prod-slide-sandals-2"), img("odos-prod-slide-sandals-3")],
+    colors: ["Brown", "Beige"],
+    sizes: ["38", "39", "40"],
+    specifications: ["Woven upper", "Flexible sole"],
+    tags: ["new"],
+    flashSale: null,
+    createdAt: daysAgo(10),
+  },
+  {
+    id: "prod-leather-sandals-3",
+    name: "Suede Ankle Boots",
+    description: "Classic suede ankle boots with a comfortable low heel.",
+    price: 250,
+    compareAtPrice: 300,
+    discountLabel: "16% off",
+    storeId: "store-atelier",
+    categoryName: "Fashion",
+    categorySlugs: ["fashion"],
+    subcategory: "Shoes",
+    rating: 4.8,
+    reviewCount: 8,
+    stock: 10,
+    images: [img("odos-prod-ankle-boots"), img("odos-prod-ankle-boots-2"), img("odos-prod-ankle-boots-3")],
+    colors: ["Tan", "Olive"],
+    sizes: ["39", "40", "41", "42"],
+    specifications: ["Suede upper", "Side zip closure", "Low block heel"],
+    tags: ["popular"],
+    flashSale: null,
+    createdAt: daysAgo(60),
+  },
+  {
+    id: "prod-canvas-tote-2",
+    name: "Leather Trim Weekender",
+    description: "Spacious weekender bag crafted with premium canvas and leather accents.",
+    price: 180,
+    compareAtPrice: 220,
+    discountLabel: "18% off",
+    storeId: "store-atelier",
+    categoryName: "Fashion",
+    categorySlugs: ["fashion"],
+    subcategory: "Bags",
+    rating: 4.7,
+    reviewCount: 4,
+    stock: 15,
+    images: [img("odos-prod-weekender"), img("odos-prod-weekender-2"), img("odos-prod-weekender-3")],
+    colors: ["Navy", "Khaki"],
+    sizes: [],
+    specifications: ["Canvas body", "Leather straps", "Detachable shoulder strap"],
+    tags: ["popular"],
+    flashSale: null,
+    createdAt: daysAgo(12),
+  },
+  {
+    id: "prod-canvas-tote-3",
+    name: "Mini Crossbody Bag",
+    description: "A compact crossbody bag perfect for carrying just the essentials.",
+    price: 85,
+    compareAtPrice: 110,
+    discountLabel: "22% off",
+    storeId: "store-atelier",
+    categoryName: "Fashion",
+    categorySlugs: ["fashion"],
+    subcategory: "Bags",
+    rating: 4.5,
+    reviewCount: 6,
+    stock: 25,
+    images: [img("odos-prod-crossbody"), img("odos-prod-crossbody-2"), img("odos-prod-crossbody-3")],
+    colors: ["Black", "Tan"],
+    sizes: [],
+    specifications: ["Adjustable strap", "Zip closure", "Internal slip pocket"],
+    tags: ["new"],
+    flashSale: null,
+    createdAt: daysAgo(5),
+  },
+  {
+    id: "prod-kente-shirt-2",
+    name: "Linen Popover Shirt",
+    description: "Breezy linen popover shirt for warm days, featuring a relaxed fit.",
+    price: 120,
+    compareAtPrice: 160,
+    discountLabel: "25% off",
+    storeId: "store-atelier",
+    categoryName: "Fashion",
+    categorySlugs: ["fashion"],
+    subcategory: "Clothing",
+    rating: 4.6,
+    reviewCount: 5,
+    stock: 12,
+    images: [img("odos-prod-linen-shirt"), img("odos-prod-linen-shirt-2"), img("odos-prod-linen-shirt-3")],
+    colors: ["White", "Navy"],
+    sizes: ["S", "M", "L"],
+    specifications: ["100% linen", "Half-placket front"],
+    tags: ["flash"],
+    flashSale: { endsAt: new Date(now + 4 * 3_600_000).toISOString(), unitsRemaining: 3, eventTitle: "Weekend flash" },
+    createdAt: daysAgo(15),
+  },
+  {
+    id: "prod-kente-shirt-3",
+    name: "Batik Print Tunic",
+    description: "Flowy tunic with a hand-dyed batik print. Perfect for casual outings.",
+    price: 140,
+    compareAtPrice: 180,
+    discountLabel: "22% off",
+    storeId: "store-atelier",
+    categoryName: "Fashion",
+    categorySlugs: ["fashion"],
+    subcategory: "Clothing",
+    rating: 4.9,
+    reviewCount: 11,
+    stock: 6,
+    images: [img("odos-prod-batik-tunic"), img("odos-prod-batik-tunic-2"), img("odos-prod-batik-tunic-3")],
+    colors: ["Indigo", "Mustard"],
+    sizes: ["M", "L", "XL"],
+    specifications: ["Viscose blend", "Hand-dyed print"],
+    tags: ["flash", "popular"],
+    flashSale: { endsAt: new Date(now + 8 * 3_600_000).toISOString(), unitsRemaining: 2, eventTitle: "Weekend flash" },
+    createdAt: daysAgo(8),
+  },
+  {
     id: "prod-earbuds",
     name: "Nova Pulse Wireless Earbuds",
     description: "20-hour battery life with a charging case, active noise cancelling.",
@@ -495,8 +627,8 @@ export const MOCK_PRODUCTS: Product[] = [
     colors: ["Charcoal", "Beige", "Navy"],
     sizes: ["30", "32", "34", "36"],
     specifications: ["98% cotton, 2% elastane", "Tapered fit", "Machine washable"],
-    tags: ["popular"],
-    flashSale: null,
+    tags: ["popular", "flash"],
+    flashSale: { endsAt: new Date(now + 5 * 3_600_000).toISOString(), unitsRemaining: 11, eventTitle: "Weekend flash" },
     createdAt: daysAgo(12),
   },
   {
@@ -517,8 +649,8 @@ export const MOCK_PRODUCTS: Product[] = [
     colors: ["Natural", "Terracotta"],
     sizes: ["Set of 4"],
     specifications: ["100% stonewashed linen", "Machine washable", "45 x 45cm"],
-    tags: ["new"],
-    flashSale: null,
+    tags: ["new", "flash"],
+    flashSale: { endsAt: new Date(now + 4 * 3_600_000).toISOString(), unitsRemaining: 14, eventTitle: "Weekend flash" },
     createdAt: daysAgo(4),
   },
   {
@@ -602,9 +734,30 @@ const MOCK_REVIEWS: Record<string, Review[]> = {
   ],
 };
 
-// No store has enough products yet to make named sections (vs. one "Products" grid) worth it — every
-// store falls through to `store-view.tsx`'s single-block fallback until a store's catalogue is bigger.
-const MOCK_STORE_SECTIONS: Record<string, StoreSection[]> = {};
+/** Groups each store's catalogue by `subcategory` ("Shoes", "Trousers"…) so every store page gets named sections. */
+function buildStoreSections(): Record<string, StoreSection[]> {
+  const byStore = new Map<string, Map<string, Product[]>>();
+  for (const product of MOCK_PRODUCTS) {
+    if (!product.storeId || !product.subcategory) continue;
+    const bySubcategory = byStore.get(product.storeId) ?? new Map<string, Product[]>();
+    byStore.set(product.storeId, bySubcategory);
+    const items = bySubcategory.get(product.subcategory) ?? [];
+    items.push(product);
+    bySubcategory.set(product.subcategory, items);
+  }
+  const sections: Record<string, StoreSection[]> = {};
+  for (const [storeId, bySubcategory] of byStore) {
+    sections[storeId] = Array.from(bySubcategory, ([title, products]) => ({
+      id: `${storeId}-${title.toLowerCase()}`,
+      title,
+      slug: title.toLowerCase().replace(/\s+/g, "-"),
+      products,
+    }));
+  }
+  return sections;
+}
+
+const MOCK_STORE_SECTIONS: Record<string, StoreSection[]> = buildStoreSections();
 
 export function mockProducts(params: ProductListParams = {}): Product[] {
   return MOCK_PRODUCTS.filter(

@@ -6,7 +6,7 @@ import { Drawer } from "@/components/ui/drawer";
 import { cn } from "@/libs/cn";
 import CONFIG from "@/utils/config";
 
-const CONTACT_METHODS: {
+export const CONTACT_METHODS: {
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   tone: string;
   title: string;

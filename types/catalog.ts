@@ -68,6 +68,16 @@ export type Product = {
   createdAt: string;
 };
 
+export type Voucher = {
+  id: string;
+  storeId: string;
+  /** Short name shown on the card, e.g. "Weekend offer". */
+  label: string;
+  amountOff: number;
+  minSpend: number;
+  expiresAt: string;
+};
+
 export type Review = {
   id: string;
   author: string;
