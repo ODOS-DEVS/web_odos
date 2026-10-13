@@ -18,14 +18,14 @@ export function Price({
       <span
         className={cn(
           "font-semibold",
-          size === "lg" ? "text-2xl" : "text-base",
+          size === "lg" ? "text-2xl" : "text-sm min-[360px]:text-base",
           onSale && "text-accent",
         )}
       >
         {formatMoneyCompact(value)}
       </span>
       {onSale && (
-        <span className={cn("text-muted line-through", size === "lg" ? "text-base" : "text-sm")}>
+        <span className={cn("text-muted line-through", size === "lg" ? "text-base" : "text-xs min-[360px]:text-sm")}>
           {formatMoneyCompact(compareAt)}
         </span>
       )}

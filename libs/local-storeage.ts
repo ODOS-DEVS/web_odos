@@ -94,9 +94,7 @@ function writeRoot(tree: Tree): void {
 /**
  * Generic, synchronous localStorage access — no callbacks, since
  * `localStorage` itself is synchronous. Non-component code (the axios
- * interceptor, the auth store's init) uses these functions directly; a
- * component that wants reactive updates uses `hooks/use-local-storage.ts`
- * instead, built on top of these same functions.
+ * interceptor, the auth store's init) uses these functions directly.
  *
  * Every call reads the object fresh from storage rather than caching it, so a
  * write from another tab is never overwritten with a stale copy.

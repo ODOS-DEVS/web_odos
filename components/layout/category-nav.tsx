@@ -13,12 +13,9 @@ const primaryLinks = [
   { href: "/orders", label: "Orders" },
 ];
 
-const secondaryLinks = [
-  { href: "/products", label: "Category" },
-  { href: "#", label: "Resources" },
-];
+const secondaryLinks = [{ href: "#", label: "Resources" }];
 
-/** Browse row: fixed product/store links, then a divider, then category/resource links. */
+/** Browse row: fixed product/store links, then a divider, then resource links. */
 export function CategoryNav() {
   return (
     <>

@@ -19,12 +19,12 @@ export function FavoritesButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="press relative grid size-10 place-items-center rounded-full hover:bg-surface-muted"
+        className="press relative grid size-9 place-items-center rounded-full hover:bg-surface-muted min-[320px]:size-10"
         aria-label={ready && count > 0 ? `Favorites, ${count} items` : "Favorites"}
       >
-        <Heart className="size-5" aria-hidden />
+        <Heart className="size-4.5 min-[320px]:size-5" aria-hidden />
         {ready && count > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 grid min-w-5 place-items-center rounded-full bg-accent px-1 text-[11px] leading-5 font-semibold text-accent-foreground tabular-nums">
+          <span className="absolute top-0 right-0 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[9px] leading-4 font-semibold text-accent-foreground tabular-nums min-[320px]:-top-0.5 min-[320px]:-right-0.5 min-[320px]:min-w-5 min-[320px]:text-[11px] min-[320px]:leading-5">
             {count}
           </span>
         )}

@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { Product, Store } from "@/types/catalog";
 import { cn } from "@/libs/cn";
+import { CardSkeleton } from "@/components/ui/card-skeleton";
 import { ProductCard } from "./product-card";
 
 export function ProductGrid({
@@ -19,7 +20,8 @@ export function ProductGrid({
   return (
     <ul
       className={cn(
-        "grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3",
+        "no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto overscroll-x-contain px-5 pb-1",
+        "sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 sm:overflow-visible sm:px-0 sm:pb-0",
         columns === 4 && "lg:grid-cols-4",
         className,
       )}
@@ -27,7 +29,7 @@ export function ProductGrid({
       {products.map((product, index) => (
         <li
           key={product.id}
-          className="rise-in"
+          className="rise-in w-[84%] shrink-0 snap-start sm:w-auto sm:shrink"
           // Short stagger, capped so long lists never feel slow.
           style={{ "--i": Math.min(index, 8) } as CSSProperties}
         >
@@ -45,15 +47,17 @@ export function ProductGrid({
 export function ProductGridSkeleton({ count = 8, className }: { count?: number; className?: string }) {
   return (
     <ul
-      className={cn("grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4", className)}
+      className={cn(
+        "no-scrollbar -mx-4 flex gap-4 overflow-hidden px-5",
+        "sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 sm:px-0 lg:grid-cols-4",
+        className,
+      )}
       aria-busy="true"
       aria-label="Loading products"
     >
       {Array.from({ length: count }, (_, i) => (
-        <li key={i} className="space-y-3">
-          <div className="aspect-square animate-pulse rounded-2xl bg-surface-muted" />
-          <div className="h-3 w-1/3 animate-pulse rounded bg-surface-muted" />
-          <div className="h-4 w-4/5 animate-pulse rounded bg-surface-muted" />
+        <li key={i} className="w-[84%] shrink-0 sm:w-auto sm:shrink">
+          <CardSkeleton />
         </li>
       ))}
     </ul>

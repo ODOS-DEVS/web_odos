@@ -11,14 +11,14 @@ export function SiteHeader() {
   return (
     // Translucent chrome: content scrolls underneath a blurred layer instead of an opaque bar.
     <header className="sticky top-0 z-40 short:static border-b border-line bg-background/80 backdrop-blur-xl backdrop-saturate-150">
-      <Container className="flex h-16 items-center gap-3 sm:gap-6">
-        <Link href="/" className="text-2xl font-bold tracking-tight" aria-label="ODOS home">
+      <Container className="flex h-16 items-center gap-1 min-[320px]:gap-3 sm:gap-6">
+        <Link href="/" className="text-xl font-bold tracking-tight min-[320px]:text-2xl" aria-label="ODOS home">
           odos<span className="text-accent">.</span>
         </Link>
 
         <SearchForm className="mx-auto hidden max-w-xl flex-1 md:block" />
 
-        <div className="ml-auto flex items-center gap-1 md:ml-0">
+        <div className="ml-auto flex items-center gap-0 min-[320px]:gap-1 md:ml-0">
           <AccountMenu />
           <ThemeToggle />
           <FavoritesButton />

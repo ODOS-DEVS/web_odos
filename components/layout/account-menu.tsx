@@ -30,10 +30,10 @@ export function AccountMenu() {
         </ButtonLink>
         <Link
           href="/login"
-          className="press grid size-10 place-items-center rounded-full hover:bg-surface-muted sm:hidden"
+          className="press grid size-9 place-items-center rounded-full hover:bg-surface-muted min-[320px]:size-10 sm:hidden"
           aria-label="Log in"
         >
-          <User className="size-5" aria-hidden />
+          <User className="size-4.5 min-[320px]:size-5" aria-hidden />
         </Link>
       </>
     );
@@ -46,7 +46,7 @@ export function AccountMenu() {
     <>
       <details ref={menu} className="group relative">
         <summary
-          className="press grid size-10 cursor-pointer list-none place-items-center rounded-full bg-accent-soft text-sm font-semibold text-accent marker:hidden [&::-webkit-details-marker]:hidden"
+          className="press grid size-9 cursor-pointer list-none place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent marker:hidden min-[320px]:size-10 min-[320px]:text-sm [&::-webkit-details-marker]:hidden"
           aria-label={`Account menu for ${name}`}
         >
           {name.trim().charAt(0).toUpperCase() || "?"}

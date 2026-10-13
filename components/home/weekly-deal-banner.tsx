@@ -19,62 +19,56 @@ export function WeeklyDealBanner() {
     return () => clearInterval(timer);
   }, []);
 
-  const currentDeal = DEALS[currentIndex];
-
   return (
-    <div className="relative isolate w-full min-h-[280px] sm:min-h-[320px] overflow-hidden flex items-center">
-      {/* Images with transition */}
-      {DEALS.map((deal, index) => (
-        <div
-          key={deal.id}
-          className={cn(
-            "absolute inset-0 transition-opacity duration-1000",
-            index === currentIndex ? "opacity-100" : "opacity-0"
-          )}
-        >
-          <Image
-            src={deal.image}
-            alt={deal.title}
-            fill
-            className="object-cover object-center"
-            sizes="100vw"
-            priority={index === 0}
-          />
-        </div>
-      ))}
-
-      {/* Dark Color Overlay */}
-      <div className="absolute inset-0 bg-black/40 z-0" />
-
-      {/* Content */}
-      <Container className="relative z-10 w-full py-8 mb-6">
-        <div className="w-full max-w-[580px] bg-[#e3e3e3] rounded-2xl p-6 sm:p-8 shadow-sm transition-all duration-500 transform">
-          <h2 className="text-3xl sm:text-[36px] font-extrabold text-black mb-3 tracking-tight transition-all duration-300">
-            {currentDeal.title}
-          </h2>
-          <p className="text-sm sm:text-base text-[#333333] mb-5 leading-relaxed min-h-[48px]">
-            {currentDeal.description}
-          </p>
-          <ButtonLink 
-            href={currentDeal.href} 
-            size="sm" 
-            className="w-fit gap-2 rounded-full border-none bg-black/10 text-black font-semibold hover:bg-black/20 px-5 transition-colors"
+    <div className="relative isolate w-full overflow-hidden">
+      {/* Slides sit side by side in one strip; sliding it left is what gives the right-to-left motion. */}
+      <div
+        className="flex transition-transform duration-700 ease-in-out"
+        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+      >
+        {DEALS.map((deal, index) => (
+          <div
+            key={deal.id}
+            className="relative flex min-h-70 w-full shrink-0 items-center sm:min-h-80"
+            aria-hidden={index !== currentIndex}
           >
-            View this deal
-            <ArrowRight className="size-4 text-[#ea6734]" aria-hidden />
-          </ButtonLink>
-        </div>
-      </Container>
+            <Image
+              src={deal.image}
+              alt={deal.title}
+              fill
+              className="object-cover object-center"
+              sizes="100vw"
+              priority={index === 0}
+            />
+            <div className="absolute inset-0 bg-black/40" />
+
+            <Container className="relative z-10 w-full py-8">
+              <div className="w-full max-w-145 rounded-2xl bg-[#e3e3e3] p-6 shadow-sm sm:p-8">
+                <h2 className="mb-3 text-3xl font-extrabold tracking-tight text-black sm:text-[36px]">{deal.title}</h2>
+                <p className="mb-5 min-h-12 text-sm leading-relaxed text-[#333333] sm:text-base">{deal.description}</p>
+                <ButtonLink
+                  href={deal.href}
+                  size="sm"
+                  className="w-fit gap-2 rounded-full border-none bg-black/10 px-5 font-semibold text-black transition-colors hover:bg-black/20"
+                >
+                  View this deal
+                  <ArrowRight className="size-4 text-[#ea6734]" aria-hidden />
+                </ButtonLink>
+              </div>
+            </Container>
+          </div>
+        ))}
+      </div>
 
       {/* Carousel Indicators */}
-      <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center gap-2" aria-hidden>
+      <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center gap-2">
         {DEALS.map((_, index) => (
           <button
             key={index}
             onClick={() => setCurrentIndex(index)}
             className={cn(
               "size-2.5 rounded-full shadow-sm transition-all duration-300",
-              index === currentIndex ? "bg-black w-4" : "bg-white hover:bg-white/80"
+              index === currentIndex ? "w-4 bg-black" : "bg-white hover:bg-white/80",
             )}
             aria-label={`Go to slide ${index + 1}`}
           />

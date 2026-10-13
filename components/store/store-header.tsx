@@ -12,45 +12,47 @@ export function StoreHeader({ store }: { store: Store }) {
 
   return (
     <>
-      <div className="relative h-44 overflow-hidden rounded-3xl bg-surface-muted sm:h-64">
+      <div className="relative h-44 overflow-hidden rounded-2xl bg-surface-muted sm:h-64 sm:rounded-3xl">
         <Media src={store.bannerUrl ?? store.logoUrl} name={store.name} priority sizes="100vw" className="size-full" />
         {/* Soft top scrim keeps the back control legible over any banner. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-foreground/20 to-transparent" aria-hidden />
         <Link
           href="/stores"
-          className="press absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-surface/90 py-2 pr-4 pl-3 text-sm font-medium shadow-sm backdrop-blur-md hover:bg-surface"
+          className="press absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-surface/90 py-2 pr-3.5 pl-3 text-xs font-medium shadow-sm backdrop-blur-md min-[360px]:top-4 min-[360px]:left-4 min-[360px]:pr-4 min-[360px]:text-sm hover:bg-surface"
         >
           <ArrowLeft className="size-4" aria-hidden />
           All stores
         </Link>
       </div>
 
-      <header className="relative flex flex-wrap items-start gap-x-5 gap-y-4 px-3 sm:px-8">
+      <header className="relative px-0 min-[400px]:px-3 sm:px-8">
         <Media
           src={store.logoUrl}
           name={store.name}
           priority
           sizes="112px"
-          className="-mt-10 size-20 shrink-0 rounded-3xl bg-surface ring-4 ring-background min-[400px]:-mt-12 min-[400px]:size-24 sm:-mt-14 sm:size-28"
+          className="-mt-8 size-16 shrink-0 rounded-2xl bg-surface ring-4 ring-background min-[360px]:-mt-10 min-[360px]:size-20 min-[400px]:-mt-12 min-[400px]:size-24 min-[400px]:rounded-3xl sm:-mt-14 sm:size-28"
           imgClassName="object-contain p-1.5"
         />
-        <div className="min-w-0 flex-1 pt-4">
+
+        {/* Full-width below the logo, not squeezed beside it. */}
+        <div className="mt-3 min-w-0 min-[400px]:mt-4">
           {/* Name + rating pill on one line, like a marketplace shop header (Etsy, Depop). */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h1 className="text-2xl leading-tight font-semibold min-[400px]:text-3xl sm:text-4xl">{store.name}</h1>
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2.5 py-1 text-sm font-semibold">
+            <h1 className="max-w-full text-xl leading-tight font-semibold min-[360px]:text-2xl min-[400px]:text-3xl sm:text-4xl">{store.name}</h1>
+            <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-1 text-xs font-semibold min-[400px]:px-2.5 min-[400px]:text-sm">
               <Star className="size-3.5 fill-current text-warning" aria-hidden />
               {store.rating > 0 ? store.rating.toFixed(1) : "New"}
             </span>
           </div>
-          <p className="mt-1 text-muted sm:text-lg">{[store.category, place].filter(Boolean).join(" · ")}</p>
+          <p className="mt-1 text-[13px] leading-5 text-muted min-[400px]:text-base sm:text-lg">{[store.category, place].filter(Boolean).join(" · ")}</p>
         </div>
 
         {/* Primary way to reach the vendor, promoted out of the About card (Faire's Message button). */}
         {(store.whatsappUrl || store.phone || store.email) && (
-          <div className="flex shrink-0 gap-2 pt-4">
+          <div className="mt-3 flex w-full gap-2 min-[400px]:mt-4 sm:w-auto">
             {store.whatsappUrl && (
-              <ButtonLink href={store.whatsappUrl} target="_blank" rel="noopener noreferrer" variant="accent" size="sm">
+              <ButtonLink href={store.whatsappUrl} target="_blank" rel="noopener noreferrer" variant="accent" size="sm" className="flex-1 sm:flex-none">
                 <MessageCircle className="size-4" aria-hidden />
                 Message
               </ButtonLink>
@@ -74,7 +76,7 @@ export function StoreHeader({ store }: { store: Store }) {
 
 function Cell({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center gap-3 bg-surface p-4">
+    <div className="flex items-center gap-3 bg-surface p-3 min-[400px]:p-4">
       <span className="hidden size-10 shrink-0 place-items-center rounded-full bg-accent-soft text-accent min-[400px]:grid">{icon}</span>
       <div className="min-w-0">
         <dt className="text-xs text-muted">{label}</dt>
@@ -87,7 +89,7 @@ function Cell({ icon, label, children }: { icon: ReactNode; label: string; child
 /** The four facts a shopper scans first: rating, place, delivery, availability. */
 export function StoreInfoBar({ store }: { store: Store }) {
   return (
-    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
+    <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-line bg-line min-[320px]:grid-cols-2 lg:grid-cols-4">
       <Cell icon={<Star className="size-5" aria-hidden />} label="Rating">
         {store.rating > 0 ? <span className="tabular-nums">{store.rating.toFixed(1)} / 5</span> : "New on ODOS"}
       </Cell>

@@ -12,7 +12,7 @@ export type Promo = {
 export const PROMOS: Promo[] = [
   {
     id: "apple-watch",
-    href: "/products?tag=flash",
+    href: "/products/prod-earbuds",
     eyebrow: "TODAY'S BEST DEAL",
     title: "APPLE WATCH",
     price: "GHC 300",
@@ -22,7 +22,7 @@ export const PROMOS: Promo[] = [
   },
   {
     id: "nike",
-    href: "/products?category=fashion",
+    href: "/products/prod-leather-sandals-3",
     eyebrow: "TODAY'S BEST DEAL",
     title: "NIKE",
     price: "GHC 300",
@@ -47,7 +47,7 @@ export type Tile = {
 export const TILES: Tile[] = [
   {
     id: "nike-hero",
-    href: "/products?tag=flash",
+    href: "/products/prod-leather-sandals-3",
     eyebrow: "TODAY'S BEST DEAL",
     title: "NIKE",
     price: "GHC 300",
@@ -58,7 +58,7 @@ export const TILES: Tile[] = [
   },
   {
     id: "nike-blue",
-    href: "/products?tag=flash",
+    href: "/products/prod-bomber-jacket",
     eyebrow: "TODAY'S BEST DEAL",
     title: "NIKE",
     price: "GHC 300",
@@ -69,7 +69,7 @@ export const TILES: Tile[] = [
   },
   {
     id: "nike-dark",
-    href: "/products?category=fashion",
+    href: "/products/prod-chinos",
     eyebrow: "TODAY'S BEST DEAL",
     title: "NIKE",
     price: "GHC 300",
@@ -88,6 +88,8 @@ export type Deal = {
   image: string;
 };
 
+const dealImg = (seed: string) => `https://picsum.photos/seed/${seed}/1600/640`;
+
 export const DEALS: Deal[] = [
   {
     id: 1,
@@ -101,27 +103,27 @@ export const DEALS: Deal[] = [
     title: "End of Year Sale",
     description: "Wrap up the year with massive savings on tech, fashion, and home essentials. Don't miss out!",
     href: "/products?tag=sale",
-    image: "/images/christmas-decorating.jpg",
+    image: dealImg("odos-deal-year-end"),
   },
   {
     id: 3,
     title: "Winter Collection",
     description: "Stay warm and stylish this season. Explore our exclusive winter collection with amazing discounts.",
     href: "/products?tag=winter",
-    image: "/images/christmas-decorating.jpg",
+    image: dealImg("odos-deal-winter"),
   },
   {
     id: 4,
     title: "Gift Guide 2026",
     description: "Find the perfect gift for your loved ones. Curated selections for every personality and budget.",
     href: "/products?tag=gifts",
-    image: "/images/christmas-decorating.jpg",
+    image: dealImg("odos-deal-gifts"),
   },
   {
     id: 5,
     title: "Flash Deals",
     description: "Limited time offers on top brands. Hurry up before they are gone forever!",
     href: "/products?tag=flash",
-    image: "/images/christmas-decorating.jpg",
+    image: dealImg("odos-deal-flash"),
   },
 ];
