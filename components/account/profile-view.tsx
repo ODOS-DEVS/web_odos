@@ -6,10 +6,14 @@ import { toast } from "sonner";
 import { Camera } from "lucide-react";
 import type { UserRead, UserUpdate } from "@/types/api";
 import { AddressTab } from "@/components/account/address-tab";
+import { ChatsTab } from "@/components/account/chats-tab";
 import { HelpSupportTab } from "@/components/account/help-support-tab";
+import { LoyaltyTab } from "@/components/account/loyalty-tab";
 import { PaymentMethodsTab } from "@/components/account/payment-methods-tab";
 import { ReturnsTab } from "@/components/account/returns-tab";
 import { ReviewsTab } from "@/components/account/reviews-tab";
+import { VendorTab } from "@/components/account/vendor-tab";
+import { SellerCenter } from "@/components/vendor/seller-dashboard";
 import { VouchersTab } from "@/components/account/vouchers-tab";
 import { WalletTab } from "@/components/account/wallet-tab";
 import { RequireLogin } from "@/components/auth/require-login";
@@ -26,16 +30,21 @@ import { useFakeMutation } from "@/mocks/mutation";
 
 const TABS = [
   { id: "profile", label: "Profile" },
+  { id: "dashboard", label: "Dashboard" },
   { id: "payment", label: "Payment methods" },
   { id: "wallet", label: "Wallet" },
-  { id: "address", label: "Address" },
   { id: "returns", label: "Returns" },
+  { id: "chats", label: "Chats" },
   { id: "reviews", label: "Reviews" },
   { id: "vouchers", label: "Vouchers" },
   { id: "help", label: "Help & Support" },
+  { id: "vendor", label: "Become a Vendor" },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+// Still reachable by direct link (e.g. from checkout), just not shown as its own pill above.
+const HIDDEN_TAB_IDS = ["loyalty", "address"] as const;
+
+type TabId = (typeof TABS)[number]["id"] | (typeof HIDDEN_TAB_IDS)[number];
 
 const GENDERS = ["Prefer not to say", "Male", "Female"] as const;
 
@@ -274,7 +283,7 @@ function ProfileDetailsForm({ user }: { user: UserRead }) {
 }
 
 function isTabId(value: string | null): value is TabId {
-  return TABS.some((t) => t.id === value);
+  return TABS.some((t) => t.id === value) || HIDDEN_TAB_IDS.some((id) => id === value);
 }
 
 function ProfileTabs() {
@@ -329,6 +338,7 @@ function ProfileTabs() {
 
       <div className="mt-6">
         {tab === "profile" && <ProfileDetailsForm user={user} />}
+        {tab === "dashboard" && <SellerCenter />}
         {tab === "payment" && <PaymentMethodsTab />}
         {tab === "wallet" && <WalletTab />}
         {tab === "address" && <AddressTab />}
@@ -336,6 +346,9 @@ function ProfileTabs() {
         {tab === "reviews" && <ReviewsTab />}
         {tab === "vouchers" && <VouchersTab />}
         {tab === "help" && <HelpSupportTab />}
+        {tab === "vendor" && <VendorTab />}
+        {tab === "chats" && <ChatsTab />}
+        {tab === "loyalty" && <LoyaltyTab />}
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 /** Temporary dummy vendor chat standing in for the real `/chat` endpoints. Delete along with `mocks/`. */
 
+import type { Store } from "@/types/catalog";
+
 export type ChatMessage = {
   id: string;
   from: "me" | "store";
@@ -17,4 +19,16 @@ export function mockChatMessages(storeName: string): ChatMessage[] {
     { id: "m2", from: "me", text: "Hi, is this item still in stock?", createdAt: minutesAgo(38) },
     { id: "m3", from: "store", text: "Yes, we’ve got it in stock and can have it ready today.", createdAt: minutesAgo(35) },
   ];
+}
+
+export type ChatThreadSummary = { store: Store; lastMessage: string; updatedAt: string; unread: boolean };
+
+/** One thread per store the shopper has messaged — backs the account "Chats" tab's list view. */
+export function mockChatThreads(stores: Store[]): ChatThreadSummary[] {
+  const [first, second, third] = stores;
+  return [
+    first && { store: first, lastMessage: "Yes, we’ve got it in stock and can have it ready today.", updatedAt: minutesAgo(35), unread: true },
+    second && { store: second, lastMessage: "Thanks for your order — it ships out tomorrow morning.", updatedAt: minutesAgo(300), unread: false },
+    third && { store: third, lastMessage: "We’ve restocked your size, grab it before it’s gone!", updatedAt: minutesAgo(2880), unread: false },
+  ].filter((t): t is ChatThreadSummary => Boolean(t));
 }

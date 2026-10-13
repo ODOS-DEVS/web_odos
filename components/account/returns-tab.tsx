@@ -11,6 +11,7 @@ import { Field, inputClass } from "@/components/ui/field";
 import { Media } from "@/components/ui/media";
 import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { TogglePill } from "@/components/ui/toggle-pill";
+import { useQueryParam } from "@/hooks/use-query-param";
 import { useReturnRequestForItem, useReturns } from "@/hooks/use-returns";
 import { cn } from "@/libs/cn";
 import { formatDate, formatMoney } from "@/libs/format";
@@ -198,7 +199,7 @@ function ReturnItemCard({ item, onStart }: { item: ReturnEligibleItem; onStart: 
 }
 
 export function ReturnsTab() {
-  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [activeItemId, setActiveItemId] = useQueryParam("returnItem");
   const items = MOCK_RETURN_ELIGIBLE_ITEMS;
   const activeItem = items.find((i) => i.id === activeItemId) ?? null;
 

@@ -31,7 +31,7 @@ export const MOCK_USER: UserRead = {
   role: "customer",
   admin_permission: null,
   roles: ["customer"],
-  vendor_status: "none",
+  vendor_status: "approved",
   vendor_id: null,
   vendor_rejection_reason: null,
   is_active: true,

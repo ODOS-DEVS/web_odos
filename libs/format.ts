@@ -49,6 +49,38 @@ export function formatDateTime(iso: string) {
   return dateTime.format(new Date(iso));
 }
 
+const chatClockTime = new Intl.DateTimeFormat(LOCALE, { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
+const chatWeekday = new Intl.DateTimeFormat(LOCALE, { weekday: "short", timeZone: "UTC" });
+const chatShortDate = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short", timeZone: "UTC" });
+
+function utcStartOfDay(d: Date) {
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+/** Always a clock time ("9:49 AM") — for the timestamp inside a single chat bubble. */
+export function formatChatTime(iso: string) {
+  return chatClockTime.format(new Date(iso));
+}
+
+/** WhatsApp/iMessage-style relative stamp for a chat thread list: time today, "Yesterday", weekday within a week, else a short date. */
+export function formatChatListTime(iso: string) {
+  const target = new Date(iso);
+  const diffDays = Math.round((utcStartOfDay(new Date()) - utcStartOfDay(target)) / 86_400_000);
+  if (diffDays <= 0) return chatClockTime.format(target);
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return chatWeekday.format(target);
+  return chatShortDate.format(target);
+}
+
+/** The sticky day divider ("Today" / "Yesterday" / "13 Oct") shown between message groups in a thread. */
+export function formatChatDayDivider(iso: string) {
+  const target = new Date(iso);
+  const diffDays = Math.round((utcStartOfDay(new Date()) - utcStartOfDay(target)) / 86_400_000);
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return chatShortDate.format(target);
+}
+
 export function formatCount(value: number) {
   return new Intl.NumberFormat(LOCALE, { notation: "compact" }).format(value);
 }

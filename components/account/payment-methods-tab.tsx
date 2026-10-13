@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
 import { usePaymentMethods, type SavedPaymentMethod } from "@/hooks/use-payment-methods";
+import { useQueryParam } from "@/hooks/use-query-param";
 
 const NETWORKS: { id: string; label: string; logo: Logo }[] = [
   { id: "mtn", label: "MTN MoMo", logo: { kind: "image", src: "/payment-logos/mtn-official.png", alt: "MTN" } },
@@ -133,7 +134,9 @@ function MethodRow({ method }: { method: SavedPaymentMethod }) {
 
 export function PaymentMethodsTab() {
   const { methods } = usePaymentMethods();
-  const [adding, setAdding] = useState(false);
+  const [addingParam, setAddingParam] = useQueryParam("payment");
+  const adding = addingParam === "new";
+  const setAdding = (next: boolean) => setAddingParam(next ? "new" : null);
 
   return (
     <div className="space-y-4">
