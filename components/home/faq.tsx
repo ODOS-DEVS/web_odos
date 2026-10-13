@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { cn } from "@/libs/cn";
@@ -38,6 +41,8 @@ const FAQS = [
 ];
 
 export function Faq() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
   return (
     <section className="mt-24 py-16">
       <Container className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] lg:items-center">
@@ -47,15 +52,35 @@ export function Faq() {
         </div>
 
         <div className="rounded-3xl bg-surface px-5 sm:px-6">
-          {FAQS.map((item, index) => (
-            <details key={item.q} className={cn("group py-1", index !== 0 && "border-t border-dashed border-line")}>
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-                {item.q}
-                <ChevronDown className="size-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" aria-hidden />
-              </summary>
-              <p className="pb-4 text-sm leading-6 text-muted">{item.a}</p>
-            </details>
-          ))}
+          {FAQS.map((item, index) => {
+            const isOpen = openIndex === index;
+            return (
+              <div key={item.q} className={cn("py-1", index !== 0 && "border-t border-dashed border-line")}>
+                <button
+                  type="button"
+                  onClick={() => setOpenIndex(isOpen ? null : index)}
+                  aria-expanded={isOpen}
+                  className="flex w-full cursor-pointer items-center justify-between gap-4 py-3.5 text-left text-sm font-semibold"
+                >
+                  {item.q}
+                  <ChevronDown
+                    className={cn("size-4 shrink-0 text-muted transition-transform duration-300 ease-out", isOpen && "rotate-180")}
+                    aria-hidden
+                  />
+                </button>
+                <div
+                  className={cn(
+                    "grid transition-[grid-template-rows] duration-300 ease-out",
+                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                  )}
+                >
+                  <div className="overflow-hidden">
+                    <p className="pb-4 text-sm leading-6 text-muted">{item.a}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Container>
     </section>

@@ -1,9 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Montserrat } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemedToaster } from "@/components/layout/themed-toaster";
 import CONFIG from "@/utils/config";
 import { themeScript } from "@/libs/theme";
 import "./globals.css";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(CONFIG.SITE_URL),
@@ -24,7 +31,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // data-theme is set by the inline script before hydration, so the attribute differs from the server HTML.
-    <html lang="en" className="h-full" suppressHydrationWarning>
+    <html lang="en" className={`h-full ${montserrat.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
