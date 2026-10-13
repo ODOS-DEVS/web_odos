@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Package, User } from "lucide-react";
+import { Award, LogOut, ShoppingBag, Store, User } from "lucide-react";
 import { toast } from "sonner";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -62,15 +62,31 @@ export function AccountMenu() {
             className="press mt-1 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
           >
             <User className="size-4 text-muted" aria-hidden />
-            Account
+            Personal Account
+          </Link>
+          <Link
+            href="/account?tab=vendor"
+            onClick={close}
+            className="press flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
+          >
+            <Store className="size-4 text-muted" aria-hidden />
+            Vendor Account
           </Link>
           <Link
             href="/orders"
             onClick={close}
             className="press flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
           >
-            <Package className="size-4 text-muted" aria-hidden />
-            Your orders
+            <ShoppingBag className="size-4 text-muted" aria-hidden />
+            Your Orders
+          </Link>
+          <Link
+            href="/account?tab=loyalty"
+            onClick={close}
+            className="press flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
+          >
+            <Award className="size-4 text-muted" aria-hidden />
+            Loyalty Points
           </Link>
           <button
             type="button"

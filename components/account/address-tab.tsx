@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import { GHANA_REGIONS } from "@/libs/checkout";
 import { useAddresses, type SavedAddress } from "@/hooks/use-addresses";
+import { useQueryParam } from "@/hooks/use-query-param";
 
 type Draft = Omit<SavedAddress, "id">;
 
@@ -100,8 +101,12 @@ function AddressRow({ address, onEdit }: { address: SavedAddress; onEdit: () => 
 
 export function AddressTab() {
   const { addresses, add, update } = useAddresses();
-  const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // "new" for the add form, an address id for editing that address — one param survives a refresh.
+  const [formParam, setFormParam] = useQueryParam("address");
+  const adding = formParam === "new";
+  const editingId = adding ? null : formParam;
+  const setAdding = (next: boolean) => setFormParam(next ? "new" : null);
+  const setEditingId = (id: string | null) => setFormParam(id);
 
   const editing = addresses.find((a) => a.id === editingId);
 

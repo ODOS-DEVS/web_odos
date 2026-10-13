@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { cn } from "@/libs/cn";
 
-const FAQS = [
+export const FAQS = [
   {
     q: "How do I update my profile details?",
     a: "Open the account menu in the header and choose your profile. You can update your name, phone number and delivery address at any time.",
