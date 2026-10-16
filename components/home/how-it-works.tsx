@@ -21,22 +21,28 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="mt-24 bg-surface-muted/60 py-16">
+    <section className="mt-24 border-y border-line bg-surface-muted/40 py-16 sm:py-20">
       <Container>
-        <h2 className="max-w-md text-2xl font-semibold sm:text-3xl">
+        <p className="inline-flex rounded-full bg-accent-soft px-3 py-1 text-[0.65rem] font-bold tracking-[0.16em] text-accent uppercase">
+          How it works
+        </p>
+        <h2 className="mt-3 max-w-2xl text-2xl font-bold tracking-[-0.035em] sm:text-3xl">
           How one order reaches you from many vendors
         </h2>
-        <ol className="mt-10 grid gap-8 md:grid-cols-3">
+        <ol className="mt-8 grid gap-4 sm:mt-10 md:grid-cols-3 md:gap-5">
           {steps.map((step, index) => (
-            <li key={step.title}>
-              <div className="flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-full bg-surface shadow-sm">
-                  <step.icon className="size-5 text-accent" aria-hidden />
-                </span>
-                <span className="text-sm font-medium text-muted tabular-nums">0{index + 1}</span>
-              </div>
-              <h3 className="mt-4 font-semibold tracking-normal">{step.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-muted">{step.body}</p>
+            <li
+              key={step.title}
+              className="group rounded-[1.4rem] border border-line bg-surface p-6 shadow-[0_10px_26px_rgba(22,20,15,0.06)] transition-transform duration-200 ease-[var(--ease-snap)] hover:-translate-y-1 motion-reduce:transform-none motion-reduce:transition-none sm:p-7"
+            >
+              <span className="grid size-11 place-items-center rounded-full bg-accent-soft text-accent transition-transform duration-200 ease-[var(--ease-snap)] group-hover:-translate-y-0.5 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none">
+                <step.icon className="size-5" strokeWidth={2.25} aria-hidden />
+              </span>
+              <p className="mt-6 text-[0.65rem] font-bold tracking-[0.14em] text-muted uppercase">
+                Step {index + 1}
+              </p>
+              <h3 className="mt-1.5 text-base font-bold tracking-[-0.02em]">{step.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted">{step.body}</p>
             </li>
           ))}
         </ol>

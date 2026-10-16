@@ -76,11 +76,11 @@ export function ProductsView({ filters }: { filters: ActiveFilters }) {
           </div>
 
           {products.isPending ? (
-            <ProductGridSkeleton className="lg:grid-cols-3" />
+            <ProductGridSkeleton className="lg:grid-cols-3" scrollOnMobile={false} />
           ) : products.isError ? (
             <QueryError error={products.error} onRetry={() => products.refetch()} title="We couldn’t load products" />
           ) : results.length > 0 ? (
-            <ProductGrid products={results} stores={storeMap} columns={3} />
+            <ProductGrid products={results} stores={storeMap} columns={3} scrollOnMobile={false} />
           ) : (
             <EmptyState
               icon={<SearchX className="size-10 text-muted" aria-hidden />}
