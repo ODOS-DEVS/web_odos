@@ -81,7 +81,7 @@ export function MarketView({ filters }: { filters: MarketActiveFilters }) {
           )}
 
           {products.isPending || stores.isPending ? (
-            <ProductGridSkeleton className="lg:grid-cols-3" />
+            <ProductGridSkeleton className="lg:grid-cols-3" scrollOnMobile={false} />
           ) : selectedStore ? (
             <>
               <div className="mb-6 flex items-end justify-between gap-4">
@@ -98,7 +98,7 @@ export function MarketView({ filters }: { filters: MarketActiveFilters }) {
               </div>
 
               {results.length > 0 ? (
-                <ProductGrid products={results} stores={storeMap} columns={3} />
+                <ProductGrid products={results} stores={storeMap} columns={3} scrollOnMobile={false} />
               ) : (
                 <EmptyState
                   icon={<SearchX className="size-10 text-muted" aria-hidden />}

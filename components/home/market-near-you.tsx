@@ -6,6 +6,9 @@ import { useIsStoreFavorite, useStoreFavorites } from "@/hooks/use-store-favorit
 import { Media } from "@/components/ui/media";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { favoriteShareActions, SpeedDial } from "@/components/ui/speed-dial";
+import { MOCK_MARKETS } from "@/mocks/catalog.mock";
+
+const MARKET_TITLES = new Map(MOCK_MARKETS.map((market) => [market.slug, market.title]));
 
 /** A row of nearby vendor cards — a photo-led alternative to the `StoreCard` list in "Stores near you". */
 export function MarketNearYou({ stores }: { stores: Store[] }) {
@@ -29,15 +32,18 @@ function MarketCard({ store }: { store: Store }) {
   const { toggle } = useStoreFavorites();
   const saved = useIsStoreFavorite(store.id);
 
+  const marketTitle = (store.marketSlug && MARKET_TITLES.get(store.marketSlug)) || store.name;
+  const marketHref = store.marketSlug ? `/market?market=${store.marketSlug}` : "/market";
+
   const actions = favoriteShareActions({
-    name: store.name,
-    href: `/stores/${store.slug}`,
+    name: marketTitle,
+    href: marketHref,
     saved,
     onToggleFavorite: () => toggle(store),
   });
 
   return (
-    <Link href={`/stores/${store.slug}`} className="group block touch-manipulation select-none">
+    <Link href={marketHref} className="group block touch-manipulation select-none">
       <div className="relative">
         <Media
           src={store.bannerUrl}
@@ -48,7 +54,7 @@ function MarketCard({ store }: { store: Store }) {
         />
         <SpeedDial actions={actions} className="absolute right-3 bottom-3" />
       </div>
-      <p className="mt-3 truncate text-sm font-semibold">{store.name}</p>
+      <p className="mt-3 truncate text-sm font-semibold">{marketTitle}</p>
     </Link>
   );
 }
