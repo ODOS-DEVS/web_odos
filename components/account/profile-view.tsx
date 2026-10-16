@@ -14,6 +14,9 @@ import { ReturnsTab } from "@/components/account/returns-tab";
 import { ReviewsTab } from "@/components/account/reviews-tab";
 import { VendorTab } from "@/components/account/vendor-tab";
 import { SellerCenter } from "@/components/vendor/seller-dashboard";
+import { VendorCustomersTab } from "@/components/vendor/vendor-customers-tab";
+import { VendorOrdersTab } from "@/components/vendor/vendor-orders-tab";
+import { VendorProductsTab } from "@/components/vendor/vendor-products-tab";
 import { VouchersTab } from "@/components/account/vouchers-tab";
 import { WalletTab } from "@/components/account/wallet-tab";
 import { RequireLogin } from "@/components/auth/require-login";
@@ -31,6 +34,9 @@ import { useFakeMutation } from "@/mocks/mutation";
 const TABS = [
   { id: "profile", label: "Profile" },
   { id: "dashboard", label: "Dashboard" },
+  { id: "orders", label: "Orders" },
+  { id: "products", label: "Products" },
+  { id: "customers", label: "Customers" },
   { id: "payment", label: "Payment methods" },
   { id: "wallet", label: "Wallet" },
   { id: "returns", label: "Returns" },
@@ -339,6 +345,9 @@ function ProfileTabs() {
       <div className="mt-6">
         {tab === "profile" && <ProfileDetailsForm user={user} />}
         {tab === "dashboard" && <SellerCenter />}
+        {tab === "orders" && <VendorOrdersTab />}
+        {tab === "products" && <VendorProductsTab />}
+        {tab === "customers" && <VendorCustomersTab />}
         {tab === "payment" && <PaymentMethodsTab />}
         {tab === "wallet" && <WalletTab />}
         {tab === "address" && <AddressTab />}
