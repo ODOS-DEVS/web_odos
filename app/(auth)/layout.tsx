@@ -1,15 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { Artwork } from "@/components/ui/artwork";
+import { Media } from "@/components/ui/media";
 
 const mosaic = [
-  { emoji: "🥐", hue: 70 },
-  { emoji: "🎧", hue: 255 },
-  { emoji: "🧴", hue: 350 },
-  { emoji: "🥑", hue: 145 },
-  { emoji: "🧣", hue: 20 },
-  { emoji: "🕯️", hue: 195 },
+  { src: "/auth/mosaic-watch.jpg", alt: "Apple Watch Ultra" },
+  { src: "/auth/mosaic-shoe.jpg", alt: "Basketball sneaker" },
+  { src: "/auth/mosaic-controller.jpg", alt: "Game controller" },
+  { src: "/auth/mosaic-top.jpg", alt: "Knit top on a hanger" },
+  { src: "/auth/mosaic-headphones.jpg", alt: "Woman wearing headphones" },
+  { src: "/auth/mosaic-books.jpg", alt: "Stack of books with glasses" },
 ];
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
@@ -28,12 +28,13 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <aside className="relative hidden overflow-hidden bg-surface-muted p-12 lg:flex lg:flex-col lg:justify-between" aria-hidden>
         <div className="grid grid-cols-3 gap-4">
           {mosaic.map((tile, index) => (
-            <Artwork
-              key={tile.emoji}
-              emoji={tile.emoji}
-              hue={tile.hue}
-              className={`rounded-3xl ${index % 2 === 0 ? "aspect-[3/4]" : "aspect-square"}`}
-              emojiClassName="text-7xl"
+            <Media
+              key={tile.src}
+              src={tile.src}
+              alt={tile.alt}
+              name={tile.alt}
+              sizes="20vw"
+              className={`rounded-3xl ${index % 2 === 0 ? "aspect-3/4" : "aspect-square"}`}
             />
           ))}
         </div>
