@@ -31,7 +31,7 @@ function greeting() {
   return "Good evening";
 }
 
-const tileClass = "press flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-surface hover:border-foreground";
+const tileClass = "press flex w-[4.5rem] shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-line bg-surface py-3 hover:border-foreground";
 const manageRowClass = "press flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 text-left hover:border-foreground";
 
 function AttentionCard({ value, label }: { value: number; label: string }) {
@@ -61,10 +61,10 @@ function TodayCard({ badge, value, label }: { badge: string; value: string; labe
 function QuickActionTile({ label, href }: { label: string; href?: string }) {
   const content: ReactNode = (
     <>
-      <span className="grid size-10 place-items-center rounded-full border border-line text-foreground">
-        <Plus className="size-4.5" aria-hidden />
+      <span className="grid size-9 place-items-center rounded-full border border-line text-foreground">
+        <Plus className="size-4" aria-hidden />
       </span>
-      <span className="text-xs font-medium">{label}</span>
+      <span className="text-[11px] font-medium">{label}</span>
     </>
   );
 
@@ -93,8 +93,8 @@ function ManageRow({ label, icon: Icon, className }: { label: string; icon: Luci
 
 const QUICK_ACTIONS: { label: string; href?: string }[] = [
   { label: "Add" },
-  { label: "Orders" },
-  { label: "Products" },
+  { label: "Orders", href: "/account?tab=orders" },
+  { label: "Products", href: "/account?tab=products" },
   { label: "Stock" },
   { label: "Chats", href: "/account?tab=chats" },
   { label: "Wallet", href: "/account?tab=wallet" },
@@ -157,7 +157,7 @@ export function SellerCenter() {
 
       <section>
         <h2 className="mb-3 text-base font-semibold">Quick actions</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="no-scrollbar flex gap-2.5 overflow-x-auto">
           {QUICK_ACTIONS.map((action) => (
             <QuickActionTile key={action.label} label={action.label} href={action.href} />
           ))}

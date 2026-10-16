@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { toast } from "sonner";
-import { Boxes, Mail, MapPin, Package, PackageSearch, Phone, Star, Ticket, Users } from "lucide-react";
+import { Boxes, Mail, MapPin, PackageSearch, Phone, Star, Ticket } from "lucide-react";
 import { ChatsTab } from "@/components/account/chats-tab";
 import { WalletTab } from "@/components/account/wallet-tab";
 import { RequireLogin } from "@/components/auth/require-login";
@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SellerCenter } from "@/components/vendor/seller-dashboard";
+import { VendorCustomersTab } from "@/components/vendor/vendor-customers-tab";
+import { VendorOrdersTab } from "@/components/vendor/vendor-orders-tab";
+import { VendorProductsTab } from "@/components/vendor/vendor-products-tab";
 import { useSession } from "@/hooks/use-auth";
 import { useQueryParam } from "@/hooks/use-query-param";
 import { cn } from "@/libs/cn";
@@ -139,10 +142,10 @@ function VendorAccountTabs() {
       <div>
         {tab === "profile" && <VendorProfileTab />}
         {tab === "dashboard" && <SellerCenter />}
-        {tab === "orders" && <ComingSoonTab icon={<Package className="size-6 text-muted" aria-hidden />} label="Orders" />}
-        {tab === "products" && <ComingSoonTab icon={<Boxes className="size-6 text-muted" aria-hidden />} label="Products" />}
+        {tab === "orders" && <VendorOrdersTab />}
+        {tab === "products" && <VendorProductsTab />}
         {tab === "stock" && <ComingSoonTab icon={<Boxes className="size-6 text-muted" aria-hidden />} label="Stock" />}
-        {tab === "customers" && <ComingSoonTab icon={<Users className="size-6 text-muted" aria-hidden />} label="Customers" />}
+        {tab === "customers" && <VendorCustomersTab />}
         {tab === "returns" && <ComingSoonTab icon={<PackageSearch className="size-6 text-muted" aria-hidden />} label="Returns" />}
         {tab === "reviews" && <ComingSoonTab icon={<Star className="size-6 text-muted" aria-hidden />} label="Reviews" />}
         {tab === "chats" && <ChatsTab />}
