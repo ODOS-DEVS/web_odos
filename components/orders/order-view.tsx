@@ -24,7 +24,7 @@ function OrderDetail({ id }: { id: string }) {
   const order = found
     ? fakeQuery(found)
     : fakeQuery(undefined as Order | undefined, { isError: true, error: new ApiError(404, "Order not found") });
-  const cancel = useFakeMutation((_orderId: string) => ({ ...found!, status: "cancelled" as const }));
+  const cancel = useFakeMutation(() => ({ ...found!, status: "cancelled" as const }));
   const stores = mockStoreMap();
 
   if (order.isPending) return <div className="mt-8 h-96 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;

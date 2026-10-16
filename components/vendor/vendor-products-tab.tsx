@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Boxes, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
@@ -311,16 +311,10 @@ export function VendorProductsTab() {
   }, [products, filter, query]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-
-  useEffect(() => {
-    setPage(1);
-  }, [filter, query]);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
-  const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Clamped during render (not via effect): keeps the page in range as filters shrink the result set,
+  // without the extra render pass a `setState` in `useEffect` would cause.
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const openCreate = () => {
     setEditingId(null);
@@ -434,7 +428,7 @@ export function VendorProductsTab() {
               </li>
             ))}
           </ul>
-          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
         </>
       ) : (
         <EmptyState
