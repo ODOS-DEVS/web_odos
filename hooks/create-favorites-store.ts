@@ -15,7 +15,8 @@ export function createFavoritesStore<TEntity, TItem>({
   toItem,
   getId,
 }: {
-  /** localStorage key — there's no wishlist endpoint wired up yet, so favourites live in the browser only. */
+  /** localStorage key. Product favourites sync to /wishlist when signed in (see use-favorites);
+   * store favourites have no backend equivalent, so they stay in the browser. */
   name: string;
   /** Builds the stored item from the entity being toggled. */
   toItem: (entity: TEntity) => TItem;

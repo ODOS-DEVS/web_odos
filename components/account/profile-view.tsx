@@ -41,8 +41,10 @@ const TABS = [
   { id: "orders", label: "Orders", vendorOnly: true },
   { id: "products", label: "Products", vendorOnly: true },
   { id: "customers", label: "Customers", vendorOnly: true },
+  { id: "address", label: "Addresses" },
   { id: "payment", label: "Payment methods" },
   { id: "wallet", label: "Wallet" },
+  { id: "loyalty", label: "Rewards" },
   { id: "returns", label: "Returns" },
   { id: "chats", label: "Chats" },
   { id: "reviews", label: "Reviews" },
@@ -53,8 +55,9 @@ const TABS = [
   { id: "vendor", label: "Become a Vendor", shopperOnly: true },
 ] as const;
 
-// Still reachable by direct link (e.g. from checkout), just not shown as its own pill above.
-const HIDDEN_TAB_IDS = ["loyalty", "address"] as const;
+// Every tab has its own pill now; kept as an empty list so `isTabId` and `TabId` stay unchanged
+// if a tab is hidden again later.
+const HIDDEN_TAB_IDS = [] as const;
 
 type TabId = (typeof TABS)[number]["id"] | (typeof HIDDEN_TAB_IDS)[number];
 

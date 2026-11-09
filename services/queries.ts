@@ -8,6 +8,7 @@ import {
 } from "./catalog.service";
 import { chatService } from "./chat.service";
 import { deliveryService, type DeliveryQuoteInput } from "./delivery.service";
+import { loyaltyService } from "./loyalty.service";
 import { ordersService } from "./orders.service";
 import { paymentsService } from "./payments.service";
 import { reviewsService } from "./reviews.service";
@@ -47,6 +48,8 @@ export const queryKeys = {
   vendorCustomers: ["vendor", "customers"] as const,
   vendorAnalytics: ["vendor", "analytics"] as const,
   wallet: ["wallet"] as const,
+  loyalty: ["loyalty", "account"] as const,
+  loyaltyHistory: ["loyalty", "history"] as const,
   wishlist: ["wishlist"] as const,
   chatThreads: ["chat", "threads"] as const,
   chatStoreThread: (storeId: string) => ["chat", "store-thread", storeId] as const,
@@ -242,6 +245,21 @@ export const vendorQueries = {
       staleTime: 60_000,
       // A shopper who has never applied gets a 404, which is an answer, not a failure.
       retry: false,
+    }),
+};
+
+export const loyaltyQueries = {
+  account: () =>
+    queryOptions({
+      queryKey: queryKeys.loyalty,
+      queryFn: () => loyaltyService.account(),
+      staleTime: 30_000,
+    }),
+  history: () =>
+    queryOptions({
+      queryKey: queryKeys.loyaltyHistory,
+      queryFn: () => loyaltyService.history(),
+      staleTime: 30_000,
     }),
 };
 
