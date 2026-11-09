@@ -15,16 +15,15 @@ import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
 import { QueryError } from "@/components/ui/query-error";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { useCategories, useDealProducts, useProducts, useStores } from "@/hooks/use-catalog";
 import { newestFirst } from "@/libs/catalog";
-import { MOCK_CATEGORIES, MOCK_STORES, mockDealProducts, mockProducts } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
 
 /** Home page content. Every section reads from the query cache the server prefetched, and hides itself when empty. */
 export function HomeSections() {
-  const categories = fakeQuery(MOCK_CATEGORIES);
-  const stores = fakeQuery(MOCK_STORES);
-  const products = fakeQuery(mockProducts());
-  const deals = fakeQuery(mockDealProducts());
+  const categories = useCategories();
+  const stores = useStores();
+  const products = useProducts();
+  const deals = useDealProducts();
 
   const storeMap = new Map((stores.data ?? []).map((s) => [s.id, s]));
   const all = products.data ?? [];
@@ -96,7 +95,7 @@ export function HomeSections() {
           <QueryError error={stores.error} onRetry={() => stores.refetch()} title="We couldn’t load stores" />
         ) : (
           <ul className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto overscroll-x-contain px-5 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-x-5 sm:gap-y-9 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
-            {stores.data.slice(0, 6).map((store, index) => (
+            {(stores.data ?? []).slice(0, 6).map((store, index) => (
               <li key={store.id} className="w-[84%] shrink-0 snap-start sm:w-auto sm:shrink">
                 <StoreCard store={store} priority={index < 3} />
               </li>

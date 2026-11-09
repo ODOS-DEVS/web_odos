@@ -1,5 +1,5 @@
-import type { CategoryRead, ProductRead, ProductReviewRead, StoreRead } from "@/types/api";
-import type { Category, Product, ProductTag, Review, Store } from "@/types/catalog";
+import type { CategoryRead, MarketRead, ProductRead, ProductReviewRead, StoreRead, StoreVoucherRead } from "@/types/api";
+import type { Category, Market, Product, ProductTag, Review, Store, Voucher } from "@/types/catalog";
 import type { OrderItemRead, OrderPackageRead, OrderRead } from "@/types/api";
 import type { FulfilmentStatus, Order, OrderItem, OrderPackage } from "@/types/order";
 import { rollupStatus } from "@/libs/orders";
@@ -21,6 +21,16 @@ export function toCategory(c: CategoryRead): Category {
     subtitle: c.subtitle ?? "",
     imageUrl: c.image_url ?? null,
     subcategories: c.subcategories ?? [],
+  };
+}
+
+export function toMarket(m: MarketRead): Market {
+  return {
+    id: m.id,
+    slug: m.slug,
+    name: m.title,
+    imageUrl: m.image_url ?? null,
+    sortOrder: m.sort_order,
   };
 }
 
@@ -93,6 +103,22 @@ export function toProduct(p: ProductRead): Product {
           }
         : null,
     createdAt: p.created_at ?? "",
+  };
+}
+
+export function toVoucher(v: StoreVoucherRead): Voucher {
+  return {
+    id: v.id,
+    code: v.code,
+    storeId: v.store_id ?? null,
+    storeName: v.store_name ?? null,
+    title: v.title,
+    description: v.description ?? null,
+    rewardText: v.reward_text,
+    minSpend: v.min_subtotal,
+    expiresAt: v.expires_at ?? null,
+    claimed: Boolean(v.claimed),
+    issuerName: v.issuer_name ?? null,
   };
 }
 

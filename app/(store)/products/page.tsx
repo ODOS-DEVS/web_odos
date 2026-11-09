@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { HydrationBoundary } from "@tanstack/react-query";
 import type { ActiveFilters } from "@/components/product/product-filters";
 import { ProductsView } from "@/components/product/products-view";
+import { dehydrated, getServerQueryClient, prefetchAll } from "@/libs/query-client.server";
 import { first } from "@/libs/url";
-import { MOCK_CATEGORIES } from "@/mocks/catalog.mock";
+import { catalogQueries } from "@/services/queries";
 
 function parseFilters(raw: Record<string, string | string[] | undefined>): ActiveFilters {
   return {
@@ -22,14 +24,23 @@ export async function generateMetadata({ searchParams }: PageProps<"/products">)
   if (filters.q) return { title: `Results for “${filters.q}”` };
   if (filters.tag && TAG_TITLE[filters.tag]) return { title: TAG_TITLE[filters.tag] };
   if (filters.category) {
-    const name = MOCK_CATEGORIES.find((c) => c.slug === filters.category)?.name;
+    // Shares the per-request query client with the page body, so this costs no extra request.
+    const categories = await getServerQueryClient().fetchQuery(catalogQueries.categories());
+    const name = categories.find((c) => c.slug === filters.category)?.name;
     if (name) return { title: name };
   }
   return { title: "All products" };
 }
 
-// `ProductsView` reads `mocks/` directly, so there is nothing to prefetch server-side for now.
 export default async function ProductsPage({ searchParams }: PageProps<"/products">) {
   const filters = parseFilters(await searchParams);
-  return <ProductsView filters={filters} />;
+
+  const queryClient = getServerQueryClient();
+  await prefetchAll(queryClient, catalogQueries.products(), catalogQueries.stores(), catalogQueries.categories());
+
+  return (
+    <HydrationBoundary state={dehydrated(queryClient)}>
+      <ProductsView filters={filters} />
+    </HydrationBoundary>
+  );
 }

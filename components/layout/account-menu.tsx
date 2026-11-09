@@ -7,14 +7,12 @@ import { Award, LogOut, ShoppingBag, Store, User } from "lucide-react";
 import { toast } from "sonner";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useSession } from "@/hooks/use-auth";
-import { mockLogout } from "@/mocks/auth.mock";
-import { useFakeMutation } from "@/mocks/mutation";
+import { useLogout, useSession } from "@/hooks/use-auth";
 
 /** Logged out: Log in / Sign up. Logged in: an avatar menu with orders and log out. */
 export function AccountMenu() {
   const session = useSession();
-  const logout = useFakeMutation(mockLogout);
+  const logout = useLogout();
   const router = useRouter();
   const menu = useRef<HTMLDetailsElement>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);

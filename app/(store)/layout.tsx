@@ -2,9 +2,8 @@ import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 
-// No server-side prefetch here for now: the catalogue is served from `mocks/`, read directly by each
-// client component, so there is no query cache to warm ahead of time. Restore the prefetch once the
-// real backend is wired.
+// Each page warms its own slice of the query cache (see the `HydrationBoundary` in the pages below),
+// so the layout stays a plain shell.
 export default function StoreLayout({ children }: { children: ReactNode }) {
   return (
     <>

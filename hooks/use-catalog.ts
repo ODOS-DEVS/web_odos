@@ -8,6 +8,8 @@ import type { Store } from "@/types/catalog";
 
 export const useCategories = () => useQuery(catalogQueries.categories());
 
+export const useMarkets = () => useQuery(catalogQueries.markets());
+
 export const useStores = (params: StoreListParams = {}) => useQuery(catalogQueries.stores(params));
 
 export const useStoreSections = (storeId: string | undefined) =>

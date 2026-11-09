@@ -1,8 +1,8 @@
 import { CATALOG_ENDPOINTS } from "@/libs/api-endpoint";
 import type { CategoryRead, MarketRead, ProductRead, StoreRead, StoreSectionRead } from "@/types/api";
-import type { Category, Product, Store } from "@/types/catalog";
+import type { Category, Market, Product, Store } from "@/types/catalog";
 import { apiFetch } from "./http";
-import { toCategory, toProduct, toStore } from "./mappers";
+import { toCategory, toMarket, toProduct, toStore } from "./mappers";
 
 /** Query params accepted by GET /catalog/products (the API caps `limit` at 100). */
 export type ProductListParams = {
@@ -28,7 +28,10 @@ export const catalogService = {
     return rows.map(toCategory).sort((a, b) => a.name.localeCompare(b.name));
   },
 
-  markets: () => apiFetch<MarketRead[]>(CATALOG_ENDPOINTS.markets),
+  async markets(): Promise<Market[]> {
+    const rows = await apiFetch<MarketRead[]>(CATALOG_ENDPOINTS.markets);
+    return rows.map(toMarket).sort((a, b) => a.sortOrder - b.sortOrder);
+  },
 
   async stores(params: StoreListParams = {}): Promise<Store[]> {
     const rows = await apiFetch<StoreRead[]>(CATALOG_ENDPOINTS.stores, { query: params });

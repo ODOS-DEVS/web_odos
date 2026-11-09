@@ -6,11 +6,10 @@ import { StoreCard, StoreCardSkeleton } from "@/components/store/store-card";
 import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
-import { MOCK_STORES } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
+import { useStores } from "@/hooks/use-catalog";
 
 export function StoresView() {
-  const stores = fakeQuery(MOCK_STORES);
+  const stores = useStores();
 
   return (
     <Container className="py-8 sm:py-12">
@@ -29,11 +28,11 @@ export function StoresView() {
         </ul>
       ) : stores.isError ? (
         <QueryError error={stores.error} onRetry={() => stores.refetch()} title="We couldn’t load stores" />
-      ) : stores.data.length === 0 ? (
+      ) : (stores.data ?? []).length === 0 ? (
         <EmptyState icon={<StoreIcon className="size-10 text-muted" aria-hidden />} title="No stores yet" description="Check back soon." />
       ) : (
         <ul className="grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
-          {stores.data.map((store, index) => (
+          {(stores.data ?? []).map((store, index) => (
             <li key={store.id} className="rise-in" style={{ "--i": Math.min(index, 8) } as CSSProperties}>
               <StoreCard store={store} priority={index < 3} />
             </li>

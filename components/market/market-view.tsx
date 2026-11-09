@@ -10,14 +10,14 @@ import { Media } from "@/components/ui/media";
 import { filterProducts } from "@/libs/catalog";
 import { cn } from "@/libs/cn";
 import { buildHref } from "@/libs/url";
-import { MOCK_CATEGORIES, MOCK_MARKETS, MOCK_STORES, mockProducts } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
+import { useCategories, useMarkets, useProducts, useStores } from "@/hooks/use-catalog";
 import { MarketFilters, type MarketActiveFilters } from "./market-filters";
 
 export function MarketView({ filters }: { filters: MarketActiveFilters }) {
-  const stores = fakeQuery(MOCK_STORES);
-  const categories = fakeQuery(MOCK_CATEGORIES);
-  const products = fakeQuery(mockProducts());
+  const stores = useStores();
+  const categories = useCategories();
+  const products = useProducts();
+  const markets = useMarkets();
 
   const storeList = stores.data ?? [];
   const storeMap = new Map(storeList.map((s) => [s.id, s]));
@@ -52,7 +52,7 @@ export function MarketView({ filters }: { filters: MarketActiveFilters }) {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-12">
         <div className="lg:sticky lg:top-40 lg:self-start">
-          <MarketFilters active={filters} categories={categories.data ?? []} stores={storeList} markets={MOCK_MARKETS} />
+          <MarketFilters active={filters} categories={categories.data ?? []} stores={storeList} markets={markets.data ?? []} />
         </div>
 
         <section aria-label="Results">

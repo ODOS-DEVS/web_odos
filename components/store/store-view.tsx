@@ -11,19 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
 import { QueryError } from "@/components/ui/query-error";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { mockProducts, mockStoreBySlug, mockStoreSections } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
-import { mockStoreVouchers } from "@/mocks/vouchers.mock";
-import { ApiError } from "@/services/http";
-import type { Product, Store } from "@/types/catalog";
+import { useProducts, useStoreBySlug, useStoreSections } from "@/hooks/use-catalog";
+import { useStoreVouchers } from "@/hooks/use-vouchers";
+import type { Product } from "@/types/catalog";
 
 export function StoreView({ slug }: { slug: string }) {
-  const found = mockStoreBySlug(slug);
-  const { data: store, isPending, isError, error, refetch } = found
-    ? fakeQuery(found)
-    : fakeQuery(undefined as Store | undefined, { isError: true, error: new ApiError(404, "Store not found") });
-  const products = fakeQuery(mockProducts({ store_id: store?.id }));
-  const sections = fakeQuery(mockStoreSections(store?.id ?? ""));
+  const { data: store, isPending, isError, error, refetch } = useStoreBySlug(slug);
+  const products = useProducts({ store_id: store?.id });
+  const sections = useStoreSections(store?.id);
+  const storeVouchers = useStoreVouchers(store?.id);
 
   if (isError) return <Container className="py-12"><QueryError error={error} onRetry={() => refetch()} title="We couldn’t load this store" /></Container>;
   if (isPending || !store) return <Container className="py-12"><div className="h-96 animate-pulse rounded-3xl bg-surface-muted" aria-busy="true" /></Container>;
@@ -32,7 +28,7 @@ export function StoreView({ slug }: { slug: string }) {
   const storeMap = new Map([[store.id, store]]);
   const flash = list.filter((p) => p.tags.includes("flash"));
   const hasEndDate = flash.some((p) => p.flashSale?.endsAt);
-  const vouchers = fakeQuery(mockStoreVouchers(store.id)).data ?? [];
+  const vouchers = storeVouchers.data ?? [];
 
   // Vendors group their products into their own sections ("Shoes", "Bags"…); anything left over follows.
   const grouped: { id: string; title: string; items: Product[] }[] = [];

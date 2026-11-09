@@ -10,28 +10,24 @@ import { Container } from "@/components/ui/container";
 import { QueryError } from "@/components/ui/query-error";
 import { formatDate, formatDateTime } from "@/libs/format";
 import { STATUS_LABEL } from "@/libs/orders";
-import { mockStoreMap } from "@/mocks/catalog.mock";
-import { useFakeMutation } from "@/mocks/mutation";
-import { mockOrder } from "@/mocks/orders.mock";
-import { fakeQuery } from "@/mocks/query";
+import { useStoreMap } from "@/hooks/use-catalog";
+import { useCancelOrder, useOrder } from "@/hooks/use-orders";
 import { ApiError } from "@/services/http";
-import type { Order } from "@/types/order";
 import { PackageCard } from "./package-card";
 import { StatusBadge } from "./status-badge";
 
 function OrderDetail({ id }: { id: string }) {
-  const found = mockOrder(id);
-  const order = found
-    ? fakeQuery(found)
-    : fakeQuery(undefined as Order | undefined, { isError: true, error: new ApiError(404, "Order not found") });
-  const cancel = useFakeMutation(() => ({ ...found!, status: "cancelled" as const }));
-  const stores = mockStoreMap();
+  const order = useOrder(id);
+  const cancel = useCancelOrder();
+  const { map: stores } = useStoreMap();
 
   if (order.isPending) return <div className="mt-8 h-96 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;
   if (order.isError) {
     const missing = order.error instanceof ApiError && order.error.status === 404;
     return <div className="mt-8"><QueryError error={order.error} onRetry={() => order.refetch()} title={missing ? "We couldn’t find that order" : "We couldn’t load this order"} /></div>;
   }
+
+  if (!order.data) return <div className="mt-8 h-96 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;
 
   const o = order.data;
   const mixed = new Set(o.packages.map((p) => p.status)).size > 1;

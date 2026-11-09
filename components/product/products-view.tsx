@@ -10,8 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
 import { filterProducts, type ProductSort } from "@/libs/catalog";
 import { buildHref } from "@/libs/url";
-import { MOCK_CATEGORIES, MOCK_STORES, mockProducts } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
+import { useCategories, useProducts, useStores } from "@/hooks/use-catalog";
 import type { ProductTag } from "@/types/catalog";
 
 export const SORTS: { value: ProductSort; label: string }[] = [
@@ -25,9 +24,9 @@ export const TAGS: ProductTag[] = ["new", "popular", "flash"];
 const TAG_TITLE: Record<ProductTag, string> = { new: "New arrivals", popular: "Popular products", flash: "Flash deals" };
 
 export function ProductsView({ filters }: { filters: ActiveFilters }) {
-  const products = fakeQuery(mockProducts());
-  const stores = fakeQuery(MOCK_STORES);
-  const categories = fakeQuery(MOCK_CATEGORIES);
+  const products = useProducts();
+  const stores = useStores();
+  const categories = useCategories();
 
   const sort = SORTS.some((s) => s.value === filters.sort) ? (filters.sort as ProductSort) : "featured";
   const tag = TAGS.includes(filters.tag as ProductTag) ? (filters.tag as ProductTag) : undefined;

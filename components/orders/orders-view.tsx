@@ -8,9 +8,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
+import { useOrders } from "@/hooks/use-orders";
 import { isActive } from "@/libs/orders";
-import { MOCK_ORDERS } from "@/mocks/orders.mock";
-import { fakeQuery } from "@/mocks/query";
 import { OrderCard } from "./order-card";
 
 const TABS = [
@@ -20,7 +19,7 @@ const TABS = [
 ] as const;
 
 function OrdersList({ status }: { status?: string }) {
-  const orders = fakeQuery(MOCK_ORDERS);
+  const orders = useOrders();
 
   if (orders.isPending) {
     return (
@@ -33,7 +32,7 @@ function OrdersList({ status }: { status?: string }) {
   }
   if (orders.isError) return <div className="mt-6"><QueryError error={orders.error} onRetry={() => orders.refetch()} title="We couldn’t load your orders" /></div>;
 
-  const rows = orders.data.filter((order) => (status === "active" ? isActive(order.status) : status === "delivered" ? order.status === "delivered" : true));
+  const rows = (orders.data ?? []).filter((order) => (status === "active" ? isActive(order.status) : status === "delivered" ? order.status === "delivered" : true));
 
   return rows.length > 0 ? (
     <ul className="mt-6 space-y-4">

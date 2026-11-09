@@ -7,8 +7,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
-import { mockLogin, mockSignup } from "@/mocks/auth.mock";
-import { useFakeMutation } from "@/mocks/mutation";
+import { useLogin, useSignup } from "@/hooks/use-auth";
 import { ApiError } from "@/services/http";
 
 function GoogleMark() {
@@ -26,8 +25,8 @@ function GoogleMark() {
 export function AuthForm({ mode, next = "/" }: { mode: "login" | "signup"; next?: string }) {
   const isLogin = mode === "login";
   const router = useRouter();
-  const login = useFakeMutation(mockLogin);
-  const signup = useFakeMutation(mockSignup);
+  const login = useLogin();
+  const signup = useSignup();
   const mutation = isLogin ? login : signup;
 
   const [showPassword, setShowPassword] = useState(false);

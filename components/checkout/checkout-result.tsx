@@ -4,10 +4,10 @@ import { useEffect } from "react";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { ButtonLink, Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/hooks/use-cart";
 import { formatMoney } from "@/libs/format";
-import { mockPaymentVerification } from "@/mocks/payments.mock";
-import { fakeQuery } from "@/mocks/query";
+import { paymentQueries } from "@/services/queries";
 
 /**
  * Where the hosted payment page sends the shopper back. It asks the API whether the payment really
@@ -16,7 +16,7 @@ import { fakeQuery } from "@/mocks/query";
 export function CheckoutResult({ reference }: { reference?: string }) {
   const { clear } = useCart();
 
-  const verification = fakeQuery(mockPaymentVerification(reference ?? ""));
+  const verification = useQuery({ ...paymentQueries.verify(reference ?? ""), enabled: Boolean(reference) });
 
   const paid = verification.data?.paid;
   useEffect(() => {

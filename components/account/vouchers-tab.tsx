@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { inputClass } from "@/components/ui/field";
-import { useSavedVouchers } from "@/hooks/use-saved-vouchers";
+import { useSavedVouchers } from "@/hooks/use-vouchers";
 import { cn } from "@/libs/cn";
 import { formatMoneyCompact } from "@/libs/format";
 import type { SavedVoucher } from "@/types/voucher";
@@ -22,15 +22,19 @@ function RedeemForm() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = redeem(code);
-    if (result === "ok") {
-      toast.success("Voucher added to your wallet");
-      setCode("");
-    } else if (result === "already-redeemed") {
-      toast.error("You've already redeemed this code");
-    } else {
-      toast.error("That code isn't valid or has expired");
-    }
+    redeem.mutate(code, {
+      onSuccess: (result) => {
+        if (result === "ok") {
+          toast.success("Voucher added to your wallet");
+          setCode("");
+        } else if (result === "already-redeemed") {
+          toast.error("You've already redeemed this code");
+        } else {
+          toast.error("That code isn't valid or has expired");
+        }
+      },
+      onError: () => toast.error("We couldn't redeem that code. Please try again."),
+    });
   };
 
   return (
@@ -44,8 +48,8 @@ function RedeemForm() {
           onChange={(e) => setCode(e.target.value)}
           className={cn(inputClass, "sm:flex-1")}
         />
-        <Button type="submit" variant="accent" disabled={!code.trim()} className="sm:w-auto">
-          Redeem
+        <Button type="submit" variant="accent" disabled={!code.trim() || redeem.isPending} className="sm:w-auto">
+          {redeem.isPending ? "Redeeming…" : "Redeem"}
         </Button>
       </div>
     </form>
@@ -72,14 +76,16 @@ function SavedVoucherCard({ voucher }: { voucher: SavedVoucher }) {
         <span className="text-xs font-medium text-muted">Voucher</span>
         <Badge tone="accent">{voucher.label}</Badge>
       </div>
-      <p className="mt-3 text-2xl font-semibold">{formatMoneyCompact(voucher.amountOff)} OFF</p>
+      <p className="mt-3 text-2xl font-semibold">{voucher.rewardText}</p>
       <p className="mt-1 text-sm text-muted">
         {voucher.minSpend > 0 ? `Min spend ${formatMoneyCompact(voucher.minSpend)}` : "No minimum spend"}
       </p>
       <div className="mt-5 flex items-end justify-between gap-3">
         <div className="flex flex-col uppercase">
-          <span className="text-[10px] font-medium leading-tight text-muted">Expires</span>
-          <span className="text-[11px] font-semibold leading-tight tabular-nums">{formatVoucherDate(voucher.expiresAt)}</span>
+          <span className="text-[10px] font-medium leading-tight text-muted">{voucher.expiresAt ? "Expires" : "Valid"}</span>
+          <span className="text-[11px] font-semibold leading-tight tabular-nums">
+            {voucher.expiresAt ? formatVoucherDate(voucher.expiresAt) : "No end date"}
+          </span>
         </div>
         <button
           type="button"

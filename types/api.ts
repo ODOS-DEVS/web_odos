@@ -452,3 +452,33 @@ export type PaymentVerificationRead = {
   verified_at?: string | null;
   message: string;
 };
+
+/* ---------- Vouchers ---------- */
+
+/** A per-store offer from `GET /vouchers/stores/{store_id}` (public) or `GET /vouchers/promotions`. */
+export type StoreVoucherRead = {
+  id: string;
+  code: string;
+  title: string;
+  description?: string | null;
+  issuer_name?: string | null;
+  scope: string;
+  availability: string;
+  store_id?: string | null;
+  store_name?: string | null;
+  /** Display-ready reward, e.g. "GH₵10 off" — already formatted by the backend. */
+  reward_text: string;
+  min_subtotal: number;
+  expires_at?: string | null;
+  claimed?: boolean;
+  campaign_tag?: string | null;
+  discount_type?: string | null;
+  approval_status?: string | null;
+};
+
+/** A voucher the shopper has already claimed, from `GET /vouchers/me`. */
+export type VoucherWalletRead = Omit<StoreVoucherRead, "claimed" | "discount_type" | "approval_status"> & {
+  /** "active", "used", "expired" — the backend decides. */
+  status: string;
+  source?: string | null;
+};

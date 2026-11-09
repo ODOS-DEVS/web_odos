@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { HydrationBoundary } from "@tanstack/react-query";
 import type { MarketActiveFilters } from "@/components/market/market-filters";
 import { MarketView } from "@/components/market/market-view";
+import { dehydrated, getServerQueryClient, prefetchAll } from "@/libs/query-client.server";
 import { first } from "@/libs/url";
+import { catalogQueries } from "@/services/queries";
 
 function parseFilters(raw: Record<string, string | string[] | undefined>): MarketActiveFilters {
   return {
@@ -15,8 +18,21 @@ function parseFilters(raw: Record<string, string | string[] | undefined>): Marke
 
 export const metadata: Metadata = { title: "Market" };
 
-// `MarketView` reads `mocks/` directly, so there is nothing to prefetch server-side for now.
 export default async function MarketPage({ searchParams }: PageProps<"/market">) {
   const filters = parseFilters(await searchParams);
-  return <MarketView filters={filters} />;
+
+  const queryClient = getServerQueryClient();
+  await prefetchAll(
+    queryClient,
+    catalogQueries.stores(),
+    catalogQueries.categories(),
+    catalogQueries.products(),
+    catalogQueries.markets(),
+  );
+
+  return (
+    <HydrationBoundary state={dehydrated(queryClient)}>
+      <MarketView filters={filters} />
+    </HydrationBoundary>
+  );
 }

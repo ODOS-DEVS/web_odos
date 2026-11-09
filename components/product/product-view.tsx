@@ -16,19 +16,13 @@ import { Rating } from "@/components/ui/rating";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { relatedProducts } from "@/libs/catalog";
 import { discountPercent } from "@/libs/format";
-import { mockProduct, mockProductReviews, mockProducts, mockStoreMap } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
-import { ApiError } from "@/services/http";
-import type { Product } from "@/types/catalog";
+import { useProduct, useProductReviews, useProducts, useStoreMap } from "@/hooks/use-catalog";
 
 export function ProductView({ id }: { id: string }) {
-  const found = mockProduct(id);
-  const product = found
-    ? fakeQuery(found)
-    : fakeQuery(undefined as Product | undefined, { isError: true, error: new ApiError(404, "Product not found") });
-  const reviews = fakeQuery(mockProductReviews(id));
-  const all = fakeQuery(mockProducts());
-  const stores = mockStoreMap();
+  const product = useProduct(id);
+  const reviews = useProductReviews(id);
+  const all = useProducts();
+  const { map: stores } = useStoreMap();
 
   if (product.isError) return <Container className="py-12"><QueryError error={product.error} onRetry={() => product.refetch()} title="We couldn’t load this product" /></Container>;
   if (!product.data) return <Container className="py-12"><div className="h-[32rem] animate-pulse rounded-3xl bg-surface-muted" aria-busy="true" /></Container>;

@@ -36,6 +36,15 @@ export type Store = {
   marketSlug: string | null;
 };
 
+/** A physical market a vendor trades in, e.g. "Kaneshie Market". */
+export type Market = {
+  id: string;
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+  sortOrder: number;
+};
+
 export type ProductTag = "new" | "popular" | "flash";
 
 export type FlashSale = {
@@ -70,12 +79,20 @@ export type Product = {
 
 export type Voucher = {
   id: string;
-  storeId: string;
+  code: string;
+  storeId: string | null;
+  storeName: string | null;
   /** Short name shown on the card, e.g. "Weekend offer". */
-  label: string;
-  amountOff: number;
+  title: string;
+  description: string | null;
+  /** Display-ready reward, e.g. "GH₵10 off" or "15% off" — formatted by the backend. */
+  rewardText: string;
   minSpend: number;
-  expiresAt: string;
+  /** Null when the offer has no end date. */
+  expiresAt: string | null;
+  /** True once this shopper has claimed it into their wallet. */
+  claimed: boolean;
+  issuerName: string | null;
 };
 
 export type Review = {

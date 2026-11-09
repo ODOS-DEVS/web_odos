@@ -14,10 +14,8 @@ import { useSession } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
 import { GHANA_REGIONS, toOrderItems } from "@/libs/checkout";
 import { formatMoney } from "@/libs/format";
-import { mockDeliveryQuote } from "@/mocks/delivery.mock";
-import { useFakeMutation } from "@/mocks/mutation";
-import { mockCheckout } from "@/mocks/payments.mock";
-import { fakeQuery } from "@/mocks/query";
+import { useDeliveryQuote } from "@/hooks/use-delivery-quote";
+import { useCheckout } from "@/hooks/use-orders";
 import { ApiError } from "@/services/http";
 import { ChoiceCard } from "./choice-card";
 import { PAYMENT_METHODS, PaymentMethodPicker } from "./payment-method-picker";
@@ -37,7 +35,7 @@ function Step({ number, title, children }: { number: number; title: string; chil
 function CheckoutForm() {
   const user = useSession()?.user;
   const { ready, lines, subtotal, count } = useCart();
-  const checkout = useFakeMutation(mockCheckout);
+  const checkout = useCheckout();
 
   const [name, setName] = useState(user?.full_name ?? "");
   const [phone, setPhone] = useState(user?.phone_number ?? "");
@@ -49,14 +47,12 @@ function CheckoutForm() {
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS.find((m) => m.isDefault) ?? PAYMENT_METHODS[0]);
 
   // Region (not city) drives pricing, so typing a city doesn't fire a new quote per keystroke.
-  const quote = fakeQuery(
-    mockDeliveryQuote({
-      subtotal,
-      method,
-      region,
-      items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.price })),
-    }),
-  );
+  const quote = useDeliveryQuote({
+    subtotal,
+    method,
+    region,
+    items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.price })),
+  });
 
   if (!ready) return <div className="h-96 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;
 
