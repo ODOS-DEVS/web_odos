@@ -2,38 +2,42 @@
 
 import { useState } from "react";
 import { ChevronRight, MessageCircle, Search } from "lucide-react";
-import { ChatThread } from "@/components/chat/chat-view";
+import { ChatConversation } from "@/components/chat/chat-view";
 import { Media } from "@/components/ui/media";
 import { useChatThreads } from "@/hooks/use-chats";
 import { useQueryParam } from "@/hooks/use-query-param";
 import { cn } from "@/libs/cn";
 import { formatChatListTime } from "@/libs/format";
-import type { ChatThreadSummary } from "@/mocks/chat.mock";
+import type { ChatThread } from "@/types/chat";
 
-function ThreadRow({ thread, onOpen }: { thread: ChatThreadSummary; onOpen: () => void }) {
+function ThreadRow({ thread, onOpen }: { thread: ChatThread; onOpen: () => void }) {
+  const unread = thread.unreadCount > 0;
   return (
     <button
       type="button"
       onClick={onOpen}
       className="press flex w-full items-center gap-3 rounded-2xl border border-line bg-surface p-4 text-left hover:border-foreground"
     >
-      <Media src={thread.store.logoUrl} name={thread.store.name} sizes="48px" className="size-12 shrink-0 rounded-xl" />
+      <Media src={thread.counterpartAvatarUrl} name={thread.counterpartName} sizes="48px" className="size-12 shrink-0 rounded-xl" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold">{thread.store.name}</p>
-          {thread.unread && <span className="size-2 shrink-0 rounded-full bg-accent" aria-hidden />}
+          <p className="truncate text-sm font-semibold">{thread.counterpartName}</p>
+          {unread && <span className="size-2 shrink-0 rounded-full bg-accent" aria-hidden />}
         </div>
-        <p className={cn("mt-0.5 truncate text-xs", thread.unread ? "font-medium text-foreground" : "text-muted")}>{thread.lastMessage}</p>
+        <p className={cn("mt-0.5 truncate text-xs", unread ? "font-medium text-foreground" : "text-muted")}>
+          {thread.lastMessage ?? "No messages yet"}
+        </p>
       </div>
-      <div className={cn("flex shrink-0 items-center gap-1", thread.unread ? "text-accent" : "text-muted")}>
-        <span className="text-xs font-medium">{formatChatListTime(thread.updatedAt)}</span>
+      <div className={cn("flex shrink-0 items-center gap-1", unread ? "text-accent" : "text-muted")}>
+        <span className="text-xs font-medium">{formatChatListTime(thread.lastMessageAt ?? thread.updatedAt)}</span>
         <ChevronRight className="size-4" aria-hidden />
       </div>
     </button>
   );
 }
 
-function SidebarRow({ thread, active, onOpen }: { thread: ChatThreadSummary; active: boolean; onOpen: () => void }) {
+function SidebarRow({ thread, active, onOpen }: { thread: ChatThread; active: boolean; onOpen: () => void }) {
+  const unread = thread.unreadCount > 0;
   return (
     <button
       type="button"
@@ -44,15 +48,17 @@ function SidebarRow({ thread, active, onOpen }: { thread: ChatThreadSummary; act
         active ? "bg-accent-soft" : "hover:bg-surface-muted",
       )}
     >
-      <Media src={thread.store.logoUrl} name={thread.store.name} sizes="40px" className="size-10 shrink-0 rounded-full" />
+      <Media src={thread.counterpartAvatarUrl} name={thread.counterpartName} sizes="40px" className="size-10 shrink-0 rounded-full" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold">{thread.store.name}</p>
-          <span className="shrink-0 text-[11px] text-muted">{formatChatListTime(thread.updatedAt)}</span>
+          <p className="truncate text-sm font-semibold">{thread.counterpartName}</p>
+          <span className="shrink-0 text-[11px] text-muted">{formatChatListTime(thread.lastMessageAt ?? thread.updatedAt)}</span>
         </div>
         <div className="mt-0.5 flex items-center gap-1.5">
-          {thread.unread && <span className="size-1.5 shrink-0 rounded-full bg-accent" aria-hidden />}
-          <p className={cn("truncate text-xs", thread.unread ? "font-medium text-foreground" : "text-muted")}>{thread.lastMessage}</p>
+          {unread && <span className="size-1.5 shrink-0 rounded-full bg-accent" aria-hidden />}
+          <p className={cn("truncate text-xs", unread ? "font-medium text-foreground" : "text-muted")}>
+            {thread.lastMessage ?? "No messages yet"}
+          </p>
         </div>
       </div>
     </button>
@@ -60,20 +66,20 @@ function SidebarRow({ thread, active, onOpen }: { thread: ChatThreadSummary; act
 }
 
 export function ChatsTab() {
-  const { threads, markRead } = useChatThreads();
+  const { threads, isPending } = useChatThreads();
   // Kept in the URL (like the other account tabs) so refreshing an open thread doesn't drop back to the list.
-  const [activeSlug, setActiveSlug] = useQueryParam("thread");
+  const [activeId, setActiveId] = useQueryParam("thread");
   const [search, setSearch] = useState("");
-  const activeThread = threads.find((t) => t.store.slug === activeSlug) ?? null;
+  const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
   const filtered = search.trim()
-    ? threads.filter((t) => t.store.name.toLowerCase().includes(search.trim().toLowerCase()))
+    ? threads.filter((t) => t.counterpartName.toLowerCase().includes(search.trim().toLowerCase()))
     : threads;
 
-  const openThread = (slug: string) => {
-    markRead(slug);
-    setActiveSlug(slug);
-  };
+  const peerOf = (thread: ChatThread) => ({
+    name: thread.counterpartName,
+    logoUrl: thread.counterpartAvatarUrl,
+  });
 
   return (
     <div className="space-y-5">
@@ -85,11 +91,21 @@ export function ChatsTab() {
       {/* Narrow screens: the list, or the open thread full-width with a back button. */}
       <div className="lg:hidden">
         {activeThread ? (
-          <ChatThread store={activeThread.store} onBack={() => setActiveSlug(null)} />
+          <ChatConversation peer={peerOf(activeThread)} threadId={activeThread.id} onBack={() => setActiveId(null)} />
+        ) : isPending ? (
+          <div className="space-y-3" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-20 animate-pulse rounded-2xl bg-surface-muted" />
+            ))}
+          </div>
+        ) : threads.length === 0 ? (
+          <p className="rounded-2xl border border-line bg-surface p-6 text-center text-sm text-muted">
+            No conversations yet. Message a store from its page and it will show up here.
+          </p>
         ) : (
           <div className="space-y-3">
             {threads.map((thread) => (
-              <ThreadRow key={thread.store.slug} thread={thread} onOpen={() => openThread(thread.store.slug)} />
+              <ThreadRow key={thread.id} thread={thread} onOpen={() => setActiveId(thread.id)} />
             ))}
           </div>
         )}
@@ -116,10 +132,10 @@ export function ChatsTab() {
             ) : (
               filtered.map((thread) => (
                 <SidebarRow
-                  key={thread.store.slug}
+                  key={thread.id}
                   thread={thread}
-                  active={thread.store.slug === activeSlug}
-                  onOpen={() => openThread(thread.store.slug)}
+                  active={thread.id === activeId}
+                  onOpen={() => setActiveId(thread.id)}
                 />
               ))
             )}
@@ -128,7 +144,7 @@ export function ChatsTab() {
 
         <div className="flex-1">
           {activeThread ? (
-            <ChatThread store={activeThread.store} className="h-full rounded-none border-0" />
+            <ChatConversation peer={peerOf(activeThread)} threadId={activeThread.id} className="h-full rounded-none border-0" />
           ) : (
             <div className="grid h-full place-items-center p-6 text-center">
               <div>

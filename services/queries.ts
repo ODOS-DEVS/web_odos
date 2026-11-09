@@ -6,10 +6,12 @@ import {
   type ProductListParams,
   type StoreListParams,
 } from "./catalog.service";
+import { chatService } from "./chat.service";
 import { deliveryService, type DeliveryQuoteInput } from "./delivery.service";
 import { ordersService } from "./orders.service";
 import { paymentsService } from "./payments.service";
 import { reviewsService } from "./reviews.service";
+import { vendorService } from "./vendor.service";
 import { vouchersService } from "./vouchers.service";
 import { walletService } from "./wallet.service";
 import { wishlistService } from "./wishlist.service";
@@ -29,14 +31,19 @@ export const queryKeys = {
   product: (id: string) => ["catalog", "product", id] as const,
   deals: ["catalog", "deals"] as const,
   reviews: (productId: string) => ["reviews", productId] as const,
+  myReviews: ["reviews", "me"] as const,
   deliveryQuote: (input: DeliveryQuoteInput) =>
     ["delivery", "quote", input] as const,
   storeVouchers: (storeId: string) => ["vouchers", "store", storeId] as const,
   promotions: ["vouchers", "promotions"] as const,
   myVouchers: ["vouchers", "me"] as const,
   addresses: ["account", "addresses"] as const,
+  myVendorApplication: ["vendor", "application", "me"] as const,
   wallet: ["wallet"] as const,
   wishlist: ["wishlist"] as const,
+  chatThreads: ["chat", "threads"] as const,
+  chatStoreThread: (storeId: string) => ["chat", "store-thread", storeId] as const,
+  chatMessages: (threadId: string) => ["chat", "messages", threadId] as const,
   me: ["auth", "me"] as const,
   orders: ["orders"] as const,
   paymentVerification: (reference: string) => ["payments", "verify", reference] as const,
@@ -93,6 +100,12 @@ export const catalogQueries = {
 };
 
 export const reviewQueries = {
+  mine: () =>
+    queryOptions({
+      queryKey: queryKeys.myReviews,
+      queryFn: () => reviewsService.mine(),
+      staleTime: 30_000,
+    }),
   forProduct: (productId: string) =>
     queryOptions({
       queryKey: queryKeys.reviews(productId),
@@ -140,12 +153,45 @@ export const accountQueries = {
     }),
 };
 
+export const chatQueries = {
+  threads: () =>
+    queryOptions({
+      queryKey: queryKeys.chatThreads,
+      queryFn: () => chatService.threads(),
+      staleTime: 15_000,
+    }),
+  storeThread: (storeId: string) =>
+    queryOptions({
+      queryKey: queryKeys.chatStoreThread(storeId),
+      queryFn: () => chatService.ensureStoreThread(storeId),
+      // The thread id does not change once it exists, so there is nothing to go stale.
+      staleTime: Infinity,
+    }),
+  messages: (threadId: string) =>
+    queryOptions({
+      queryKey: queryKeys.chatMessages(threadId),
+      queryFn: () => chatService.messages(threadId),
+      staleTime: 0,
+    }),
+};
+
 export const wishlistQueries = {
   list: () =>
     queryOptions({
       queryKey: queryKeys.wishlist,
       queryFn: () => wishlistService.list(),
       staleTime: 30_000,
+    }),
+};
+
+export const vendorQueries = {
+  myApplication: () =>
+    queryOptions({
+      queryKey: queryKeys.myVendorApplication,
+      queryFn: () => vendorService.myApplication(),
+      staleTime: 60_000,
+      // A shopper who has never applied gets a 404, which is an answer, not a failure.
+      retry: false,
     }),
 };
 

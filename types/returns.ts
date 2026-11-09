@@ -14,14 +14,18 @@ export type ReturnEligibleItem = {
   unitPrice: number;
 };
 
+/** A filed request. `status` is free text on the wire, so unknown values are kept as-is. */
 export type ReturnRequest = {
   id: string;
+  orderId: string;
   itemId: string;
   type: ReturnRequestType;
   quantity: number;
   reason: string;
   details: string;
-  photoNames: string[];
-  status: ReturnRequestStatus;
+  status: string;
+  evidenceImageUrls: string[];
+  adminNote: string | null;
+  refundAmount: number | null;
   createdAt: string;
 };

@@ -12,8 +12,8 @@ import { useSession } from "@/hooks/use-auth";
 import { useQueryParam } from "@/hooks/use-query-param";
 import { GHANA_REGIONS } from "@/libs/checkout";
 import { cn } from "@/libs/cn";
-import { useFakeMutation } from "@/mocks/mutation";
-import { MOCK_MARKETS } from "@/mocks/catalog.mock";
+import { useMarkets } from "@/hooks/use-catalog";
+import { useApplyAsVendor } from "@/hooks/use-vendor-application";
 
 const BUSINESS_CATEGORIES = [
   "Fashion & Accessories",
@@ -41,10 +41,6 @@ const STATUS_TONE: Record<ApplicationStatus, BadgeTone> = {
   approved: "success",
   rejected: "danger",
 };
-
-function mockSubmitVendorApplication(input: Record<string, unknown>) {
-  return input;
-}
 
 function UploadSlot({
   label,
@@ -84,7 +80,8 @@ function UploadSlot({
 }
 
 function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: () => void }) {
-  const submit = useFakeMutation(mockSubmitVendorApplication);
+  const submit = useApplyAsVendor();
+  const markets = useMarkets();
 
   const [businessName, setBusinessName] = useState("");
   const [businessCategory, setBusinessCategory] = useState<(typeof BUSINESS_CATEGORIES)[number] | null>(null);
@@ -99,13 +96,14 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
   const [locationInput, setLocationInput] = useState("");
   const [preferredMarket, setPreferredMarket] = useState<string | null>(null);
 
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
-  const [shopPhotoPreview, setShopPhotoPreview] = useState<string | null>(null);
+  const [logo, setLogo] = useState<{ file: File; preview: string } | null>(null);
+  const [banner, setBanner] = useState<{ file: File; preview: string } | null>(null);
+  const [shopPhoto, setShopPhoto] = useState<{ file: File; preview: string } | null>(null);
 
-  const readAsDataUrl = (file: File, onLoaded: (url: string) => void) => {
+  /** Reads a data URL for the preview while keeping the original file for the upload. */
+  const pickImage = (setter: (value: { file: File; preview: string }) => void) => (file: File) => {
     const reader = new FileReader();
-    reader.onload = () => onLoaded(reader.result as string);
+    reader.onload = () => setter({ file, preview: reader.result as string });
     reader.readAsDataURL(file);
   };
 
@@ -129,18 +127,23 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
         businessCategory,
         businessDescription,
         phoneNumber,
-        storeName,
-        storeDescription,
         region,
         city,
-        locationInput,
-        preferredMarket,
+        storeName,
+        storeDescription,
+        storeLocation: locationInput,
+        marketId: preferredMarket,
+        logo: logo?.file ?? null,
+        banner: banner?.file ?? null,
+        shopPhoto: shopPhoto?.file ?? null,
       },
       {
         onSuccess: () => {
           toast.success("Vendor application submitted — we'll email you once it's reviewed.");
           onSubmitted();
         },
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : "We couldn't submit your application. Please try again."),
       },
     );
   };
@@ -292,9 +295,9 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
       <div className="mt-8 border-t border-line pt-6">
         <p className="mb-2 text-sm font-medium">Preferred Market *</p>
         <div className="flex flex-wrap gap-2">
-          {MOCK_MARKETS.map((market) => (
-            <TogglePill key={market.slug} selected={preferredMarket === market.title} onClick={() => setPreferredMarket(market.title)}>
-              {market.title}
+          {(markets.data ?? []).map((market) => (
+            <TogglePill key={market.id} selected={preferredMarket === market.id} onClick={() => setPreferredMarket(market.id)}>
+              {market.name}
             </TogglePill>
           ))}
         </div>
@@ -304,13 +307,13 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
         <h3 className="text-sm font-semibold">Store visuals</h3>
         <p className="mt-0.5 text-xs text-muted">Upload a clean store logo and banner so your storefront feels trustworthy from day one.</p>
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <UploadSlot label="Store logo" buttonLabel="Upload logo" preview={logoPreview} onPick={(f) => readAsDataUrl(f, setLogoPreview)} />
-          <UploadSlot label="Store Banner" buttonLabel="Upload Banner" preview={bannerPreview} onPick={(f) => readAsDataUrl(f, setBannerPreview)} />
+          <UploadSlot label="Store logo" buttonLabel="Upload logo" preview={logo?.preview ?? null} onPick={pickImage(setLogo)} />
+          <UploadSlot label="Store Banner" buttonLabel="Upload Banner" preview={banner?.preview ?? null} onPick={pickImage(setBanner)} />
           <UploadSlot
             label="Store Phone"
             buttonLabel="Upload Shop Photo"
-            preview={shopPhotoPreview}
-            onPick={(f) => readAsDataUrl(f, setShopPhotoPreview)}
+            preview={shopPhoto?.preview ?? null}
+            onPick={pickImage(setShopPhoto)}
           />
         </div>
       </div>

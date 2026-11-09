@@ -5,12 +5,13 @@ import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { ChevronLeft, Mic, Paperclip, Send } from "lucide-react";
 import type { Store } from "@/types/catalog";
+import type { ChatMessage } from "@/types/chat";
 import { RequireLogin } from "@/components/auth/require-login";
 import { Container } from "@/components/ui/container";
 import { Media } from "@/components/ui/media";
+import { useChatMessages, useSendMessage, useStoreThread } from "@/hooks/use-chats";
 import { cn } from "@/libs/cn";
 import { formatChatDayDivider, formatChatTime } from "@/libs/format";
-import { type ChatMessage, mockChatMessages } from "@/mocks/chat.mock";
 
 /** Flattens messages into render items, inserting a "Today" / "Yesterday" / date pill before each new day. */
 function withDayDividers(messages: ChatMessage[]) {
@@ -27,23 +28,52 @@ function withDayDividers(messages: ChatMessage[]) {
   return items;
 }
 
+/** Whoever is on the other end of the conversation, as little of them as the header needs. */
+export type ChatPeer = {
+  name: string;
+  logoUrl: string | null;
+  /** Present for a vendor store, so the header can link back to it. */
+  slug?: string | null;
+};
+
 /**
- * Also reused standalone (no `onBack`) by the account "Chats" tab, which swaps the store-page link for a
- * list-view back button on narrow screens, or embeds this directly beside the thread list (`className`
- * override) as the right-hand pane of its desktop sidebar layout.
+ * One conversation, for a thread that is already known. `ChatThread` wraps this for the store page
+ * (where only the store is known); the account "Chats" tab renders it directly from its thread list.
  */
-export function ChatThread({ store, onBack, className }: { store: Store; onBack?: () => void; className?: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => mockChatMessages(store.name));
+export function ChatConversation({
+  peer,
+  threadId,
+  isOpening = false,
+  onBack,
+  className,
+}: {
+  peer: ChatPeer;
+  threadId: string | undefined;
+  /** True while the thread id is still being resolved. */
+  isOpening?: boolean;
+  onBack?: () => void;
+  className?: string;
+}) {
+  const messages = useChatMessages(threadId);
+  const send = useSendMessage(threadId);
   const [draft, setDraft] = useState("");
-  const items = useMemo(() => withDayDividers(messages), [messages]);
+  const items = useMemo(() => withDayDividers(messages.data ?? []), [messages.data]);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = draft.trim();
-    if (!text) return;
-    setMessages((prev) => [...prev, { id: crypto.randomUUID(), from: "me", text, createdAt: new Date().toISOString() }]);
+    if (!text || send.isPending) return;
+    // Cleared up front so the box feels instant, and put back if the send fails.
     setDraft("");
+    send.mutate(text, {
+      onError: (error) => {
+        setDraft(text);
+        toast.error(error instanceof Error ? error.message : "Your message didn’t send");
+      },
+    });
   };
+
+  const loading = isOpening || messages.isPending;
 
   return (
     <div className={cn("flex h-[calc(100vh-10rem)] flex-col overflow-hidden rounded-3xl border border-line bg-surface", className)}>
@@ -53,18 +83,37 @@ export function ChatThread({ store, onBack, className }: { store: Store; onBack?
             <ChevronLeft className="size-5" aria-hidden />
           </button>
         ) : (
-          <Link href={`/stores/${store.slug}`} className="press grid size-9 shrink-0 place-items-center rounded-full hover:bg-surface-muted" aria-label="Back to store">
-            <ChevronLeft className="size-5" aria-hidden />
-          </Link>
+          peer.slug && (
+            <Link href={`/stores/${peer.slug}`} className="press grid size-9 shrink-0 place-items-center rounded-full hover:bg-surface-muted" aria-label="Back to store">
+              <ChevronLeft className="size-5" aria-hidden />
+            </Link>
+          )
         )}
-        <Media src={store.logoUrl} name={store.name} sizes="40px" className="size-10 shrink-0 rounded-full" />
+        <Media src={peer.logoUrl} name={peer.name} sizes="40px" className="size-10 shrink-0 rounded-full" />
         <div className="min-w-0">
-          <p className="truncate font-semibold">{store.name}</p>
+          <p className="truncate font-semibold">{peer.name}</p>
           <p className="text-xs text-muted">Usually replies within a few hours</p>
         </div>
       </div>
 
       <ul className="flex-1 space-y-3 overflow-y-auto px-5 py-6">
+        {loading ? (
+          <li className="space-y-3" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={cn("h-12 animate-pulse rounded-2xl bg-surface-muted", i % 2 ? "ml-auto w-1/2" : "w-2/3")} />
+            ))}
+          </li>
+        ) : messages.isError ? (
+          <li className="py-10 text-center text-sm text-muted">
+            We couldn’t load this conversation.{" "}
+            <button type="button" onClick={() => messages.refetch()} className="press font-medium text-accent underline">
+              Try again
+            </button>
+          </li>
+        ) : items.length === 0 ? (
+          <li className="py-10 text-center text-sm text-muted">No messages yet — say hello to {peer.name}.</li>
+        ) : null}
+
         {items.map((item) => {
           if (item.kind === "divider") {
             return (
@@ -89,7 +138,7 @@ export function ChatThread({ store, onBack, className }: { store: Store; onBack?
       <form onSubmit={onSubmit} className="flex items-center gap-2 border-t border-line p-4">
         <button
           type="button"
-          onClick={() => toast("Attachments aren't available yet")}
+          onClick={() => toast("Attachments aren’t available yet")}
           aria-label="Attach a file"
           className="press grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-muted"
         >
@@ -99,21 +148,22 @@ export function ChatThread({ store, onBack, className }: { store: Store; onBack?
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={`Message ${store.name}…`}
+          placeholder={`Message ${peer.name}…`}
           className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-sm outline-none focus-visible:outline-none focus:border-foreground"
         />
         {draft.trim() ? (
           <button
             type="submit"
             aria-label="Send message"
-            className="press grid size-11 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground"
+            disabled={send.isPending || !threadId}
+            className="press grid size-11 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground disabled:opacity-60"
           >
             <Send className="size-4.5" aria-hidden />
           </button>
         ) : (
           <button
             type="button"
-            onClick={() => toast("Voice messages aren't available yet")}
+            onClick={() => toast("Voice messages aren’t available yet")}
             aria-label="Record a voice message"
             className="press grid size-11 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground"
           >
@@ -122,6 +172,21 @@ export function ChatThread({ store, onBack, className }: { store: Store; onBack?
         )}
       </form>
     </div>
+  );
+}
+
+/** The conversation with a vendor, opening (or reusing) the thread for that store first. */
+export function ChatThread({ store, onBack, className }: { store: Store; onBack?: () => void; className?: string }) {
+  const thread = useStoreThread(store.id);
+
+  return (
+    <ChatConversation
+      peer={{ name: store.name, logoUrl: store.logoUrl, slug: store.slug }}
+      threadId={thread.data?.id}
+      isOpening={thread.isPending}
+      onBack={onBack}
+      className={className}
+    />
   );
 }
 

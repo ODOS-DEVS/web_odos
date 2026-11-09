@@ -1,4 +1,5 @@
 import type { DeliverySpeed } from "./delivery";
+import type { ReturnRequest } from "./returns";
 
 export type { DeliverySpeed };
 
@@ -62,6 +63,8 @@ export type Order = {
   total: number;
   packages: OrderPackage[];
   timeline: TrackingEvent[];
+  /** Return/exchange/refund requests the shopper has filed against this order. */
+  returnRequests: ReturnRequest[];
   address: {
     name: string;
     phone: string;

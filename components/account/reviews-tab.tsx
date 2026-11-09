@@ -8,12 +8,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { inputClass } from "@/components/ui/field";
 import { Media } from "@/components/ui/media";
 import { useMyReviewForItem, useMyReviews } from "@/hooks/use-my-reviews";
+import { useOrders } from "@/hooks/use-orders";
 import { cn } from "@/libs/cn";
 import { formatDate } from "@/libs/format";
-import { MOCK_ORDERS } from "@/mocks/orders.mock";
+import type { Order } from "@/types/order";
 
 type ReviewableItem = {
   orderItemId: string;
+  orderId: string;
   productId: string;
   name: string;
   imageUrl: string | null;
@@ -21,14 +23,26 @@ type ReviewableItem = {
   deliveredAt: string;
 };
 
-function reviewableItems(): ReviewableItem[] {
+/**
+ * Only delivered packages can be reviewed, which is also what the API enforces. Reviews are keyed by
+ * order + product, so the same product bought twice is reviewable once per order.
+ */
+function reviewableItems(orders: Order[]): ReviewableItem[] {
   const items: ReviewableItem[] = [];
-  for (const order of MOCK_ORDERS) {
+  for (const order of orders) {
     for (const pkg of order.packages) {
       if (pkg.status !== "delivered") continue;
       const deliveredAt = order.timeline.find((t) => t.label === "Delivered")?.at ?? order.placedAt;
       for (const item of pkg.items) {
-        items.push({ orderItemId: item.id, productId: item.productId, name: item.name, imageUrl: item.imageUrl, orderNumber: order.number, deliveredAt });
+        items.push({
+          orderItemId: item.id,
+          orderId: order.id,
+          productId: item.productId,
+          name: item.name,
+          imageUrl: item.imageUrl,
+          orderNumber: order.number,
+          deliveredAt,
+        });
       }
     }
   }
@@ -76,10 +90,17 @@ function ReviewForm({ item, initial, onCancel, onDone }: { item: ReviewableItem;
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (rating === 0) return;
-    submit({ orderItemId: item.orderItemId, productId: item.productId, rating, comment: comment.trim() });
-    toast.success("Review submitted");
-    onDone();
+    if (rating === 0 || submit.isPending) return;
+    submit.mutate(
+      { orderId: item.orderId, productId: item.productId, rating, comment: comment.trim() },
+      {
+        onSuccess: () => {
+          toast.success("Review submitted");
+          onDone();
+        },
+        onError: (error) => toast.error(error instanceof Error ? error.message : "We couldn't submit your review"),
+      },
+    );
   };
 
   return (
@@ -102,8 +123,8 @@ function ReviewForm({ item, initial, onCancel, onDone }: { item: ReviewableItem;
         />
       </div>
       <div className="flex gap-2.5">
-        <Button type="submit" variant="accent" disabled={rating === 0}>
-          Submit review
+        <Button type="submit" variant="accent" disabled={rating === 0 || submit.isPending}>
+          {submit.isPending ? "Submitting…" : "Submit review"}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
@@ -114,7 +135,7 @@ function ReviewForm({ item, initial, onCancel, onDone }: { item: ReviewableItem;
 }
 
 function ReviewableItemRow({ item }: { item: ReviewableItem }) {
-  const review = useMyReviewForItem(item.orderItemId);
+  const review = useMyReviewForItem(item.orderId, item.productId);
   const [open, setOpen] = useState(false);
 
   return (
@@ -160,7 +181,18 @@ function ReviewableItemRow({ item }: { item: ReviewableItem }) {
 }
 
 export function ReviewsTab() {
-  const items = reviewableItems();
+  const orders = useOrders();
+  const items = reviewableItems(orders.data ?? []);
+
+  if (orders.isPending) {
+    return (
+      <div className="space-y-4" aria-busy="true">
+        {[0, 1].map((i) => (
+          <div key={i} className="h-24 animate-pulse rounded-2xl bg-surface-muted" />
+        ))}
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (

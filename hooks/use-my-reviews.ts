@@ -1,53 +1,39 @@
 "use client";
 
-import { useMemo } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { useMounted } from "./use-mounted";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { reviewsService, type ReviewInput } from "@/services/reviews.service";
+import { queryKeys, reviewQueries } from "@/services/queries";
+import type { MyReview } from "@/types/review";
+import { useSession } from "./use-auth";
 
-export type MyReview = {
-  id: string;
-  orderItemId: string;
-  productId: string;
-  rating: number;
-  comment: string;
-  createdAt: string;
-};
+export type { MyReview };
 
-type SubmitInput = { orderItemId: string; productId: string; rating: number; comment: string };
-
-type MyReviewsState = {
-  reviews: MyReview[];
-  submit: (input: SubmitInput) => void;
-};
-
-// No reviews endpoint wired up yet, so the shopper's own reviews live in the browser like returns.
-const useMyReviewsStore = create<MyReviewsState>()(
-  persist(
-    (set, get) => ({
-      reviews: [],
-      submit: (input) => {
-        const existing = get().reviews.find((r) => r.orderItemId === input.orderItemId);
-        const review: MyReview = { ...input, id: existing?.id ?? crypto.randomUUID(), createdAt: new Date().toISOString() };
-        set({ reviews: [review, ...get().reviews.filter((r) => r.orderItemId !== input.orderItemId)] });
-      },
-    }),
-    { name: "odos-my-reviews-v1" },
-  ),
-);
-
-/** The shopper's own submitted product reviews. `ready` is false until the client has mounted. */
+/** The shopper's own submitted reviews, and the mutation that writes one. */
 export function useMyReviews() {
-  const ready = useMounted();
-  const stored = useMyReviewsStore((s) => s.reviews);
-  const submit = useMyReviewsStore((s) => s.submit);
-  const reviews = useMemo(() => (ready ? stored : []), [ready, stored]);
-  return { ready, reviews, submit };
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const query = useQuery({ ...reviewQueries.mine(), enabled: Boolean(session) });
+
+  const submit = useMutation({
+    mutationFn: (input: ReviewInput) => reviewsService.upsert(input),
+    onSuccess: (_result, input) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.myReviews });
+      // The product's own review list and its rating change too.
+      queryClient.invalidateQueries({ queryKey: queryKeys.reviews(input.productId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.product(input.productId) });
+    },
+  });
+
+  return {
+    ready: Boolean(session) && query.isSuccess,
+    reviews: query.data ?? [],
+    isPending: query.isPending,
+    submit,
+  };
 }
 
-/** The shopper's own review for a given order item, if any. */
-export function useMyReviewForItem(orderItemId: string) {
-  const ready = useMounted();
-  const review = useMyReviewsStore((s) => s.reviews.find((r) => r.orderItemId === orderItemId));
-  return ready ? review : undefined;
+/** The shopper's review of one product on one order, if they have written it. */
+export function useMyReviewForItem(orderId: string, productId: string): MyReview | undefined {
+  const { reviews } = useMyReviews();
+  return reviews.find((r) => r.orderId === orderId && r.productId === productId);
 }

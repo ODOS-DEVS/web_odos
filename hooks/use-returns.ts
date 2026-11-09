@@ -1,52 +1,47 @@
 "use client";
 
 import { useMemo } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { ReturnRequest, ReturnRequestType } from "@/types/returns";
-import { useMounted } from "./use-mounted";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ordersService, type ReturnInput } from "@/services/orders.service";
+import { queryKeys } from "@/services/queries";
+import type { ReturnRequest } from "@/types/returns";
+import { useOrders } from "./use-orders";
 
-type SubmitInput = {
-  itemId: string;
-  type: ReturnRequestType;
-  quantity: number;
-  reason: string;
-  details: string;
-  photoNames: string[];
-};
-
-type ReturnsState = {
-  requests: ReturnRequest[];
-  submit: (input: SubmitInput) => ReturnRequest;
-};
-
-// There's no returns endpoint wired up yet, so requests live in the browser like wallet/favorites.
-const useReturnsStore = create<ReturnsState>()(
-  persist(
-    (set, get) => ({
-      requests: [],
-      submit: (input) => {
-        const request: ReturnRequest = { ...input, id: crypto.randomUUID(), status: "pending", createdAt: new Date().toISOString() };
-        set({ requests: [request, ...get().requests] });
-        return request;
-      },
-    }),
-    { name: "odos-returns-v1" },
-  ),
-);
-
-/** The shopper's filed return/exchange/refund requests. `ready` is false until the client has mounted. */
+/**
+ * The shopper's filed return requests. These travel with the order itself
+ * (`OrderRead.return_requests`), so there is no separate list endpoint to call — and no local copy
+ * that could disagree with what the vendor sees.
+ */
 export function useReturns() {
-  const ready = useMounted();
-  const stored = useReturnsStore((s) => s.requests);
-  const submit = useReturnsStore((s) => s.submit);
-  const requests = useMemo(() => (ready ? stored : []), [ready, stored]);
-  return { ready, requests, submit };
+  const orders = useOrders();
+  const queryClient = useQueryClient();
+
+  const requests = useMemo<ReturnRequest[]>(
+    () =>
+      (orders.data ?? [])
+        .flatMap((order) => order.returnRequests)
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    [orders.data],
+  );
+
+  const submit = useMutation({
+    mutationFn: ({ orderId, ...input }: ReturnInput & { orderId: string }) => ordersService.createReturn(orderId, input),
+    onSuccess: (_result, { orderId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders });
+      queryClient.invalidateQueries({ queryKey: queryKeys.order(orderId) });
+    },
+  });
+
+  return {
+    ready: orders.isSuccess,
+    requests,
+    isPending: orders.isPending,
+    submit,
+  };
 }
 
-/** The most recent request filed against a given eligible item, if any. */
-export function useReturnRequestForItem(itemId: string) {
-  const ready = useMounted();
-  const request = useReturnsStore((s) => s.requests.find((r) => r.itemId === itemId));
-  return ready ? request : undefined;
+/** The most recent request filed against a given order line, if any. */
+export function useReturnRequestForItem(itemId: string): ReturnRequest | undefined {
+  const { requests } = useReturns();
+  return requests.find((r) => r.itemId === itemId);
 }

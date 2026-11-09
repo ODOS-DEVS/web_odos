@@ -1,7 +1,8 @@
 import type { CategoryRead, MarketRead, ProductRead, ProductReviewRead, StoreRead, StoreVoucherRead } from "@/types/api";
 import type { Category, Market, Product, ProductTag, Review, Store, Voucher } from "@/types/catalog";
-import type { OrderItemRead, OrderPackageRead, OrderRead } from "@/types/api";
+import type { OrderItemRead, OrderPackageRead, OrderRead, ReturnRequestRead } from "@/types/api";
 import type { FulfilmentStatus, Order, OrderItem, OrderPackage } from "@/types/order";
+import type { ReturnRequest, ReturnRequestType } from "@/types/returns";
 import { rollupStatus } from "@/libs/orders";
 
 const NEW_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
@@ -192,6 +193,26 @@ function toPackage(p: OrderPackageRead, items: OrderItem[]): OrderPackage {
   };
 }
 
+const RETURN_TYPES = new Set<ReturnRequestType>(["refund", "exchange", "return"]);
+
+function toReturnRequest(r: ReturnRequestRead): ReturnRequest {
+  return {
+    id: r.id,
+    orderId: r.order_id,
+    itemId: r.order_item_id,
+    // Free text on the wire; anything unrecognised is treated as a plain return.
+    type: RETURN_TYPES.has(r.request_type as ReturnRequestType) ? (r.request_type as ReturnRequestType) : "return",
+    quantity: r.quantity,
+    reason: r.reason,
+    details: r.details ?? "",
+    status: r.status,
+    evidenceImageUrls: r.evidence_image_urls ?? [],
+    adminNote: r.admin_note ?? null,
+    refundAmount: r.refund_amount ?? null,
+    createdAt: r.created_at,
+  };
+}
+
 export function toOrder(o: OrderRead): Order {
   const items = o.items.map(toOrderItem);
   const byId = new Map(items.map((i) => [i.id, i]));
@@ -217,6 +238,7 @@ export function toOrder(o: OrderRead): Order {
     total: o.total_amount,
     packages,
     timeline: (o.timeline ?? []).map((e) => ({ at: e.occurred_at, label: e.note?.trim() || humanise(e.status) })),
+    returnRequests: (o.return_requests ?? []).map(toReturnRequest),
     address: {
       name: o.address_full_name,
       phone: o.address_phone,

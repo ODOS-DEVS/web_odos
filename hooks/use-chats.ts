@@ -1,45 +1,63 @@
 "use client";
 
-import { useMemo } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { MOCK_STORES } from "@/mocks/catalog.mock";
-import { mockChatThreads, type ChatThreadSummary } from "@/mocks/chat.mock";
-import { useMounted } from "./use-mounted";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { chatService } from "@/services/chat.service";
+import { chatQueries, queryKeys } from "@/services/queries";
+import { useSession } from "./use-auth";
 
-const BASE_THREADS = mockChatThreads(MOCK_STORES);
+/** How often an open conversation re-checks for a vendor reply. There are no websockets on the API. */
+const MESSAGE_POLL_MS = 15_000;
 
-type ChatsState = {
-  readSlugs: string[];
-  markRead: (slug: string) => void;
-};
-
-// There's no chat-read-state endpoint wired up yet, so it lives in the browser like wallet/favorites.
-const useChatsStore = create<ChatsState>()(
-  persist(
-    (set, get) => ({
-      readSlugs: [],
-      markRead: (slug) => {
-        if (get().readSlugs.includes(slug)) return;
-        set({ readSlugs: [...get().readSlugs, slug] });
-      },
-    }),
-    { name: "odos-chats-v1" },
-  ),
-);
-
-/** The shopper's vendor chat threads, with unread state that clears once a thread's been opened. */
+/** Every conversation the shopper has, newest activity first. */
 export function useChatThreads() {
-  const ready = useMounted();
-  const readSlugs = useChatsStore((s) => s.readSlugs);
-  const markRead = useChatsStore((s) => s.markRead);
+  const session = useSession();
+  const query = useQuery({ ...chatQueries.threads(), enabled: Boolean(session) });
+  const threads = query.data ?? [];
 
-  const threads = useMemo<ChatThreadSummary[]>(
-    () => BASE_THREADS.map((t) => ({ ...t, unread: t.unread && !readSlugs.includes(t.store.slug) })),
-    [readSlugs],
-  );
+  return {
+    ready: Boolean(session) && query.isSuccess,
+    threads,
+    unreadCount: threads.reduce((total, thread) => total + thread.unreadCount, 0),
+    isPending: query.isPending,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  };
+}
 
-  const unreadCount = ready ? threads.filter((t) => t.unread).length : 0;
+/**
+ * Opens the conversation with a vendor. "Ensure" is idempotent on the API, so this runs on every
+ * mount and either creates the thread or hands back the existing one.
+ */
+export function useStoreThread(storeId: string | undefined) {
+  const session = useSession();
+  return useQuery({
+    ...chatQueries.storeThread(storeId ?? ""),
+    enabled: Boolean(session && storeId),
+  });
+}
 
-  return { ready, threads, unreadCount, markRead };
+/** Messages in a thread, polled while the conversation is on screen. */
+export function useChatMessages(threadId: string | undefined) {
+  const session = useSession();
+  return useQuery({
+    ...chatQueries.messages(threadId ?? ""),
+    enabled: Boolean(session && threadId),
+    refetchInterval: threadId ? MESSAGE_POLL_MS : false,
+  });
+}
+
+export function useSendMessage(threadId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (text: string) => {
+      if (!threadId) throw new Error("The conversation is still opening. Please try again.");
+      return chatService.send(threadId, text);
+    },
+    onSuccess: () => {
+      if (threadId) queryClient.invalidateQueries({ queryKey: queryKeys.chatMessages(threadId) });
+      // The thread list shows the last message and unread counts, so it moves too.
+      queryClient.invalidateQueries({ queryKey: queryKeys.chatThreads });
+    },
+  });
 }

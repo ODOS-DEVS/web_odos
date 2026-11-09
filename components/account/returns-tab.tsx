@@ -12,10 +12,36 @@ import { Media } from "@/components/ui/media";
 import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { TogglePill } from "@/components/ui/toggle-pill";
 import { useQueryParam } from "@/hooks/use-query-param";
+import { useOrders } from "@/hooks/use-orders";
 import { useReturnRequestForItem, useReturns } from "@/hooks/use-returns";
 import { cn } from "@/libs/cn";
 import { formatDate, formatMoney } from "@/libs/format";
-import { MOCK_RETURN_ELIGIBLE_ITEMS } from "@/mocks/returns.mock";
+import type { Order } from "@/types/order";
+
+/** Every line of a delivered package, which is exactly what the API will accept a request against. */
+function returnEligibleItems(orders: Order[]): ReturnEligibleItem[] {
+  const items: ReturnEligibleItem[] = [];
+  for (const order of orders) {
+    for (const pkg of order.packages) {
+      if (pkg.status !== "delivered") continue;
+      const deliveredAt = order.timeline.find((t) => t.label === "Delivered")?.at ?? order.placedAt;
+      for (const item of pkg.items) {
+        items.push({
+          id: item.id,
+          orderId: order.id,
+          orderNumber: order.number,
+          name: item.name,
+          imageUrl: item.imageUrl,
+          variant: [item.size, item.color].filter(Boolean).join(" · "),
+          deliveredAt,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        });
+      }
+    }
+  }
+  return items;
+}
 
 const REQUEST_TYPES: { id: ReturnRequestType; label: string }[] = [
   { id: "refund", label: "Refund" },
@@ -53,21 +79,36 @@ function ReturnRequestForm({ item, onCancel, onSubmitted }: { item: ReturnEligib
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
-  const [photoNames, setPhotoNames] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<File[]>([]);
 
   const onAddPhotos = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
-    setPhotoNames((prev) => [...prev, ...files.map((f) => f.name)].slice(0, 3));
+    setPhotos((prev) => [...prev, ...files].slice(0, 3));
     event.target.value = "";
   };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!reason.trim()) return;
-    submit({ itemId: item.id, type, quantity, reason: reason.trim(), details: details.trim(), photoNames });
-    toast.success("Return request submitted");
-    onSubmitted();
+    if (!reason.trim() || submit.isPending) return;
+    submit.mutate(
+      {
+        orderId: item.orderId,
+        orderItemId: item.id,
+        type,
+        quantity,
+        reason: reason.trim(),
+        details: details.trim(),
+        images: photos,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Return request submitted");
+          onSubmitted();
+        },
+        onError: (error) => toast.error(error instanceof Error ? error.message : "We couldn't submit that request"),
+      },
+    );
   };
 
   return (
@@ -141,7 +182,7 @@ function ReturnRequestForm({ item, onCancel, onSubmitted }: { item: ReturnEligib
           <button
             type="button"
             onClick={() => photoInputRef.current?.click()}
-            disabled={photoNames.length >= 3}
+            disabled={photos.length >= 3}
             className="press inline-flex items-center gap-1.5 rounded-full border border-accent px-3.5 py-1.5 text-sm font-medium text-accent hover:bg-accent-soft disabled:pointer-events-none disabled:opacity-50"
           >
             <ImagePlus className="size-4" aria-hidden />
@@ -150,15 +191,15 @@ function ReturnRequestForm({ item, onCancel, onSubmitted }: { item: ReturnEligib
           <input ref={photoInputRef} type="file" accept="image/*" multiple onChange={onAddPhotos} className="sr-only" />
         </div>
 
-        {photoNames.length > 0 && (
+        {photos.length > 0 && (
           <ul className="mt-3 space-y-2">
-            {photoNames.map((name, i) => (
-              <li key={`${name}-${i}`} className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-sm">
-                <span className="truncate">{name}</span>
+            {photos.map((file, i) => (
+              <li key={`${file.name}-${i}`} className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-sm">
+                <span className="truncate">{file.name}</span>
                 <button
                   type="button"
-                  onClick={() => setPhotoNames((prev) => prev.filter((_, idx) => idx !== i))}
-                  aria-label={`Remove ${name}`}
+                  onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                  aria-label={`Remove ${file.name}`}
                   className="press shrink-0 rounded-full p-1 text-muted hover:bg-surface-muted"
                 >
                   <X className="size-3.5" aria-hidden />
@@ -200,7 +241,8 @@ function ReturnItemCard({ item, onStart }: { item: ReturnEligibleItem; onStart: 
 
 export function ReturnsTab() {
   const [activeItemId, setActiveItemId] = useQueryParam("returnItem");
-  const items = MOCK_RETURN_ELIGIBLE_ITEMS;
+  const orders = useOrders();
+  const items = returnEligibleItems(orders.data ?? []);
   const activeItem = items.find((i) => i.id === activeItemId) ?? null;
 
   if (activeItem) {

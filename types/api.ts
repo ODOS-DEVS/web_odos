@@ -353,7 +353,7 @@ export type OrderRead = {
   created_at: string;
   updated_at: string;
   items: OrderItemRead[];
-  return_requests: unknown[];
+  return_requests?: ReturnRequestRead[] | null;
   timeline: OrderStatusEventRead[];
   packages: OrderPackageRead[];
 };
@@ -508,4 +508,21 @@ export type AddressCreate = {
   city: string;
   region: string;
   is_default?: boolean;
+};
+
+/* ---------- Returns ---------- */
+
+export type ReturnRequestRead = {
+  id: string;
+  order_id: string;
+  order_item_id: string;
+  request_type: string;
+  status: string;
+  quantity: number;
+  reason: string;
+  details?: string | null;
+  evidence_image_urls?: string[] | null;
+  admin_note?: string | null;
+  refund_amount?: number | null;
+  created_at: string;
 };
