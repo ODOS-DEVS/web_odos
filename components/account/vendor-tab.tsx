@@ -10,7 +10,7 @@ import { Field, inputClass } from "@/components/ui/field";
 import { TogglePill } from "@/components/ui/toggle-pill";
 import { useSession } from "@/hooks/use-auth";
 import { useQueryParam } from "@/hooks/use-query-param";
-import { GHANA_REGIONS } from "@/libs/checkout";
+import { RegionCitySelect } from "@/components/ui/region-city-select";
 import { cn } from "@/libs/cn";
 import { useMarkets } from "@/hooks/use-catalog";
 import { useApplyAsVendor } from "@/hooks/use-vendor-application";
@@ -243,19 +243,15 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
           />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="region" className="mb-1.5 block text-sm font-medium">
-              Region *
-            </label>
-            <select id="region" name="region" required value={region} onChange={(e) => setRegion(e.target.value)} className={inputClass}>
-              {GHANA_REGIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Field id="city" label="City *" placeholder="eg. Accra" required value={city} onChange={(e) => setCity(e.target.value)} />
+          <RegionCitySelect
+            idPrefix="vendor"
+            required
+            cityLabel="City"
+            region={region}
+            city={city}
+            onRegionChange={setRegion}
+            onCityChange={setCity}
+          />
         </div>
       </div>
 

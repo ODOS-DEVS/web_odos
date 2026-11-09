@@ -22,6 +22,29 @@ export const authService = {
 
   updateMe: (input: UserUpdate) => apiFetch<UserRead>(IDENTITY_ENDPOINTS.me, { method: "PATCH", body: input }),
 
+  /**
+   * Sends a 6-digit OTP. `link_to_profile` tells the backend this number is meant to become the
+   * account's phone, which is what later lets `PATCH /auth/me` accept it.
+   */
+  sendPhoneCode: (phoneNumber: string, linkToProfile = true) =>
+    apiFetch<MessageResponse>(IDENTITY_ENDPOINTS.phoneSendCode, {
+      method: "POST",
+      body: { phone_number: phoneNumber, link_to_profile: linkToProfile },
+    }),
+
+  /** Returns the updated user: on success the backend has set `phone_number` and `phone_verified`. */
+  verifyPhone: (phoneNumber: string, code: string, linkToProfile = true) =>
+    apiFetch<UserRead>(IDENTITY_ENDPOINTS.phoneVerify, {
+      method: "POST",
+      body: { phone_number: phoneNumber, code, link_to_profile: linkToProfile },
+    }),
+
+  /** Every number this account has proven it controls. */
+  async verifiedPhones(): Promise<string[]> {
+    const result = await apiFetch<{ phones: string[] }>(IDENTITY_ENDPOINTS.phoneVerified, { revalidate: false });
+    return result.phones ?? [];
+  },
+
   verifyEmail: (code: string) =>
     apiFetch<UserRead>(IDENTITY_ENDPOINTS.verifyEmail, { method: "POST", body: { code } }),
 

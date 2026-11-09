@@ -51,6 +51,7 @@ export const queryKeys = {
   chatStoreThread: (storeId: string) => ["chat", "store-thread", storeId] as const,
   chatMessages: (threadId: string) => ["chat", "messages", threadId] as const,
   me: ["auth", "me"] as const,
+  verifiedPhones: ["auth", "verified-phones"] as const,
   orders: ["orders"] as const,
   paymentVerification: (reference: string) => ["payments", "verify", reference] as const,
   order: (id: string) => ["orders", id] as const,

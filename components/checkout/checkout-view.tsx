@@ -9,10 +9,11 @@ import { RequireLogin } from "@/components/auth/require-login";
 import { OrderSummary } from "@/components/cart/order-summary";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, inputClass } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
 import { useSession } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
-import { GHANA_REGIONS, toOrderItems } from "@/libs/checkout";
+import { RegionCitySelect } from "@/components/ui/region-city-select";
+import { toOrderItems } from "@/libs/checkout";
 import { formatMoney } from "@/libs/format";
 import { useDeliveryQuote } from "@/hooks/use-delivery-quote";
 import { useCheckout } from "@/hooks/use-orders";
@@ -114,20 +115,16 @@ function CheckoutForm() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field id="name" label="Full name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} className="sm:col-span-2" />
             <Field id="phone" label="Phone number" type="tel" autoComplete="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <Field id="city" label="City or town" autoComplete="address-level2" required value={city} onChange={(e) => setCity(e.target.value)} />
             <Field id="street" label="Street address" autoComplete="street-address" required value={street} onChange={(e) => setStreet(e.target.value)} className="sm:col-span-2" />
-            <div>
-              <label htmlFor="region" className="mb-1.5 block text-sm font-medium">
-                Region
-              </label>
-              <select id="region" name="region" required value={region} onChange={(e) => setRegion(e.target.value)} className={inputClass}>
-                {GHANA_REGIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <RegionCitySelect
+              idPrefix="checkout"
+              required
+              cityLabel="City or town"
+              region={region}
+              city={city}
+              onRegionChange={setRegion}
+              onCityChange={setCity}
+            />
             <Field
               id="notes"
               label="Delivery notes"

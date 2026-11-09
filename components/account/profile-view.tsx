@@ -25,7 +25,8 @@ import { Container } from "@/components/ui/container";
 import { Field, inputClass } from "@/components/ui/field";
 import { Media } from "@/components/ui/media";
 import { useSession } from "@/hooks/use-auth";
-import { GHANA_REGIONS } from "@/libs/checkout";
+import { PhoneVerification } from "@/components/account/phone-verification";
+import { RegionCitySelect } from "@/components/ui/region-city-select";
 import { cn } from "@/libs/cn";
 import { formatDate } from "@/libs/format";
 import { useUpdateProfile } from "@/hooks/use-auth";
@@ -129,7 +130,6 @@ function ProfileDetailsForm({ user }: { user: UserRead }) {
       avatar_url: avatarUrl,
       date_of_birth: dateOfBirth || null,
       gender: gender || null,
-      phone_number: phone.trim() || null,
       city: city.trim() || null,
       region,
       allow_notifications: allowNotifications,
@@ -173,7 +173,7 @@ function ProfileDetailsForm({ user }: { user: UserRead }) {
           <Field id="otherNames" label="Other names" autoComplete="additional-name" value={otherNames} onChange={(e) => setOtherNames(e.target.value)} />
           <Field id="email" label="Email" hint="Contact support to change" type="email" value={user.email} disabled />
           <Field id="dateOfBirth" label="Date of birth" type="date" autoComplete="bday" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
-          <Field id="phone" label="Phone number" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <PhoneVerification phone={phone} onPhoneChange={setPhone} />
           <div>
             <label htmlFor="gender" className="mb-1.5 block text-sm font-medium">
               Gender
@@ -189,19 +189,7 @@ function ProfileDetailsForm({ user }: { user: UserRead }) {
               ))}
             </select>
           </div>
-          <div>
-            <label htmlFor="region" className="mb-1.5 block text-sm font-medium">
-              Region
-            </label>
-            <select id="region" name="region" value={region} onChange={(e) => setRegion(e.target.value)} className={inputClass}>
-              {GHANA_REGIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Field id="city" label="Town / city" autoComplete="address-level2" value={city} onChange={(e) => setCity(e.target.value)} />
+          <RegionCitySelect idPrefix="profile" region={region} city={city} onRegionChange={setRegion} onCityChange={setCity} />
         </div>
       </section>
 

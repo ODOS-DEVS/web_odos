@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Field, inputClass } from "@/components/ui/field";
-import { GHANA_REGIONS } from "@/libs/checkout";
+import { Field } from "@/components/ui/field";
+import { RegionCitySelect } from "@/components/ui/region-city-select";
 import { useAddresses } from "@/hooks/use-addresses";
 import type { AddressInput } from "@/services/account.service";
 import type { SavedAddress } from "@/types/account";
@@ -31,20 +31,16 @@ function AddressForm({ initial, onCancel, onDone }: { initial?: SavedAddress; on
         <Field id="address-label" label="Label" placeholder="Home, Office…" value={draft.label} onChange={(e) => set("label", e.target.value)} />
         <Field id="address-name" label="Full name" autoComplete="name" required value={draft.fullName} onChange={(e) => set("fullName", e.target.value)} />
         <Field id="address-phone" label="Phone number" type="tel" autoComplete="tel" required value={draft.phone} onChange={(e) => set("phone", e.target.value)} />
-        <Field id="address-city" label="City or town" autoComplete="address-level2" required value={draft.city} onChange={(e) => set("city", e.target.value)} />
         <Field id="address-street" label="Street address" autoComplete="street-address" required value={draft.street} onChange={(e) => set("street", e.target.value)} className="sm:col-span-2" />
-        <div>
-          <label htmlFor="address-region" className="mb-1.5 block text-sm font-medium">
-            Region
-          </label>
-          <select id="address-region" value={draft.region} onChange={(e) => set("region", e.target.value)} className={inputClass}>
-            {GHANA_REGIONS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
+        <RegionCitySelect
+          idPrefix="address"
+          required
+          cityLabel="City or town"
+          region={draft.region}
+          city={draft.city}
+          onRegionChange={(value) => set("region", value)}
+          onCityChange={(value) => set("city", value)}
+        />
       </div>
 
       <div className="mt-5 flex gap-2.5">
