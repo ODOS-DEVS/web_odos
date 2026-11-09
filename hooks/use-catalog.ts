@@ -10,6 +10,8 @@ export const useCategories = () => useQuery(catalogQueries.categories());
 
 export const useMarkets = () => useQuery(catalogQueries.markets());
 
+export const usePromoBanners = () => useQuery(catalogQueries.promoBanners());
+
 export const useStores = (params: StoreListParams = {}) => useQuery(catalogQueries.stores(params));
 
 export const useStoreSections = (storeId: string | undefined) =>

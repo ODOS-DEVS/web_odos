@@ -175,3 +175,30 @@ export const CHAT_ENDPOINTS = {
   storeThread: (storeId: string) => `/chat/threads/store/${enc(storeId)}`,
   messages: (threadId: string) => `/chat/threads/${enc(threadId)}/messages`,
 } as const;
+
+/**
+ * The seller centre. Two cautions, both learned the hard way and invisible from the types:
+ *
+ * - `product` is a **whole-record write**, not a partial patch: the backend reads a
+ *   present-but-empty `image_urls` as "clear the gallery", so an update must always resend it.
+ *   Use `vendorService.updateProduct`, which builds the payload from the full record.
+ * - There is a second price/stock API under `/vendor/inventory/*`. Avoid it: it anchors on the
+ *   store's vendor id through a subquery that breaks for vendors with more than one store, can
+ *   never clear `old_price`, and reports failure as `{"success": false}` under HTTP 200. The
+ *   `/vendor/products/*` routes below are the mainline ones.
+ */
+export const VENDOR_ENDPOINTS = {
+  applications: "/vendor/applications",
+  myApplication: "/vendor/applications/me",
+  store: "/vendor/store",
+  analytics: "/vendor/analytics",
+  customers: "/vendor/customers",
+  products: "/vendor/products",
+  product: (productId: string) => `/vendor/products/${enc(productId)}`,
+  productStatus: (productId: string) => `/vendor/products/${enc(productId)}/status`,
+  productStock: (productId: string) => `/vendor/products/${enc(productId)}/stock`,
+  orders: "/vendor/orders",
+  order: (orderId: string) => `/vendor/orders/${enc(orderId)}`,
+  orderStatus: (orderId: string) => `/vendor/orders/${enc(orderId)}/status`,
+  orderAcknowledge: (orderId: string) => `/vendor/orders/${enc(orderId)}/acknowledge`,
+} as const;

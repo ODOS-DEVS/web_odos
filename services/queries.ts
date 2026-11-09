@@ -22,6 +22,7 @@ const MINUTE = 60_000;
 export const queryKeys = {
   categories: ["catalog", "categories"] as const,
   markets: ["catalog", "markets"] as const,
+  promoBanners: ["catalog", "promo-banners"] as const,
   stores: (params: StoreListParams = {}) =>
     ["catalog", "stores", params] as const,
   storeSections: (storeId: string) =>
@@ -39,6 +40,11 @@ export const queryKeys = {
   myVouchers: ["vouchers", "me"] as const,
   addresses: ["account", "addresses"] as const,
   myVendorApplication: ["vendor", "application", "me"] as const,
+  vendorStore: ["vendor", "store"] as const,
+  vendorProducts: ["vendor", "products"] as const,
+  vendorOrders: ["vendor", "orders"] as const,
+  vendorCustomers: ["vendor", "customers"] as const,
+  vendorAnalytics: ["vendor", "analytics"] as const,
   wallet: ["wallet"] as const,
   wishlist: ["wishlist"] as const,
   chatThreads: ["chat", "threads"] as const,
@@ -59,6 +65,12 @@ export const catalogQueries = {
     queryOptions({
       queryKey: queryKeys.categories,
       queryFn: () => catalogService.categories(),
+      staleTime: 10 * MINUTE,
+    }),
+  promoBanners: () =>
+    queryOptions({
+      queryKey: queryKeys.promoBanners,
+      queryFn: () => catalogService.promoBanners(),
       staleTime: 10 * MINUTE,
     }),
   markets: () =>
@@ -185,6 +197,36 @@ export const wishlistQueries = {
 };
 
 export const vendorQueries = {
+  store: () =>
+    queryOptions({
+      queryKey: queryKeys.vendorStore,
+      queryFn: () => vendorService.store(),
+      staleTime: 5 * MINUTE,
+    }),
+  products: () =>
+    queryOptions({
+      queryKey: queryKeys.vendorProducts,
+      queryFn: () => vendorService.products(),
+      staleTime: 30_000,
+    }),
+  orders: () =>
+    queryOptions({
+      queryKey: queryKeys.vendorOrders,
+      queryFn: () => vendorService.orders(),
+      staleTime: 15_000,
+    }),
+  customers: () =>
+    queryOptions({
+      queryKey: queryKeys.vendorCustomers,
+      queryFn: () => vendorService.customers(),
+      staleTime: MINUTE,
+    }),
+  analytics: () =>
+    queryOptions({
+      queryKey: queryKeys.vendorAnalytics,
+      queryFn: () => vendorService.analytics(),
+      staleTime: 30_000,
+    }),
   myApplication: () =>
     queryOptions({
       queryKey: queryKeys.myVendorApplication,

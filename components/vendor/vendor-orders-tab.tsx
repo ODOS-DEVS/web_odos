@@ -12,8 +12,8 @@ import { Media } from "@/components/ui/media";
 import { Pagination } from "@/components/ui/pagination";
 import { STATUS_LABEL } from "@/libs/orders";
 import { formatDate, formatMoney } from "@/libs/format";
-import { useFakeMutation } from "@/mocks/mutation";
-import { MOCK_VENDOR_ORDERS, type VendorOrder } from "@/mocks/vendor.mock";
+import { useSetVendorOrderStatus, useVendorOrders } from "@/hooks/use-vendor";
+import type { VendorOrder } from "@/types/vendor";
 import type { FulfilmentStatus } from "@/types/order";
 
 const FILTERS: { value: FulfilmentStatus | "all"; label: string }[] = [
@@ -26,19 +26,18 @@ const FILTERS: { value: FulfilmentStatus | "all"; label: string }[] = [
   { value: "cancelled", label: STATUS_LABEL.cancelled },
 ];
 
-/** The seller-facing action that advances an order to its next fulfilment step, if any. */
-const NEXT_STEP: Partial<Record<FulfilmentStatus, { status: FulfilmentStatus; label: string }>> = {
-  pending: { status: "confirmed", label: "Confirm order" },
-  confirmed: { status: "preparing", label: "Start preparing" },
-  preparing: { status: "out_for_delivery", label: "Mark shipped" },
-  out_for_delivery: { status: "delivered", label: "Mark delivered" },
+/**
+ * The seller-facing action that advances an order to its next fulfilment step, if any. `wire` is what
+ * `PATCH /vendor/orders/{id}/status` expects; `status` is the normalised value the UI renders.
+ */
+const NEXT_STEP: Partial<Record<FulfilmentStatus, { status: FulfilmentStatus; wire: string; label: string }>> = {
+  pending: { status: "confirmed", wire: "confirmed", label: "Confirm order" },
+  confirmed: { status: "preparing", wire: "preparing", label: "Start preparing" },
+  preparing: { status: "out_for_delivery", wire: "dispatched", label: "Mark shipped" },
+  out_for_delivery: { status: "delivered", wire: "delivered", label: "Mark delivered" },
 };
 
 const PAGE_SIZE = 6;
-
-function advanceOrder(input: { id: string; status: FulfilmentStatus }) {
-  return input;
-}
 
 function OrderRow({ order, onSelect, onAdvance, pending }: { order: VendorOrder; onSelect: () => void; onAdvance: () => void; pending: boolean }) {
   const next = NEXT_STEP[order.status];
@@ -72,7 +71,7 @@ function OrderRow({ order, onSelect, onAdvance, pending }: { order: VendorOrder;
           </p>
 
           <div className="mt-3 flex items-center justify-between gap-3">
-            <Badge tone={order.paymentStatus === "paid" ? "success" : "neutral"}>{order.paymentStatus === "paid" ? "Paid" : "Refunded"}</Badge>
+            <Badge tone={order.isSettled ? "success" : "neutral"}>{order.isSettled ? "Settled" : "Awaiting settlement"}</Badge>
             <p className="font-semibold tabular-nums">{formatMoney(order.total)}</p>
           </div>
         </div>
@@ -164,8 +163,8 @@ function OrderDetails({ order, onAdvance, pending }: { order: VendorOrder; onAdv
             <span className="tabular-nums">{formatMoney(order.total)}</span>
           </div>
           <div className="flex items-center justify-between pt-2 text-xs text-muted">
-            <span>Payment</span>
-            <Badge tone={order.paymentStatus === "paid" ? "success" : "neutral"}>{order.paymentStatus === "paid" ? "Paid" : "Refunded"}</Badge>
+            <span>{order.paymentLabel ?? "Payment"}</span>
+            <Badge tone={order.isSettled ? "success" : "neutral"}>{order.isSettled ? "Settled" : "Awaiting settlement"}</Badge>
           </div>
         </section>
       </div>
@@ -182,14 +181,16 @@ function OrderDetails({ order, onAdvance, pending }: { order: VendorOrder; onAdv
 }
 
 export function VendorOrdersTab() {
-  const [orders, setOrders] = useState<VendorOrder[]>(MOCK_VENDOR_ORDERS);
+  const ordersQuery = useVendorOrders();
+  const orders = useMemo(() => ordersQuery.data ?? [], [ordersQuery.data]);
+
   const [filter, setFilter] = useState<FulfilmentStatus | "all">("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [advancingId, setAdvancingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  const advanceMutation = useFakeMutation(advanceOrder);
+  const advanceMutation = useSetVendorOrderStatus();
 
   const counts = useMemo(() => {
     const map = new Map<FulfilmentStatus, number>();
@@ -219,13 +220,12 @@ export function VendorOrdersTab() {
     if (!next) return;
     setAdvancingId(order.id);
     advanceMutation.mutate(
-      { id: order.id, status: next.status },
+      { orderId: order.id, status: next.wire },
       {
-        onSuccess: ({ status }) => {
-          setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status } : o)));
-          toast.success(`Order ${order.number} marked ${STATUS_LABEL[status].toLowerCase()}`);
-          setAdvancingId(null);
-        },
+        onSuccess: () => toast.success(`Order ${order.number} marked ${STATUS_LABEL[next.status].toLowerCase()}`),
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : `We couldn't update order ${order.number}`),
+        onSettled: () => setAdvancingId(null),
       },
     );
   };

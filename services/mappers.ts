@@ -1,5 +1,5 @@
-import type { CategoryRead, MarketRead, ProductRead, ProductReviewRead, StoreRead, StoreVoucherRead } from "@/types/api";
-import type { Category, Market, Product, ProductTag, Review, Store, Voucher } from "@/types/catalog";
+import type { CategoryRead, MarketRead, ProductRead, ProductReviewRead, PromoBannerRead, StoreRead, StoreVoucherRead } from "@/types/api";
+import type { Category, Market, Product, ProductTag, PromoBanner, Review, Store, Voucher } from "@/types/catalog";
 import type { OrderItemRead, OrderPackageRead, OrderRead, ReturnRequestRead } from "@/types/api";
 import type { FulfilmentStatus, Order, OrderItem, OrderPackage } from "@/types/order";
 import type { ReturnRequest, ReturnRequestType } from "@/types/returns";
@@ -32,6 +32,20 @@ export function toMarket(m: MarketRead): Market {
     name: m.title,
     imageUrl: m.image_url ?? null,
     sortOrder: m.sort_order,
+  };
+}
+
+export function toPromoBanner(b: PromoBannerRead): PromoBanner {
+  return {
+    id: b.id,
+    title: b.title,
+    subtitle: b.subtitle ?? null,
+    ctaLabel: b.cta_label,
+    // A banner with no link still has somewhere sensible to go.
+    ctaHref: b.cta_link?.trim() || (b.campaign_tag ? `/products?tag=${encodeURIComponent(b.campaign_tag)}` : "/products"),
+    imageUrl: b.image_url ?? null,
+    accent: b.accent ?? null,
+    sortOrder: b.sort_order,
   };
 }
 

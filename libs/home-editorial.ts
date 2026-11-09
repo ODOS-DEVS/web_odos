@@ -1,37 +1,3 @@
-export type Promo = {
-  id: string;
-  href: string;
-  eyebrow: string;
-  title: string;
-  price: string;
-  originalPrice: string;
-  imageSrc: string;
-  bgClass: string;
-};
-
-export const PROMOS: Promo[] = [
-  {
-    id: "apple-watch",
-    href: "/products/prod-earbuds",
-    eyebrow: "TODAY'S BEST DEAL",
-    title: "APPLE WATCH",
-    price: "GHC 300",
-    originalPrice: "GHC 500",
-    imageSrc: "/images/apple-watch.png",
-    bgClass: "bg-[#383b46]",
-  },
-  {
-    id: "nike",
-    href: "/products/prod-leather-sandals-3",
-    eyebrow: "TODAY'S BEST DEAL",
-    title: "NIKE",
-    price: "GHC 300",
-    originalPrice: "GHC 500",
-    imageSrc: "/images/nike.png",
-    bgClass: "bg-[#16232b]",
-  },
-];
-
 export type Tile = {
   id: string;
   href: string;

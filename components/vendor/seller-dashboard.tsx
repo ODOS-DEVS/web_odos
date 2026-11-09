@@ -22,7 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/libs/cn";
 import { formatMoneyCompact } from "@/libs/format";
-import { MOCK_SELLER_STATS } from "@/mocks/vendor.mock";
+import { useSellerStats } from "@/hooks/use-vendor";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -115,7 +115,24 @@ const MANAGE_ITEMS: { label: string; icon: LucideIcon }[] = [
 
 /** The "Dashboard" tab of the Vendor Account page: today's stats, quick actions, and the manage menu. */
 export function SellerCenter() {
-  const stats = MOCK_SELLER_STATS;
+  const { stats, isPending } = useSellerStats();
+
+  if (isPending || !stats) {
+    return (
+      <div className="space-y-5" aria-busy="true">
+        <div className="h-32 animate-pulse rounded-2xl bg-surface-muted" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="h-24 animate-pulse rounded-2xl bg-surface-muted" />
+          <div className="h-24 animate-pulse rounded-2xl bg-surface-muted" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-surface-muted" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -149,9 +166,9 @@ export function SellerCenter() {
       <section>
         <h2 className="mb-3 text-base font-semibold">Today</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <TodayCard badge={`${stats.ordersRefundedToday} orders`} value={formatMoneyCompact(stats.todaySales)} label="Sales" />
-          <TodayCard badge={`${stats.fulfilledPercent} done`} value={String(stats.todayOrders)} label="Orders" />
-          <TodayCard badge="Act now" value={String(stats.toConfirmToday)} label="To confirm" />
+          <TodayCard badge={`${stats.weekOrders} this week`} value={formatMoneyCompact(stats.todaySales)} label="Sales" />
+          <TodayCard badge={`${stats.fulfilledPercent}% done`} value={String(stats.todayOrders)} label="Orders" />
+          <TodayCard badge={stats.openReturns > 0 ? "Act now" : "All clear"} value={String(stats.openReturns)} label="Open returns" />
         </div>
       </section>
 

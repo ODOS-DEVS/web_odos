@@ -1,8 +1,8 @@
 import { CATALOG_ENDPOINTS } from "@/libs/api-endpoint";
-import type { CategoryRead, MarketRead, ProductRead, StoreRead, StoreSectionRead } from "@/types/api";
-import type { Category, Market, Product, Store } from "@/types/catalog";
+import type { CategoryRead, MarketRead, ProductRead, PromoBannerRead, StoreRead, StoreSectionRead } from "@/types/api";
+import type { Category, Market, Product, PromoBanner, Store } from "@/types/catalog";
 import { apiFetch } from "./http";
-import { toCategory, toMarket, toProduct, toStore } from "./mappers";
+import { toCategory, toMarket, toProduct, toPromoBanner, toStore } from "./mappers";
 
 /** Query params accepted by GET /catalog/products (the API caps `limit` at 100). */
 export type ProductListParams = {
@@ -59,6 +59,11 @@ export const catalogService = {
   async dealProducts(params: { min_discount_percent?: number; campaign_tag?: string; limit?: number; offset?: number } = {}) {
     const rows = await apiFetch<ProductRead[]>(CATALOG_ENDPOINTS.dealProducts, { query: params });
     return rows.map(toProduct);
+  },
+
+  async promoBanners(): Promise<PromoBanner[]> {
+    const rows = await apiFetch<PromoBannerRead[]>(CATALOG_ENDPOINTS.promoBanners);
+    return rows.map(toPromoBanner).sort((a, b) => a.sortOrder - b.sortOrder);
   },
 
   async flashSaleProducts(slug: string) {

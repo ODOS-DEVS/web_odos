@@ -16,7 +16,10 @@ import { VendorProductsTab } from "@/components/vendor/vendor-products-tab";
 import { useSession } from "@/hooks/use-auth";
 import { useQueryParam } from "@/hooks/use-query-param";
 import { cn } from "@/libs/cn";
-import { MOCK_SELLER_PROFILE } from "@/mocks/vendor.mock";
+import { useVendorStore } from "@/hooks/use-vendor";
+
+/** ODOS's own support address, not something the store sets. */
+const SUPPORT_EMAIL = "info@odos.market";
 
 const TABS = [
   { id: "profile", label: "Profile" },
@@ -40,8 +43,12 @@ function isTabId(value: string | null): value is TabId {
 
 function StoreHeaderCard() {
   const user = useSession()?.user;
-  const profile = MOCK_SELLER_PROFILE;
+  const { data: profile, isPending } = useVendorStore();
   const initial = user?.full_name.trim().charAt(0).toUpperCase() || "?";
+
+  if (isPending || !profile) return <div className="h-32 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;
+
+  const address = [profile.address, profile.city, profile.region].filter(Boolean).join(", ");
 
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
@@ -49,22 +56,22 @@ function StoreHeaderCard() {
         <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent-soft text-lg font-semibold text-accent">{initial}</span>
         <div className="min-w-0">
           <p className="font-semibold">{profile.storeName}</p>
-          <p className="mt-0.5 truncate text-sm text-muted">{profile.email}</p>
-          <p className="mt-0.5 text-xs text-muted">{profile.businessType}</p>
+          <p className="mt-0.5 truncate text-sm text-muted">{user?.email}</p>
+          <p className="mt-0.5 text-xs text-muted">{profile.category}</p>
         </div>
       </div>
       <ul className="space-y-1.5 text-xs text-muted">
         <li className="flex items-center gap-1.5 sm:justify-end">
           <MapPin className="size-3.5 shrink-0" aria-hidden />
-          {profile.address}
+          {address || "No address set"}
         </li>
         <li className="flex items-center gap-1.5 sm:justify-end">
           <Mail className="size-3.5 shrink-0" aria-hidden />
-          {profile.supportEmail}
+          {SUPPORT_EMAIL}
         </li>
         <li className="flex items-center gap-1.5 sm:justify-end">
           <Phone className="size-3.5 shrink-0" aria-hidden />
-          {profile.phone}
+          {profile.phone ?? "No phone set"}
         </li>
       </ul>
     </div>
@@ -72,7 +79,10 @@ function StoreHeaderCard() {
 }
 
 function VendorProfileTab() {
-  const profile = MOCK_SELLER_PROFILE;
+  const user = useSession()?.user;
+  const { data: profile, isPending } = useVendorStore();
+
+  if (isPending || !profile) return <div className="h-64 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;
 
   return (
     <div className="space-y-5">
@@ -81,11 +91,11 @@ function VendorProfileTab() {
         <dl className="mt-4 space-y-4 divide-y divide-line">
           {[
             ["Store name", profile.storeName],
-            ["Business email", profile.email],
-            ["Business type", profile.businessType],
-            ["Store address", profile.address],
-            ["Support email", profile.supportEmail],
-            ["Phone number", profile.phone],
+            ["Business email", user?.email ?? "—"],
+            ["Category", profile.category],
+            ["Store address", [profile.address, profile.city, profile.region].filter(Boolean).join(", ") || "—"],
+            ["Support email", SUPPORT_EMAIL],
+            ["Phone number", profile.phone ?? "—"],
           ].map(([label, value]) => (
             <div key={label} className="flex items-center justify-between gap-4 pt-4 first:pt-0">
               <dt className="text-sm text-muted">{label}</dt>

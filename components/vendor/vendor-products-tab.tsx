@@ -13,9 +13,15 @@ import { Media } from "@/components/ui/media";
 import { Pagination } from "@/components/ui/pagination";
 import { Price } from "@/components/ui/price";
 import { TogglePill } from "@/components/ui/toggle-pill";
+import { cn } from "@/libs/cn";
 import { discountPercent, formatDate } from "@/libs/format";
-import { useFakeMutation } from "@/mocks/mutation";
-import { MOCK_VENDOR_PRODUCTS, type VendorProduct, type VendorProductStatus } from "@/mocks/vendor.mock";
+import {
+  useCreateVendorProduct,
+  useDeleteVendorProduct,
+  useSaveVendorProduct,
+  useVendorProducts,
+} from "@/hooks/use-vendor";
+import type { VendorProduct, VendorProductStatus } from "@/types/vendor";
 
 const STATUS_FILTERS: { value: VendorProductStatus | "all" | "out_of_stock"; label: string }[] = [
   { value: "all", label: "All" },
@@ -28,34 +34,46 @@ const PAGE_SIZE = 6;
 
 type DraftProduct = {
   name: string;
+  description: string;
   category: string;
   price: string;
   compareAtPrice: string;
   stock: string;
   status: VendorProductStatus;
+  images: File[];
 };
 
-const EMPTY_DRAFT: DraftProduct = { name: "", category: "", price: "", compareAtPrice: "", stock: "", status: "active" };
+const EMPTY_DRAFT: DraftProduct = {
+  name: "",
+  description: "",
+  category: "",
+  price: "",
+  compareAtPrice: "",
+  stock: "",
+  status: "active",
+  images: [],
+};
 
 function toDraft(product: VendorProduct): DraftProduct {
   return {
     name: product.name,
+    description: product.description,
     category: product.category,
     price: String(product.price),
     compareAtPrice: product.compareAtPrice !== null ? String(product.compareAtPrice) : "",
     stock: String(product.stock),
     status: product.status,
+    images: [],
   };
 }
+
+/** Prices are integers end to end: the backend parses them with a bare `int()`, which raises on "85.50". */
+const digitsOnly = (value: string) => value.replace(/[^0-9]/g, "");
 
 function stockBadge(stock: number): { tone: BadgeTone; label: string } {
   if (stock <= 0) return { tone: "danger", label: "Out of stock" };
   if (stock <= 10) return { tone: "warning", label: `Low stock · ${stock}` };
   return { tone: "neutral", label: `${stock} in stock` };
-}
-
-function saveProduct(input: { id?: string; draft: DraftProduct }) {
-  return input;
 }
 
 function ProductForm({
@@ -78,9 +96,35 @@ function ProductForm({
       <div className="flex-1 space-y-5 p-5">
         <div className="flex items-center gap-3">
           <Media src={null} name={draft.name || "New product"} className="size-16 shrink-0 rounded-xl" />
-          <Button type="button" variant="outline" size="sm" onClick={() => toast("Photo upload is coming soon")}>
-            Change photo
-          </Button>
+          <label className="press inline-flex cursor-pointer items-center justify-center rounded-full border border-line px-4 py-2 text-sm font-medium hover:border-foreground">
+            {draft.images.length > 0 ? `${draft.images.length} photo${draft.images.length > 1 ? "s" : ""} selected` : "Add photos"}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => {
+                const picked = Array.from(e.target.files ?? []);
+                if (picked.length) set("images", [...draft.images, ...picked].slice(0, 5));
+                e.target.value = "";
+              }}
+              className="sr-only"
+            />
+          </label>
+        </div>
+
+        <div>
+          <label htmlFor="product-description" className="mb-1.5 block text-sm font-medium">
+            Description
+          </label>
+          <textarea
+            id="product-description"
+            required
+            rows={3}
+            value={draft.description}
+            onChange={(e) => set("description", e.target.value)}
+            className={cn(inputClass, "h-auto min-h-24 resize-none py-3")}
+            placeholder="What is it, and what should a shopper know before buying?"
+          />
         </div>
 
         <div>
@@ -105,14 +149,12 @@ function ProductForm({
             <input
               id="product-price"
               required
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
+              type="text"
+              inputMode="numeric"
               value={draft.price}
-              onChange={(e) => set("price", e.target.value)}
+              onChange={(e) => set("price", digitsOnly(e.target.value))}
               className={inputClass}
-              placeholder="0.00"
+              placeholder="0"
             />
           </div>
           <div>
@@ -121,12 +163,10 @@ function ProductForm({
             </label>
             <input
               id="product-compare"
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
+              type="text"
+              inputMode="numeric"
               value={draft.compareAtPrice}
-              onChange={(e) => set("compareAtPrice", e.target.value)}
+              onChange={(e) => set("compareAtPrice", digitsOnly(e.target.value))}
               className={inputClass}
               placeholder="Optional"
             />
@@ -285,7 +325,8 @@ function ProductDetails({ product, onEdit, onDelete }: { product: VendorProduct;
 }
 
 export function VendorProductsTab() {
-  const [products, setProducts] = useState<VendorProduct[]>(MOCK_VENDOR_PRODUCTS);
+  const productsQuery = useVendorProducts();
+  const products = useMemo(() => productsQuery.data ?? [], [productsQuery.data]);
   const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]["value"]>("all");
   const [query, setQuery] = useState("");
 
@@ -296,8 +337,9 @@ export function VendorProductsTab() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  const saveMutation = useFakeMutation(saveProduct);
-  const deleteMutation = useFakeMutation((id: string) => id);
+  const createMutation = useCreateVendorProduct();
+  const saveMutation = useSaveVendorProduct();
+  const deleteMutation = useDeleteVendorProduct();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -333,40 +375,44 @@ export function VendorProductsTab() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    saveMutation.mutate(
-      { id: editingId ?? undefined, draft },
-      {
-        onSuccess: () => {
-          const price = Number(draft.price) || 0;
-          const compareAtPrice = draft.compareAtPrice.trim() ? Number(draft.compareAtPrice) : null;
-          const stock = Number(draft.stock) || 0;
 
-          setProducts((prev) => {
-            if (editingId) {
-              return prev.map((p) =>
-                p.id === editingId
-                  ? { ...p, name: draft.name, category: draft.category, price, compareAtPrice, stock, status: draft.status, updatedAt: new Date().toISOString() }
-                  : p,
-              );
-            }
-            const created: VendorProduct = {
-              id: `vprod-${crypto.randomUUID()}`,
-              name: draft.name,
-              category: draft.category,
-              imageUrl: null,
-              price,
-              compareAtPrice,
-              stock,
-              status: draft.status,
-              updatedAt: new Date().toISOString(),
-            };
-            return [created, ...prev];
-          });
+    const price = Number(draft.price) || 0;
+    const compareAtPrice = draft.compareAtPrice.trim() ? Number(draft.compareAtPrice) : null;
+    const stock = Number(draft.stock) || 0;
 
-          toast.success(editingId ? `${draft.name} updated` : `${draft.name} added to your catalogue`);
-          setFormOpen(false);
-        },
+    const done = {
+      onSuccess: () => {
+        toast.success(editingId ? `${draft.name} updated` : `${draft.name} added to your catalogue`);
+        setFormOpen(false);
       },
+      onError: (error: unknown) =>
+        toast.error(error instanceof Error ? error.message : "We couldn't save that product"),
+    };
+
+    const existing = editingId ? products.find((p) => p.id === editingId) : undefined;
+    if (existing) {
+      // The whole record goes back, not just the edited fields — a partial write clears the gallery.
+      saveMutation.mutate(
+        {
+          product: existing,
+          changes: { name: draft.name, price, compareAtPrice, stock, status: draft.status },
+        },
+        done,
+      );
+      return;
+    }
+
+    createMutation.mutate(
+      {
+        name: draft.name,
+        description: draft.description,
+        category: draft.category,
+        price,
+        compareAtPrice,
+        stock,
+        images: draft.images,
+      },
+      done,
     );
   };
 
@@ -374,10 +420,10 @@ export function VendorProductsTab() {
     if (!deleteTarget) return;
     deleteMutation.mutate(deleteTarget.id, {
       onSuccess: () => {
-        setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
         toast.success(`${deleteTarget.name} deleted`);
         setDeleteTarget(null);
       },
+      onError: (error) => toast.error(error instanceof Error ? error.message : "We couldn't delete that product"),
     });
   };
 
@@ -462,7 +508,7 @@ export function VendorProductsTab() {
       </Drawer>
 
       <Drawer open={formOpen} onClose={() => setFormOpen(false)} title={editingId ? "Edit product" : "Add product"} labelId="vendor-product-form-heading">
-        <ProductForm draft={draft} onChange={setDraft} onSubmit={onSubmit} pending={saveMutation.isPending} submitLabel={editingId ? "Save changes" : "Add product"} />
+        <ProductForm draft={draft} onChange={setDraft} onSubmit={onSubmit} pending={saveMutation.isPending || createMutation.isPending} submitLabel={editingId ? "Save changes" : "Add product"} />
       </Drawer>
 
       <ConfirmDialog

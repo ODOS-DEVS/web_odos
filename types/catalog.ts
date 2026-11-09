@@ -45,6 +45,19 @@ export type Market = {
   sortOrder: number;
 };
 
+/** A merchandising banner the team schedules in the admin. */
+export type PromoBanner = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  ctaLabel: string;
+  ctaHref: string;
+  imageUrl: string | null;
+  /** Vendor-chosen accent colour, when set. */
+  accent: string | null;
+  sortOrder: number;
+};
+
 export type ProductTag = "new" | "popular" | "flash";
 
 export type FlashSale = {

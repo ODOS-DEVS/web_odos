@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/libs/cn";
-import { TILES, type Tile } from "@/mocks/home.mock";
+import { TILES, type Tile } from "@/libs/home-editorial";
 
 export function PromoCollage() {
   const [hero, ...rest] = TILES;

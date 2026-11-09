@@ -526,3 +526,16 @@ export type ReturnRequestRead = {
   refund_amount?: number | null;
   created_at: string;
 };
+
+/** A scheduled merchandising banner from `GET /catalog/promo-banners`. */
+export type PromoBannerRead = {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  cta_label: string;
+  cta_link?: string | null;
+  image_url?: string | null;
+  accent?: string | null;
+  sort_order: number;
+  campaign_tag?: string | null;
+};

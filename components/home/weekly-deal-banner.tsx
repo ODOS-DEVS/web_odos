@@ -6,7 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import Image from "next/image";
 import { cn } from "@/libs/cn";
-import { DEALS } from "@/mocks/home.mock";
+import { DEALS } from "@/libs/home-editorial";
 
 export function WeeklyDealBanner() {
   const [currentIndex, setCurrentIndex] = useState(0);

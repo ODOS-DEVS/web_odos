@@ -15,6 +15,7 @@ export default async function HomePage() {
     catalogQueries.stores(),
     catalogQueries.products(),
     catalogQueries.deals(),
+    catalogQueries.promoBanners(),
   );
 
   return (

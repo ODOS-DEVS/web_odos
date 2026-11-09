@@ -7,52 +7,31 @@ import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
 import { Pagination } from "@/components/ui/pagination";
+import { useVendorCustomers, useVendorOrders } from "@/hooks/use-vendor";
 import { formatDate, formatMoney } from "@/libs/format";
-import { MOCK_VENDOR_ORDERS, type VendorOrder } from "@/mocks/vendor.mock";
+import type { VendorCustomer as VendorCustomerRow, VendorOrder } from "@/types/vendor";
 
 const PAGE_SIZE = 6;
 
-type VendorCustomer = {
-  email: string;
-  name: string;
-  phone: string;
-  address: VendorOrder["address"];
-  ordersCount: number;
-  totalSpent: number;
-  lastOrderAt: string;
+/**
+ * The roster comes aggregated from `/vendor/customers` (spend and counts are the server's, not a
+ * local sum). There is no customer→orders endpoint, so the "recent orders" panel matches the order
+ * list on name and phone, and the address is taken from the most recent of those.
+ */
+type VendorCustomer = VendorCustomerRow & {
+  address: VendorOrder["address"] | null;
   orders: VendorOrder[];
 };
 
-/** Groups this seller's orders by buyer into a customer roster — total spend, order count, last order. */
-function deriveCustomers(orders: VendorOrder[]): VendorCustomer[] {
-  const byEmail = new Map<string, VendorCustomer>();
-
-  for (const order of orders) {
-    const existing = byEmail.get(order.buyerEmail);
-    if (existing) {
-      existing.ordersCount += 1;
-      existing.totalSpent += order.total;
-      existing.orders.push(order);
-      if (order.placedAt > existing.lastOrderAt) {
-        existing.lastOrderAt = order.placedAt;
-        existing.phone = order.buyerPhone;
-        existing.address = order.address;
-      }
-    } else {
-      byEmail.set(order.buyerEmail, {
-        email: order.buyerEmail,
-        name: order.buyerName,
-        phone: order.buyerPhone,
-        address: order.address,
-        ordersCount: 1,
-        totalSpent: order.total,
-        lastOrderAt: order.placedAt,
-        orders: [order],
-      });
-    }
-  }
-
-  return [...byEmail.values()].sort((a, b) => b.totalSpent - a.totalSpent);
+function withOrders(customers: VendorCustomerRow[], orders: VendorOrder[]): VendorCustomer[] {
+  return customers
+    .map((customer) => {
+      const mine = orders
+        .filter((o) => o.buyerName === customer.name && (!customer.phone || o.buyerPhone === customer.phone))
+        .sort((a, b) => Date.parse(b.placedAt) - Date.parse(a.placedAt));
+      return { ...customer, orders: mine, address: mine[0]?.address ?? null };
+    })
+    .sort((a, b) => b.totalSpent - a.totalSpent);
 }
 
 function CustomerRow({ customer, onSelect }: { customer: VendorCustomer; onSelect: () => void }) {
@@ -62,10 +41,15 @@ function CustomerRow({ customer, onSelect }: { customer: VendorCustomer; onSelec
 
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{customer.name}</p>
-        <p className="mt-0.5 truncate text-xs text-muted">{customer.email}</p>
+        <p className="mt-0.5 truncate text-xs text-muted">{customer.phone ?? "No phone on file"}</p>
         <p className="mt-0.5 text-xs text-muted">
-          {customer.ordersCount} {customer.ordersCount === 1 ? "order" : "orders"} · Last{" "}
-          <time dateTime={customer.lastOrderAt}>{formatDate(customer.lastOrderAt)}</time>
+          {customer.orderCount} {customer.orderCount === 1 ? "order" : "orders"}
+          {customer.lastOrderAt && (
+            <>
+              {" · Last "}
+              <time dateTime={customer.lastOrderAt}>{formatDate(customer.lastOrderAt)}</time>
+            </>
+          )}
         </p>
       </div>
 
@@ -75,8 +59,8 @@ function CustomerRow({ customer, onSelect }: { customer: VendorCustomer; onSelec
 }
 
 function CustomerDetails({ customer }: { customer: VendorCustomer }) {
-  const averageOrder = customer.totalSpent / customer.ordersCount;
-  const orders = [...customer.orders].sort((a, b) => (a.placedAt < b.placedAt ? 1 : -1));
+  const averageOrder = customer.orderCount > 0 ? customer.totalSpent / customer.orderCount : 0;
+  const orders = customer.orders;
 
   return (
     <div className="flex-1 overflow-y-auto p-5">
@@ -84,14 +68,14 @@ function CustomerDetails({ customer }: { customer: VendorCustomer }) {
         <Media src={null} name={customer.name} className="size-14 shrink-0 rounded-full" />
         <div className="min-w-0">
           <p className="truncate font-semibold tracking-normal">{customer.name}</p>
-          <p className="truncate text-sm text-muted">{customer.email}</p>
+          <p className="truncate text-sm text-muted">{customer.phone ?? "No phone on file"}</p>
         </div>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-surface-muted p-3.5">
           <p className="text-xs text-muted">Orders</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums">{customer.ordersCount}</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums">{customer.orderCount}</p>
         </div>
         <div className="rounded-2xl border border-line bg-surface-muted p-3.5">
           <p className="text-xs text-muted">Lifetime spent</p>
@@ -103,7 +87,7 @@ function CustomerDetails({ customer }: { customer: VendorCustomer }) {
         </div>
         <div className="rounded-2xl border border-line bg-surface-muted p-3.5">
           <p className="text-xs text-muted">Last order</p>
-          <p className="mt-1 text-sm font-semibold">{formatDate(customer.lastOrderAt)}</p>
+          <p className="mt-1 text-sm font-semibold">{customer.lastOrderAt ? formatDate(customer.lastOrderAt) : "—"}</p>
         </div>
       </div>
 
@@ -112,18 +96,18 @@ function CustomerDetails({ customer }: { customer: VendorCustomer }) {
         <div className="space-y-2 rounded-2xl border border-line bg-surface-muted p-4 text-sm">
           <p className="flex items-center gap-2">
             <Mail className="size-4 shrink-0 text-muted" aria-hidden />
-            {customer.email}
+            {customer.phone ?? "No phone on file"}
           </p>
           <p className="flex items-center gap-2">
             <Phone className="size-4 shrink-0 text-muted" aria-hidden />
-            {customer.phone}
+            {customer.phone ?? "—"}
           </p>
           <p className="flex items-start gap-2">
             <MapPin className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
             <span>
-              {customer.address.street}
+              {customer.address?.street ?? "No address on file"}
               <br />
-              {customer.address.city}, {customer.address.region}
+              {[customer.address?.city, customer.address?.region].filter(Boolean).join(", ")}
             </span>
           </p>
         </div>
@@ -151,15 +135,20 @@ function CustomerDetails({ customer }: { customer: VendorCustomer }) {
 }
 
 export function VendorCustomersTab() {
-  const customers = useMemo(() => deriveCustomers(MOCK_VENDOR_ORDERS), []);
+  const roster = useVendorCustomers();
+  const orders = useVendorOrders();
+  const customers = useMemo(() => withOrders(roster.data ?? [], orders.data ?? []), [roster.data, orders.data]);
+
   const [query, setQuery] = useState("");
-  const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return customers;
-    return customers.filter((customer) => customer.name.toLowerCase().includes(q) || customer.email.toLowerCase().includes(q));
+    return customers.filter(
+      (customer) => customer.name.toLowerCase().includes(q) || (customer.phone ?? "").toLowerCase().includes(q),
+    );
   }, [customers, query]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -167,7 +156,7 @@ export function VendorCustomersTab() {
   // without the extra render pass a `setState` in `useEffect` would cause.
   const currentPage = Math.min(page, totalPages);
   const pageRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const selectedCustomer = customers.find((customer) => customer.email === selectedEmail) ?? null;
+  const selectedCustomer = customers.find((customer) => customer.key === selectedKey) ?? null;
 
   return (
     <div className="space-y-5">
@@ -177,7 +166,7 @@ export function VendorCustomersTab() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search by name or email"
+          placeholder="Search by name or phone"
           className="h-11 w-full rounded-full border border-line bg-surface pr-4 pl-10 text-sm placeholder:text-muted/70 focus:border-foreground focus:outline-none"
         />
       </div>
@@ -186,8 +175,8 @@ export function VendorCustomersTab() {
         <>
           <ul className="space-y-3">
             {pageRows.map((customer) => (
-              <li key={customer.email}>
-                <CustomerRow customer={customer} onSelect={() => setSelectedEmail(customer.email)} />
+              <li key={customer.key}>
+                <CustomerRow customer={customer} onSelect={() => setSelectedKey(customer.key)} />
               </li>
             ))}
           </ul>
@@ -199,7 +188,7 @@ export function VendorCustomersTab() {
 
       <Drawer
         open={selectedCustomer !== null}
-        onClose={() => setSelectedEmail(null)}
+        onClose={() => setSelectedKey(null)}
         title={selectedCustomer?.name ?? "Customer"}
         labelId="vendor-customer-details-heading"
       >
