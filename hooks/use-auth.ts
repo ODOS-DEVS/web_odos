@@ -26,6 +26,19 @@ export function useLogin() {
   });
 }
 
+/** Signs in with a Google `id_token`, landing the same session a password login would. */
+export function useGoogleLogin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ idToken, pictureUrl }: { idToken: string; pictureUrl?: string | null }) =>
+      authService.google(idToken, pictureUrl),
+    onSuccess: ({ access_token, expires_in, user }) => {
+      setSession(access_token, expires_in, user);
+      queryClient.setQueryData(queryKeys.me, user);
+    },
+  });
+}
+
 /** Signup returns the new user without a token, so log in straight away with the same credentials. */
 export function useSignup() {
   const login = useLogin();

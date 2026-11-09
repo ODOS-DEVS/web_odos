@@ -19,6 +19,9 @@ warnIfMissing("NEXT_PUBLIC_API_BASE_URL", NEXT_PUBLIC_API_BASE_URL, DEFAULT_API_
 const NEXT_PUBLIC_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
 warnIfMissing("NEXT_PUBLIC_SITE_URL", NEXT_PUBLIC_SITE_URL, DEFAULT_SITE_URL);
 
+// Optional: without it the Google button explains itself instead of failing on click.
+const NEXT_PUBLIC_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
 /** No trailing slash, so `${origin}/api` is always well formed. */
 const stripTrailingSlash = (url: string) => url.replace(/\/+$/, "");
 
@@ -38,6 +41,14 @@ export const CONFIG = {
   SITE_URL: stripTrailingSlash(NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_URL),
 
   /* ---- App-wide constants (not environment-specific) ---- */
+
+  /**
+   * Google OAuth **web** client id, used by Google Identity Services to mint the `id_token` that
+   * `POST /auth/google` verifies. Public by design — it ships in the browser bundle. The deployed
+   * origin must be listed as an "Authorized JavaScript origin" on this client in the Google Cloud
+   * console, or Google refuses to issue a token for it.
+   */
+  GOOGLE_CLIENT_ID: NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() || "",
 
   SITE_NAME: "ODOS",
   SITE_DESCRIPTION:

@@ -1,5 +1,6 @@
 import type { Category, Store } from "@/types/catalog";
 import { buildHref } from "@/libs/url";
+import { CategoryFilterGroup } from "./category-filter-group";
 import { FilterChip, FilterGroup } from "./filter-chip";
 
 export type ActiveFilters = {
@@ -24,20 +25,11 @@ export function ProductFilters({
 
   return (
     <aside aria-label="Filters" className="space-y-6">
-      <FilterGroup label="Category">
-        <FilterChip href={href({ category: undefined })} active={!active.category}>
-          All
-        </FilterChip>
-        {categories.map((category) => (
-          <FilterChip
-            key={category.id}
-            href={href({ category: category.slug })}
-            active={active.category === category.slug}
-          >
-            {category.name}
-          </FilterChip>
-        ))}
-      </FilterGroup>
+      <CategoryFilterGroup
+        categories={categories}
+        active={active.category}
+        hrefFor={(slug) => href({ category: slug })}
+      />
 
       <FilterGroup label="Store">
         <FilterChip href={href({ store: undefined })} active={!active.store}>

@@ -12,6 +12,7 @@ import { cn } from "@/libs/cn";
 import { buildHref } from "@/libs/url";
 import { useCategories, useMarkets, useProducts, useStores } from "@/hooks/use-catalog";
 import { MarketFilters, type MarketActiveFilters } from "./market-filters";
+import { MarketStrip } from "./market-strip";
 
 export function MarketView({ filters }: { filters: MarketActiveFilters }) {
   const stores = useStores();
@@ -22,6 +23,7 @@ export function MarketView({ filters }: { filters: MarketActiveFilters }) {
   const storeList = stores.data ?? [];
   const storeMap = new Map(storeList.map((s) => [s.id, s]));
   const activeCategory = categories.data?.find((c) => c.slug === filters.category);
+  const activeMarket = markets.data?.find((m) => m.slug === filters.market);
 
   // Stores the strip + "Store" filter offer, narrowed by category/market (but not by which store is picked).
   const visibleStores = storeList.filter((store) => {
@@ -47,8 +49,16 @@ export function MarketView({ filters }: { filters: MarketActiveFilters }) {
     <Container className="py-8 sm:py-12">
       <header className="mb-8">
         <h1 className="text-3xl font-semibold sm:text-4xl">Market</h1>
-        <p className="mt-2 text-muted">This is a collection of store at a location</p>
+        <p className="mt-2 text-muted">Markets are physical trading hubs — pick one to see the vendors trading there.</p>
       </header>
+
+      <MarketStrip
+        markets={markets.data ?? []}
+        stores={storeList}
+        activeSlug={filters.market}
+        hrefFor={(slug) => buildHref("/market", filters, { market: slug, store: undefined })}
+        isPending={markets.isPending}
+      />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-12">
         <div className="lg:sticky lg:top-40 lg:self-start">
@@ -109,9 +119,13 @@ export function MarketView({ filters }: { filters: MarketActiveFilters }) {
             </>
           ) : (
             <EmptyState
-              icon={<SearchX className="size-10 text-muted" aria-hidden />}
-              title="No stores in this market yet"
-              description="Try a different category or market."
+              icon={<StoreIcon className="size-10 text-muted" aria-hidden />}
+              title={activeMarket ? `No vendors in ${activeMarket.name} yet` : "No stores match these filters"}
+              description={
+                activeMarket
+                  ? "Vendors choose their market on their store profile, so this fills up as they join."
+                  : "Try a different category or market."
+              }
             />
           )}
         </section>

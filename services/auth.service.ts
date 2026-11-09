@@ -9,6 +9,13 @@ export const authService = {
 
   signup: (input: UserCreate) => apiFetch<UserRead>(AUTH_ENDPOINTS.signup, { method: "POST", body: input }),
 
+  /** Exchanges a Google `id_token` for an ODOS session. Unauthenticated: no bearer is attached. */
+  google: (idToken: string, pictureUrl?: string | null) =>
+    apiFetch<AuthToken>(AUTH_ENDPOINTS.google, {
+      method: "POST",
+      body: { id_token: idToken, picture_url: pictureUrl ?? null },
+    }),
+
   logout: () => apiFetch<unknown>(AUTH_ENDPOINTS.logout, { method: "POST" }),
 
   me: () => apiFetch<UserRead>(IDENTITY_ENDPOINTS.me, { revalidate: false }),
