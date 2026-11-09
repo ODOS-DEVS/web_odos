@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SavedVoucher } from "@/types/voucher";
+
+export type { SavedVoucher };
 import { queryKeys, voucherQueries } from "@/services/queries";
 import { vouchersService } from "@/services/vouchers.service";
 import { useMounted } from "./use-mounted";

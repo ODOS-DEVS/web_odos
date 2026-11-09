@@ -89,7 +89,7 @@ export function MarketView({ filters }: { filters: MarketActiveFilters }) {
       <header className="mb-8">
         <h1 className="text-3xl font-semibold sm:text-4xl">Local Markets</h1>
         <p className="mt-2 text-muted">
-          Discover stores and authentic products straight from Ghana's iconic physical trading hubs.
+          Discover stores and authentic products straight from Ghana&apos;s iconic physical trading hubs.
         </p>
       </header>
 

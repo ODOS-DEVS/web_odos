@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertCircle, CheckCircle2, Eye, Package, XCircle } from "lucide-react";
+import { CheckCircle2, Eye, Package, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
 import { useVendorReturns } from "@/hooks/use-vendor";
-import { formatDate, formatMoney } from "@/libs/format";
+import { formatDate } from "@/libs/format";
 import type { VendorReturnRequestRead } from "@/types/vendor";
 
 export function VendorReturnsSkeleton() {
@@ -105,25 +105,40 @@ function ReturnDetailDrawer({
       )}
 
       {returnItem.status === "pending" ? (
-        <div className="flex gap-2 pt-4 border-t border-line">
-          <Button
-            type="button"
-            variant="accent"
-            className="flex-1"
-            disabled={isPatching}
-            onClick={() => onUpdate("approved")}
-          >
-            <CheckCircle2 className="size-4 mr-1.5" /> Approve return
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="flex-1 text-danger hover:border-danger hover:text-danger"
-            disabled={isPatching}
-            onClick={() => onUpdate("rejected")}
-          >
-            <XCircle className="size-4 mr-1.5" /> Decline
-          </Button>
+        <div className="space-y-3 pt-3 border-t border-line">
+          <div className="space-y-1.5">
+            <label htmlFor="admin-note" className="text-xs font-semibold text-muted">
+              Resolution Note (Optional)
+            </label>
+            <input
+              id="admin-note"
+              type="text"
+              placeholder="e.g. Approved for refund upon drop-off"
+              value={adminNote}
+              onChange={(e) => setAdminNote(e.target.value)}
+              className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted/60"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="accent"
+              className="flex-1"
+              disabled={isPatching}
+              onClick={() => onUpdate("approved")}
+            >
+              <CheckCircle2 className="size-4 mr-1.5" /> Approve return
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 text-danger hover:border-danger hover:text-danger"
+              disabled={isPatching}
+              onClick={() => onUpdate("rejected")}
+            >
+              <XCircle className="size-4 mr-1.5" /> Decline
+            </Button>
+          </div>
         </div>
       ) : (
         <Badge tone={returnItem.status === "approved" ? "success" : "danger"} className="capitalize">

@@ -34,7 +34,7 @@ import {
   useUpdateEmailPreferences,
   useDeleteAccount,
 } from "@/hooks/use-account-security";
-import { useCurrentUser, useSession, useUpdateProfile } from "@/hooks/use-auth";
+import { useCurrentUser, useUpdateProfile } from "@/hooks/use-auth";
 import { GHANA_REGIONS } from "@/libs/checkout";
 import { cn } from "@/libs/cn";
 import { formatDate } from "@/libs/format";

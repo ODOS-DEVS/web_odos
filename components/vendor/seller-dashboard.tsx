@@ -4,9 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import {
-  BarChart3,
   CreditCard,
-  Headset,
   LayoutGrid,
   Megaphone,
   Package,

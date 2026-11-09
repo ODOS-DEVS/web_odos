@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { vendorOrdersService, type VendorOrder } from "@/services/vendor-orders.service";
 import type { FulfilmentStatus } from "@/types/order";
+
+export type { VendorOrder };
 import { useSession } from "./use-auth";
 
 export function useVendorOrders() {

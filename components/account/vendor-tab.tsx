@@ -128,7 +128,7 @@ function VendorApplicationForm({
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
-  const [shopPhotoFile, setShopPhotoFile] = useState<File | null>(null);
+  const [_shopPhotoFile, setShopPhotoFile] = useState<File | null>(null);
   const [shopPhotoPreview, setShopPhotoPreview] = useState<string | null>(null);
 
   const [isUploading, setIsUploading] = useState(false);
@@ -545,7 +545,7 @@ export function VendorTab() {
       {status === "approved" && (
         <div className="rounded-2xl border border-success/30 bg-surface p-5 sm:p-6 space-y-3">
           <div className="flex items-center gap-2 text-success font-semibold text-sm">
-            <CheckCircle2 className="size-4.5" /> You're a verified ODOS Vendor!
+            <CheckCircle2 className="size-4.5" /> You&apos;re a verified ODOS Vendor!
           </div>
           <p className="text-sm text-muted leading-relaxed">
             Your storefront is active. You can start listing products, managing inventory, receiving orders, and viewing payouts in the Seller Center.

@@ -3,16 +3,10 @@
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import {
-  Boxes,
-  CreditCard,
   Mail,
   MapPin,
-  PackageSearch,
   Pencil,
   Phone,
-  Star,
-  Store,
-  Ticket,
 } from "lucide-react";
 import { ChatsTab } from "@/components/account/chats-tab";
 import { RequireLogin } from "@/components/auth/require-login";

@@ -2,7 +2,6 @@
 
 import {
   InputOTPAlphanumeric,
-  type InputOTPAlphanumericProps,
 } from "@/components/ui/input-otp";
 
 export { InputOTPAlphanumeric };

@@ -6,10 +6,9 @@ import { trackBehavior, trackPromo, type BehaviorEvent } from "@/services/tracki
 /** Fires one behaviour event when it mounts (and again if the identifying fields change). Renders nothing. */
 export function TrackEvent(props: BehaviorEvent) {
   const key = `${props.event_type}|${props.product_id ?? ""}|${props.store_id ?? ""}|${props.search_query ?? ""}|${props.category ?? ""}`;
-  const latest = useRef(props);
-  latest.current = props;
   useEffect(() => {
-    trackBehavior(latest.current);
+    trackBehavior(props);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return null;
 }

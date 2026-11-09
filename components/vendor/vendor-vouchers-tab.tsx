@@ -2,14 +2,13 @@
 
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Gift, Plus, Ticket, Trash2 } from "lucide-react";
+import { Plus, Ticket, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
 import { useVendorVouchers } from "@/hooks/use-vendor";
-import { formatDate, formatMoney } from "@/libs/format";
-import type { VendorVoucherRead } from "@/types/vendor";
+import { formatDate } from "@/libs/format";
 
 export function VendorVouchersSkeleton() {
   return (
@@ -60,7 +59,29 @@ function CreateVoucherForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form onSubmit={onSubmit} className="rounded-2xl border border-line bg-surface p-5 sm:p-6 space-y-4">
-      <h3 className="font-semibold text-base">Create Store Voucher</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-base">Create Store Voucher</h3>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setDiscountType("fixed_amount")}
+            className={`rounded-xl px-2.5 py-1 text-xs font-medium border transition-colors ${
+              discountType === "fixed_amount" ? "border-accent bg-accent/10 text-accent" : "border-line text-muted"
+            }`}
+          >
+            Fixed GH¢
+          </button>
+          <button
+            type="button"
+            onClick={() => setDiscountType("percentage")}
+            className={`rounded-xl px-2.5 py-1 text-xs font-medium border transition-colors ${
+              discountType === "percentage" ? "border-accent bg-accent/10 text-accent" : "border-line text-muted"
+            }`}
+          >
+            Percentage %
+          </button>
+        </div>
+      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field
           id="voucher-code"

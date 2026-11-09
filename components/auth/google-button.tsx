@@ -51,7 +51,9 @@ export function GoogleButton({ onSignedIn }: { onSignedIn: (firstName: string) =
   const [failed, setFailed] = useState(false);
   // Latest callbacks without re-initialising Google on every render.
   const handlers = useRef({ google, onSignedIn });
-  handlers.current = { google, onSignedIn };
+  useEffect(() => {
+    handlers.current = { google, onSignedIn };
+  });
 
   useEffect(() => {
     if (!CONFIG.GOOGLE_CLIENT_ID) return;

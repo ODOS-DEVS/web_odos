@@ -1,5 +1,4 @@
 import {
-  VENDOR_ANALYTICS_ENDPOINTS,
   VENDOR_ENDPOINTS,
   VENDOR_INVENTORY_ENDPOINTS,
   VENDOR_PRODUCTS_ENDPOINTS,
@@ -46,9 +45,9 @@ export type {
 };
 
 export const vendorService = {
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
   // Onboarding & Profile
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
 
   /** Retrieves the shopper's active vendor application, if any. */
   async myApplication(): Promise<VendorApplicationRead | null> {
@@ -118,9 +117,9 @@ export const vendorService = {
     }
   },
 
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
   // Storefront & Curated Sections
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
 
   /** Gets public store profile as viewed/managed by vendor. */
   async getStore(): Promise<VendorStoreRead | null> {
@@ -215,9 +214,9 @@ export const vendorService = {
     });
   },
 
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
   // Customers & Feedback
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
 
   /** Lists customer accounts who have purchased from this store. */
   async getCustomers(query?: string, limit = 50, offset = 0): Promise<VendorCustomerRead[]> {
@@ -265,9 +264,9 @@ export const vendorService = {
     });
   },
 
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
   // Returns Management
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
 
   /** Lists customer return requests for products sold by this vendor. */
   async getReturns(): Promise<VendorReturnRequestRead[]> {
@@ -295,9 +294,9 @@ export const vendorService = {
     });
   },
 
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
   // Wallet & Payouts
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
 
   /** Retrieves seller earnings balance, commission rates, and pending withdrawals. */
   async getWallet(): Promise<VendorWalletRead | null> {
@@ -343,9 +342,9 @@ export const vendorService = {
     });
   },
 
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
   // Delivery Settings
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
 
   /** Retrieves store-level delivery tiers and fee settings. */
   async getDeliverySettings(): Promise<VendorDeliverySettingsRead | null> {
@@ -364,9 +363,9 @@ export const vendorService = {
     });
   },
 
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
   // Vouchers & Promotions
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
 
   /** Lists store-specific discount vouchers created by this vendor. */
   async getVouchers(): Promise<VendorVoucherRead[]> {
@@ -409,9 +408,9 @@ export const vendorService = {
     });
   },
 
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
   // Inventory Analytics & Movement
-  // -------------------------------------------------------------
+  // `-------------------------------------------------------------`
 
   /** Overview statistics of store inventory levels and value. */
   async getInventoryStats(): Promise<VendorInventoryStatsRead | null> {

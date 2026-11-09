@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { ArrowDownRight, Building2, CheckCircle2, CreditCard, DollarSign, Wallet } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -153,6 +153,21 @@ export function VendorWalletTab() {
 
         {editingPayout ? (
           <form onSubmit={onSavePayout} className="space-y-4 border-t border-line/60 pt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted">Network:</span>
+              {(["MTN", "Telecel", "AT"] as const).map((net) => (
+                <button
+                  key={net}
+                  type="button"
+                  onClick={() => setMomoNetwork(net)}
+                  className={`rounded-xl px-2.5 py-1 text-xs font-medium border transition-colors ${
+                    momoNetwork === net ? "border-accent bg-accent/10 text-accent" : "border-line text-muted"
+                  }`}
+                >
+                  {net}
+                </button>
+              ))}
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field
                 id="payout-name"

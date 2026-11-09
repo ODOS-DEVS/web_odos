@@ -3,8 +3,7 @@
 import { AwardPointsForm } from "@/components/account/award-points-form";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Award, Check, ChevronRight, Gift, Ticket, TrendingUp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Award, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLoyalty } from "@/hooks/use-loyalty";
 import { formatDateTime, formatMoney } from "@/libs/format";

@@ -1,5 +1,3 @@
-import type { FulfilmentStatus } from "@/types/order";
-
 /** "active" is live in the shop; anything else the API sends (e.g. "draft", "inactive") is hidden. */
 export type VendorProductStatus = "active" | "draft" | (string & {});
 

@@ -140,7 +140,7 @@ export function useReturns() {
         // Also save to local store so it is immediately cached
         saveLocal(input);
         return mapped;
-      } catch (err) {
+      } catch {
         // Fallback to local store
         return saveLocal(input);
       }
