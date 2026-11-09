@@ -1,12 +1,30 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { HydrationBoundary } from "@tanstack/react-query";
 import { ProductView } from "@/components/product/product-view";
+import { dehydrated, getServerQueryClient, prefetchAll } from "@/libs/query-client.server";
+import { ApiError } from "@/services/http";
+import { catalogQueries, reviewQueries } from "@/services/queries";
+import type { Product } from "@/types/catalog";
 import CONFIG from "@/utils/config";
-import { mockProduct } from "@/mocks/catalog.mock";
+
+/**
+ * GET /catalog/products/{id} through the per-request query client, so `generateMetadata` and the page
+ * share one request. A 404 becomes Next's not-found page; any other failure returns `undefined` and the
+ * client view shows its own retryable error.
+ */
+async function loadProduct(id: string): Promise<Product | undefined> {
+  try {
+    return await getServerQueryClient().fetchQuery(catalogQueries.product(id));
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) notFound();
+    return undefined;
+  }
+}
 
 export async function generateMetadata({ params }: PageProps<"/products/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const product = mockProduct(id);
+  const product = await loadProduct(id);
   if (!product) return {};
   return {
     title: product.name,
@@ -15,13 +33,15 @@ export async function generateMetadata({ params }: PageProps<"/products/[id]">):
   };
 }
 
-// `ProductView` reads `mocks/` directly, so there is nothing to prefetch server-side for now.
 export default async function ProductPage({ params }: PageProps<"/products/[id]">) {
   const { id } = await params;
-  const product = mockProduct(id);
-  if (!product) notFound();
+  const product = await loadProduct(id);
 
-  const jsonLd = {
+  const client = getServerQueryClient();
+  // Everything else the view reads; the vendor map comes from the store list.
+  await prefetchAll(client, reviewQueries.forProduct(id), catalogQueries.similar(id), catalogQueries.stores());
+
+  const jsonLd = product && {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
@@ -39,13 +59,15 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
   };
 
   return (
-    <>
-      <script
-        type="application/ld+json"
-        // Static, server-generated data — safe to inline.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
-      />
+    <HydrationBoundary state={dehydrated(client)}>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          // Server-generated from API data; `<` is escaped so it can't close the script tag.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        />
+      )}
       <ProductView id={id} />
-    </>
+    </HydrationBoundary>
   );
 }

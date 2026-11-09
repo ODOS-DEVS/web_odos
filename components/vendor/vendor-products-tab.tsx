@@ -1,21 +1,25 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Boxes, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Boxes, Eye, Pencil, Plus, Search, Store, Trash2 } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
-import { inputClass } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
 import { Media } from "@/components/ui/media";
 import { Pagination } from "@/components/ui/pagination";
 import { Price } from "@/components/ui/price";
 import { TogglePill } from "@/components/ui/toggle-pill";
+import { QueryError } from "@/components/ui/query-error";
+import { useCategories } from "@/hooks/use-catalog";
+import { useDeleteVendorProduct, useSaveVendorProduct, useVendorProducts } from "@/hooks/use-vendor-products";
 import { discountPercent, formatDate } from "@/libs/format";
-import { useFakeMutation } from "@/mocks/mutation";
-import { MOCK_VENDOR_PRODUCTS, type VendorProduct, type VendorProductStatus } from "@/mocks/vendor.mock";
+import { ApiError } from "@/services/http";
+import type { VendorProduct, VendorProductStatus } from "@/types/vendor";
 
 const STATUS_FILTERS: { value: VendorProductStatus | "all" | "out_of_stock"; label: string }[] = [
   { value: "all", label: "All" },
@@ -26,21 +30,48 @@ const STATUS_FILTERS: { value: VendorProductStatus | "all" | "out_of_stock"; lab
 
 const PAGE_SIZE = 6;
 
+const formInputClass =
+  "h-12 w-full rounded-xl border border-line bg-surface px-4 text-base outline-none transition-colors placeholder:text-muted/70 hover:border-foreground/40 focus:border-foreground sm:text-sm";
+
 type DraftProduct = {
   name: string;
+  description: string;
   category: string;
+  categorySlug: string | null;
+  photo: File | null;
+  /** Preview of a newly chosen photo, else the product's current one. */
+  photoPreview: string | null;
   price: string;
   compareAtPrice: string;
   stock: string;
   status: VendorProductStatus;
 };
 
-const EMPTY_DRAFT: DraftProduct = { name: "", category: "", price: "", compareAtPrice: "", stock: "", status: "active" };
+const EMPTY_DRAFT: DraftProduct = {
+  name: "",
+  description: "",
+  category: "",
+  categorySlug: null,
+  photo: null,
+  photoPreview: null,
+  price: "",
+  compareAtPrice: "",
+  stock: "",
+  status: "active",
+};
+
+const isLive = (status: VendorProductStatus) => status === "active";
+const statusLabel = (status: VendorProductStatus) =>
+  isLive(status) ? "Active" : status === "draft" ? "Draft" : status.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
 function toDraft(product: VendorProduct): DraftProduct {
   return {
     name: product.name,
+    description: product.description,
     category: product.category,
+    categorySlug: product.categorySlug,
+    photo: null,
+    photoPreview: product.imageUrl,
     price: String(product.price),
     compareAtPrice: product.compareAtPrice !== null ? String(product.compareAtPrice) : "",
     stock: String(product.stock),
@@ -52,10 +83,6 @@ function stockBadge(stock: number): { tone: BadgeTone; label: string } {
   if (stock <= 0) return { tone: "danger", label: "Out of stock" };
   if (stock <= 10) return { tone: "warning", label: `Low stock · ${stock}` };
   return { tone: "neutral", label: `${stock} in stock` };
-}
-
-function saveProduct(input: { id?: string; draft: DraftProduct }) {
-  return input;
 }
 
 function ProductForm({
@@ -72,29 +99,78 @@ function ProductForm({
   submitLabel: string;
 }) {
   const set = <K extends keyof DraftProduct>(key: K, value: DraftProduct[K]) => onChange({ ...draft, [key]: value });
+  const categories = useCategories();
+  const photoInput = useRef<HTMLInputElement>(null);
+
+  const onPhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return void toast.error("Choose an image file");
+    if (file.size > 5 * 1024 * 1024) return void toast.error("That photo is too large (5 MB max)");
+    onChange({ ...draft, photo: file, photoPreview: URL.createObjectURL(file) });
+  };
 
   return (
     <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-y-auto">
       <div className="flex-1 space-y-5 p-5">
         <div className="flex items-center gap-3">
-          <Media src={null} name={draft.name || "New product"} className="size-16 shrink-0 rounded-xl" />
-          <Button type="button" variant="outline" size="sm" onClick={() => toast("Photo upload is coming soon")}>
-            Change photo
+          <Media src={draft.photoPreview} name={draft.name || "New product"} className="size-16 shrink-0 rounded-xl" />
+          <Button type="button" variant="outline" size="sm" onClick={() => photoInput.current?.click()}>
+            {draft.photoPreview ? "Change photo" : "Add photo"}
           </Button>
+          <input ref={photoInput} type="file" accept="image/*" onChange={onPhoto} className="sr-only" />
         </div>
 
+        <Field
+          id="product-name"
+          label="Product name"
+          required
+          maxLength={255}
+          value={draft.name}
+          onChange={(e) => set("name", e.target.value)}
+          placeholder="e.g. Air Max Retro"
+        />
+
         <div>
-          <label htmlFor="product-name" className="mb-1.5 block text-sm font-medium">
-            Product name
+          <label htmlFor="product-description" className="mb-1.5 block text-sm font-medium">
+            Description
           </label>
-          <input id="product-name" required value={draft.name} onChange={(e) => set("name", e.target.value)} className={inputClass} placeholder="e.g. Air Max Retro" />
+          <textarea
+            id="product-description"
+            required
+            maxLength={1000}
+            rows={3}
+            value={draft.description}
+            onChange={(e) => set("description", e.target.value)}
+            placeholder="Material, fit, what’s in the box…"
+            className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-base outline-none transition-colors hover:border-foreground/40 focus:border-foreground sm:text-sm"
+          />
         </div>
 
         <div>
           <label htmlFor="product-category" className="mb-1.5 block text-sm font-medium">
             Category
           </label>
-          <input id="product-category" required value={draft.category} onChange={(e) => set("category", e.target.value)} className={inputClass} placeholder="e.g. Sneakers" />
+          <Select
+            required
+            value={draft.categorySlug ?? undefined}
+            onValueChange={(slug) => {
+              const category = categories.data?.find((c) => c.slug === slug);
+              onChange({ ...draft, categorySlug: slug, category: category?.name ?? draft.category });
+            }}
+          >
+            <SelectTrigger id="product-category">
+              <SelectValue placeholder={draft.category || (categories.isPending ? "Loading categories…" : "Choose a category")} />
+            </SelectTrigger>
+            <SelectContent>
+              {(categories.data ?? []).map((category) => (
+                <SelectItem key={category.id} value={category.slug}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -107,12 +183,12 @@ function ProductForm({
               required
               type="number"
               min="0"
-              step="0.01"
-              inputMode="decimal"
+              step="1"
+              inputMode="numeric"
               value={draft.price}
               onChange={(e) => set("price", e.target.value)}
-              className={inputClass}
-              placeholder="0.00"
+              className={formInputClass}
+              placeholder="0"
             />
           </div>
           <div>
@@ -123,11 +199,11 @@ function ProductForm({
               id="product-compare"
               type="number"
               min="0"
-              step="0.01"
-              inputMode="decimal"
+              step="1"
+              inputMode="numeric"
               value={draft.compareAtPrice}
               onChange={(e) => set("compareAtPrice", e.target.value)}
-              className={inputClass}
+              className={formInputClass}
               placeholder="Optional"
             />
           </div>
@@ -146,18 +222,18 @@ function ProductForm({
             inputMode="numeric"
             value={draft.stock}
             onChange={(e) => set("stock", e.target.value)}
-            className={inputClass}
+            className={formInputClass}
             placeholder="0"
           />
         </div>
 
         <div>
-          <p className="mb-1.5 text-sm font-medium">Status</p>
+          <p className="mb-1.5 text-sm font-medium">Visibility</p>
           <div className="flex gap-2">
-            <TogglePill selected={draft.status === "active"} onClick={() => set("status", "active")}>
+            <TogglePill selected={isLive(draft.status)} onClick={() => set("status", "active")}>
               Active
             </TogglePill>
-            <TogglePill selected={draft.status === "draft"} onClick={() => set("status", "draft")}>
+            <TogglePill selected={!isLive(draft.status)} onClick={() => set("status", "draft")}>
               Draft
             </TogglePill>
           </div>
@@ -165,7 +241,7 @@ function ProductForm({
       </div>
 
       <div className="border-t border-line p-5">
-        <Button type="submit" size="lg" className="w-full" disabled={pending}>
+        <Button type="submit" size="lg" className="w-full" disabled={pending || !draft.categorySlug && !draft.category}>
           {pending ? "Saving…" : submitLabel}
         </Button>
       </div>
@@ -190,11 +266,12 @@ function ProductRow({
   const showStockBadge = stock.tone === "danger" || stock.tone === "warning";
 
   return (
-    <article className="rounded-2xl border border-line bg-surface p-2.5">
+    <article className="h-full rounded-2xl border border-line bg-surface p-3">
       <div className="flex gap-3">
-        <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 gap-3 text-left">
-          <div className="relative size-16 shrink-0">
-            <Media src={product.imageUrl} name={product.name} className="size-16 rounded-xl" />
+        <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 items-stretch gap-3 text-left">
+          {/* The photo stretches to the card's full height (at least a square), however tall the text gets. */}
+          <div className="relative w-20 shrink-0 self-stretch sm:w-24">
+            <Media src={product.imageUrl} name={product.name} className="h-full min-h-20 w-full rounded-xl sm:min-h-24" />
             {off > 0 && (
               <Badge tone="accent" className="absolute -top-1.5 -left-1.5 px-1.5 py-0.5 text-[10px]">
                 −{off}%
@@ -202,27 +279,33 @@ function ProductRow({
             )}
           </div>
 
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col justify-center py-0.5">
             <p className="truncate text-xs text-muted">{product.category}</p>
             <p className="mt-0.5 truncate text-sm font-medium">{product.name}</p>
-            <Price value={product.price} compareAt={product.compareAtPrice ?? undefined} className="mt-1" />
+            <Price value={product.price} compareAt={product.compareAtPrice ?? undefined} className="mt-1 flex-wrap" />
 
-            {(product.status === "draft" || showStockBadge) && (
+            {(!isLive(product.status) || showStockBadge) && (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                {product.status === "draft" && <Badge tone="neutral">Draft</Badge>}
-                {showStockBadge && <Badge tone={stock.tone}>{stock.label}</Badge>}
+                {!isLive(product.status) && <Badge tone="neutral">{statusLabel(product.status)}</Badge>}
+                {showStockBadge && (
+                  <Badge tone={stock.tone} className="whitespace-nowrap">
+                    {stock.label}
+                  </Badge>
+                )}
               </div>
             )}
           </div>
         </button>
 
         <div className="flex shrink-0 flex-col items-center gap-1">
-          <Eye className="size-3.5 text-muted" aria-hidden />
-          <button type="button" onClick={onEdit} aria-label={`Edit ${product.name}`} className="press grid size-7 place-items-center rounded-full hover:bg-surface-muted">
-            <Pencil className="size-3.5 text-muted" aria-hidden />
+          <button type="button" onClick={onSelect} aria-label={`View ${product.name}`} className="press grid size-8 place-items-center rounded-full hover:bg-surface-muted">
+            <Eye className="size-4 text-muted" aria-hidden />
           </button>
-          <button type="button" onClick={onDelete} aria-label={`Delete ${product.name}`} className="press grid size-7 place-items-center rounded-full hover:bg-danger-soft">
-            <Trash2 className="size-3.5 text-danger" aria-hidden />
+          <button type="button" onClick={onEdit} aria-label={`Edit ${product.name}`} className="press grid size-8 place-items-center rounded-full hover:bg-surface-muted">
+            <Pencil className="size-4 text-muted" aria-hidden />
+          </button>
+          <button type="button" onClick={onDelete} aria-label={`Delete ${product.name}`} className="press grid size-8 place-items-center rounded-full hover:bg-danger-soft">
+            <Trash2 className="size-4 text-danger" aria-hidden />
           </button>
         </div>
       </div>
@@ -242,8 +325,9 @@ function ProductDetails({ product, onEdit, onDelete }: { product: VendorProduct;
           <div className="min-w-0">
             <p className="text-xs text-muted">{product.category}</p>
             <h3 className="mt-0.5 text-lg font-semibold tracking-normal">{product.name}</h3>
+            {product.description && <p className="mt-1 line-clamp-3 text-sm text-muted">{product.description}</p>}
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Badge tone={product.status === "active" ? "success" : "neutral"}>{product.status === "active" ? "Active" : "Draft"}</Badge>
+              <Badge tone={isLive(product.status) ? "success" : "neutral"}>{statusLabel(product.status)}</Badge>
               {off > 0 && <Badge tone="accent">−{off}%</Badge>}
             </div>
           </div>
@@ -258,6 +342,12 @@ function ProductDetails({ product, onEdit, onDelete }: { product: VendorProduct;
             <span className="text-muted">Stock</span>
             <Badge tone={stock.tone}>{stock.label}</Badge>
           </div>
+          {product.availableStock !== product.stock && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Available (not in unpaid orders)</span>
+              <span className="tabular-nums">{product.availableStock}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-muted">Last updated</span>
             <span>{formatDate(product.updatedAt)}</span>
@@ -284,8 +374,27 @@ function ProductDetails({ product, onEdit, onDelete }: { product: VendorProduct;
   );
 }
 
+/** The product cards while the catalogue loads (also used by the account page's first-load skeleton). */
+export function VendorProductsListSkeleton() {
+  return (
+    <ul className="grid grid-cols-1 gap-3 md:grid-cols-2" aria-busy="true" aria-label="Loading products">
+      {Array.from({ length: 4 }, (_, i) => (
+        <li key={i} className="flex gap-3 rounded-2xl border border-line bg-surface p-3">
+          <div className="size-20 shrink-0 animate-pulse rounded-xl bg-surface-muted sm:size-24" />
+          <div className="flex-1 space-y-2 py-1">
+            <div className="h-3 w-20 animate-pulse rounded bg-surface-muted" />
+            <div className="h-4 w-40 animate-pulse rounded bg-surface-muted" />
+            <div className="h-4 w-24 animate-pulse rounded bg-surface-muted" />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function VendorProductsTab() {
-  const [products, setProducts] = useState<VendorProduct[]>(MOCK_VENDOR_PRODUCTS);
+  const productsQuery = useVendorProducts();
+  const products = useMemo(() => productsQuery.data ?? [], [productsQuery.data]);
   const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]["value"]>("all");
   const [query, setQuery] = useState("");
 
@@ -296,14 +405,14 @@ export function VendorProductsTab() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  const saveMutation = useFakeMutation(saveProduct);
-  const deleteMutation = useFakeMutation((id: string) => id);
+  const saveMutation = useSaveVendorProduct();
+  const deleteMutation = useDeleteVendorProduct();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products.filter((product) => {
-      if (filter === "active" && product.status !== "active") return false;
-      if (filter === "draft" && product.status !== "draft") return false;
+      if (filter === "active" && !isLive(product.status)) return false;
+      if (filter === "draft" && isLive(product.status)) return false;
       if (filter === "out_of_stock" && product.stock > 0) return false;
       if (q && !product.name.toLowerCase().includes(q) && !product.category.toLowerCase().includes(q)) return false;
       return true;
@@ -333,58 +442,53 @@ export function VendorProductsTab() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const price = Number(draft.price);
+    const compareAtPrice = draft.compareAtPrice.trim() ? Number(draft.compareAtPrice) : null;
+    if (!Number.isFinite(price) || price <= 0) return void toast.error("Enter a price above 0");
+    if (compareAtPrice !== null && compareAtPrice <= price) return void toast.error("Compare-at price must be higher than the price");
+
     saveMutation.mutate(
-      { id: editingId ?? undefined, draft },
       {
-        onSuccess: () => {
-          const price = Number(draft.price) || 0;
-          const compareAtPrice = draft.compareAtPrice.trim() ? Number(draft.compareAtPrice) : null;
-          const stock = Number(draft.stock) || 0;
-
-          setProducts((prev) => {
-            if (editingId) {
-              return prev.map((p) =>
-                p.id === editingId
-                  ? { ...p, name: draft.name, category: draft.category, price, compareAtPrice, stock, status: draft.status, updatedAt: new Date().toISOString() }
-                  : p,
-              );
-            }
-            const created: VendorProduct = {
-              id: `vprod-${crypto.randomUUID()}`,
-              name: draft.name,
-              category: draft.category,
-              imageUrl: null,
-              price,
-              compareAtPrice,
-              stock,
-              status: draft.status,
-              updatedAt: new Date().toISOString(),
-            };
-            return [created, ...prev];
-          });
-
-          toast.success(editingId ? `${draft.name} updated` : `${draft.name} added to your catalogue`);
+        id: editingId ?? undefined,
+        input: {
+          name: draft.name,
+          description: draft.description,
+          category: draft.category,
+          categorySlug: draft.categorySlug,
+          price,
+          compareAtPrice,
+          stock: Number(draft.stock) || 0,
+          status: draft.status,
+          photo: draft.photo,
+        },
+      },
+      {
+        onSuccess: (product) => {
+          toast.success(editingId ? `${product.name} updated` : `${product.name} added to your catalogue`);
           setFormOpen(false);
         },
+        onError: (error) => toast.error(error.message),
       },
     );
   };
+
 
   const onConfirmDelete = () => {
     if (!deleteTarget) return;
     deleteMutation.mutate(deleteTarget.id, {
       onSuccess: () => {
-        setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
         toast.success(`${deleteTarget.name} deleted`);
         setDeleteTarget(null);
       },
+      onError: (error) => toast.error(error.message),
     });
   };
 
   return (
     <div className="space-y-5">
+      {/* Mobile: search on its own row, then filter + add side by side. Wider: all on one row. */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[12rem] flex-1">
+        <div className="relative w-full sm:w-auto sm:min-w-48 sm:flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" aria-hidden />
           <input
             type="search"
@@ -395,28 +499,40 @@ export function VendorProductsTab() {
           />
         </div>
 
-        <select
-          value={filter}
-          onChange={(event) => setFilter(event.target.value as (typeof STATUS_FILTERS)[number]["value"])}
-          aria-label="Filter by status"
-          className="h-11 shrink-0 rounded-full border border-line bg-surface px-4 text-sm focus:border-foreground focus:outline-none"
-        >
-          {STATUS_FILTERS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
+        <Select value={filter} onValueChange={(value) => setFilter(value as (typeof STATUS_FILTERS)[number]["value"])}>
+          <SelectTrigger aria-label="Filter by status" className="h-11 min-w-0 flex-1 rounded-full sm:w-40 sm:flex-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_FILTERS.map((f) => (
+              <SelectItem key={f.value} value={f.value}>
+                {f.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <Button type="button" onClick={openCreate} className="shrink-0">
+        <Button type="button" onClick={openCreate} className="flex-1 sm:flex-none">
           <Plus className="size-4" aria-hidden />
           Add product
         </Button>
       </div>
 
-      {rows.length > 0 ? (
+      {productsQuery.isPending ? (
+        <VendorProductsListSkeleton />
+      ) : productsQuery.isError ? (
+        productsQuery.error instanceof ApiError && productsQuery.error.status === 403 ? (
+          <EmptyState
+            icon={<Store className="size-10 text-muted" aria-hidden />}
+            title="This account isn’t a vendor yet"
+            description="Apply to sell on ODOS, and your products will be managed here once you’re approved."
+          />
+        ) : (
+          <QueryError error={productsQuery.error} onRetry={() => productsQuery.refetch()} title="We couldn’t load your products" />
+        )
+      ) : rows.length > 0 ? (
         <>
-          <ul className="grid grid-cols-2 gap-3">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {pageRows.map((product) => (
               <li key={product.id}>
                 <ProductRow

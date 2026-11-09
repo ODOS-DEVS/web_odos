@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { SupportChat } from "@/components/chat/support-chat";
 import { FAQS } from "@/components/home/faq";
 import { CONTACT_METHODS } from "@/components/layout/contact-drawer";
 import { TogglePill } from "@/components/ui/toggle-pill";
@@ -124,6 +125,8 @@ export function HelpSupportTab() {
           </a>
         ))}
       </div>
+
+      <SupportChat />
 
       <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
         <h2 className="text-lg font-semibold tracking-normal">Frequently asked questions</h2>

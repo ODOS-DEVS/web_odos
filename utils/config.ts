@@ -34,6 +34,19 @@ export const CONFIG = {
   /** Path prefix of every backend route, and of the same-origin proxy that fronts it in the browser. */
   API_PREFIX: "/api",
 
+  /**
+   * Google OAuth web client ID for "Continue with Google". Optional: without it the button explains
+   * that Google sign-in isn't set up. Must be a client the backend also accepts.
+   */
+  GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "",
+
+  /**
+   * Optional Cloudinary unsigned upload, used for profile photos (the API stores only a photo URL and
+   * has no upload endpoint for shoppers). Without both values, changing the photo is disabled.
+   */
+  CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "",
+  CLOUDINARY_UPLOAD_PRESET: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? "",
+
   /** This app's own public origin — for metadata (OG/canonical URLs), robots and sitemap, never the API. */
   SITE_URL: stripTrailingSlash(NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_URL),
 

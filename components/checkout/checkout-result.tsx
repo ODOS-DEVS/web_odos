@@ -1,31 +1,58 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { ButtonLink, Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { useSession } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
+import { useMounted } from "@/hooks/use-mounted";
+import { usePaymentVerification } from "@/hooks/use-orders";
+import { PENDING_PAYMENT_KEY } from "@/libs/checkout";
 import { formatMoney } from "@/libs/format";
-import { mockPaymentVerification } from "@/mocks/payments.mock";
-import { fakeQuery } from "@/mocks/query";
 
 /**
  * Where the hosted payment page sends the shopper back. It asks the API whether the payment really
  * went through (never trusting the redirect alone), and only then empties the cart.
  */
-export function CheckoutResult({ reference }: { reference?: string }) {
+export function CheckoutResult({ reference: fromUrl }: { reference?: string }) {
   const { clear } = useCart();
+  const mounted = useMounted();
+  const session = useSession();
 
-  const verification = fakeQuery(mockPaymentVerification(reference ?? ""));
+  // Prefer the provider's reference in the URL; otherwise the one saved before the redirect.
+  const [stored] = useState(() => {
+    if (typeof window === "undefined") return undefined;
+    try {
+      return sessionStorage.getItem(PENDING_PAYMENT_KEY) ?? undefined;
+    } catch {
+      return undefined;
+    }
+  });
+  const reference = fromUrl ?? stored;
+
+  const verification = usePaymentVerification(reference);
 
   const paid = verification.data?.paid;
   useEffect(() => {
     if (!paid) return;
     clear();
+    try {
+      sessionStorage.removeItem(PENDING_PAYMENT_KEY);
+    } catch {
+      // ignore
+    }
   }, [paid, clear]);
 
   let body;
-  if (!reference) {
+  if (!mounted || (reference && !session && verification.isPending)) {
+    body = (
+      <>
+        <Loader2 className="size-10 animate-spin text-muted" aria-hidden />
+        <h1 className="mt-6 text-3xl font-semibold sm:text-4xl">Confirming your payment…</h1>
+      </>
+    );
+  } else if (!reference) {
     body = (
       <>
         <AlertTriangle className="size-10 text-warning" aria-hidden />
@@ -33,12 +60,21 @@ export function CheckoutResult({ reference }: { reference?: string }) {
         <p className="mt-3 max-w-md text-muted">We couldn’t find a payment reference. If you were charged, check your orders.</p>
       </>
     );
-  } else if (verification.isPending) {
+  } else if (verification.isPending || verification.data?.pending) {
     body = (
       <>
         <Loader2 className="size-10 animate-spin text-muted" aria-hidden />
         <h1 className="mt-6 text-3xl font-semibold sm:text-4xl">Confirming your payment…</h1>
-        <p className="mt-3 max-w-md text-muted">This only takes a moment. Please don’t close this page.</p>
+        <p className="mt-3 max-w-md text-muted">
+          {verification.data?.pending
+            ? "Waiting for the payment provider. If you were asked to approve on your phone, do that now."
+            : "This only takes a moment. Please don’t close this page."}
+        </p>
+        {verification.data?.pending && !verification.isFetching && (
+          <Button className="mt-6" variant="outline" onClick={() => verification.refetch()}>
+            Check again
+          </Button>
+        )}
       </>
     );
   } else if (verification.isError) {

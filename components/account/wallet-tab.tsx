@@ -8,37 +8,28 @@ import { inputClass } from "@/components/ui/field";
 import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
 import { useWallet } from "@/hooks/use-wallet";
-import { useFakeMutation } from "@/mocks/mutation";
 import { formatDateTime, formatMoney } from "@/libs/format";
 
 const QUICK_AMOUNTS = [50, 100, 200, 500];
 
-function mockTopUp(input: { amount: number }) {
-  return input;
-}
-
 function TopUpForm() {
   const { methods } = usePaymentMethods();
-  const { topUp } = useWallet();
-  const topUpMutation = useFakeMutation(mockTopUp);
+  const { topUpAsync, isPending } = useWallet();
 
   const [amount, setAmount] = useState<number | "">(100);
   const [methodId, setMethodId] = useState(methods[0]?.id);
   const method = methods.find((m) => m.id === methodId) ?? methods[0];
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!amount || amount <= 0 || !method) return;
-    topUpMutation.mutate(
-      { amount },
-      {
-        onSuccess: () => {
-          topUp(amount, method.label);
-          toast.success(`${formatMoney(amount)} added to your wallet`);
-          setAmount(100);
-        },
-      },
-    );
+    try {
+      await topUpAsync(Number(amount), method.label, method.id);
+      toast.success(`${formatMoney(Number(amount))} added to your wallet`);
+      setAmount(100);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Top-up failed");
+    }
   };
 
   return (
@@ -80,15 +71,49 @@ function TopUpForm() {
         </div>
       )}
 
-      <Button type="submit" variant="accent" size="lg" className="mt-5 w-full" disabled={topUpMutation.isPending || !amount || !method}>
-        {topUpMutation.isPending ? "Topping up…" : `Top up ${amount ? formatMoney(Number(amount)) : ""}`}
+      <Button type="submit" variant="accent" size="lg" className="mt-5 w-full" disabled={isPending || !amount || !method}>
+        {isPending ? "Topping up…" : `Top up ${amount ? formatMoney(Number(amount)) : ""}`}
       </Button>
     </form>
   );
 }
 
+export function WalletSkeleton() {
+  return (
+    <div className="space-y-5" aria-busy="true" aria-label="Loading wallet">
+      {/* Balance Card Skeleton */}
+      <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6 animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="size-4 rounded bg-surface-muted" />
+          <div className="h-4 w-28 rounded-md bg-surface-muted" />
+        </div>
+        <div className="mt-3 h-10 w-48 rounded-lg bg-surface-muted" />
+      </div>
+
+      {/* Top Up Card Skeleton */}
+      <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6 animate-pulse space-y-4">
+        <div className="h-5 w-32 rounded-md bg-surface-muted" />
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="h-9 w-20 rounded-full bg-surface-muted" />
+          ))}
+        </div>
+        <div className="space-y-1.5">
+          <div className="h-4 w-16 rounded-md bg-surface-muted" />
+          <div className="h-11 w-full rounded-xl bg-surface-muted" />
+        </div>
+        <div className="h-11 w-full rounded-full bg-surface-muted mt-5" />
+      </div>
+    </div>
+  );
+}
+
 export function WalletTab() {
-  const { balance, transactions } = useWallet();
+  const { balance, transactions, isLoading } = useWallet();
+
+  if (isLoading && balance === 0) {
+    return <WalletSkeleton />;
+  }
 
   return (
     <div className="space-y-5">
@@ -97,7 +122,9 @@ export function WalletTab() {
           <Wallet className="size-4" aria-hidden />
           Available balance
         </div>
-        <p className="mt-2 text-4xl font-semibold tabular-nums">{formatMoney(balance)}</p>
+        <p className="mt-2 text-4xl font-semibold tabular-nums">
+          {isLoading && balance === 0 ? "Loading…" : formatMoney(balance)}
+        </p>
       </div>
 
       <TopUpForm />

@@ -6,11 +6,10 @@ import { StoreCard, StoreCardSkeleton } from "@/components/store/store-card";
 import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
-import { MOCK_STORES } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
+import { useStores } from "@/hooks/use-catalog";
 
 export function StoresView() {
-  const stores = fakeQuery(MOCK_STORES);
+  const stores = useStores();
 
   return (
     <Container className="py-8 sm:py-12">

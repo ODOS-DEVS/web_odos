@@ -13,7 +13,11 @@ export type FavoriteItem = {
   savedAt: string;
 };
 
-const { useFavorites, useIsFavorite } = createFavoritesStore<Product, FavoriteItem>({
+const {
+  useFavorites,
+  useIsFavorite,
+  useStore: useFavoritesStore,
+} = createFavoritesStore<Product, FavoriteItem>({
   name: "odos-favorites-v1",
   getId: (item) => item.productId,
   toItem: (product) => ({
@@ -27,4 +31,4 @@ const { useFavorites, useIsFavorite } = createFavoritesStore<Product, FavoriteIt
   }),
 });
 
-export { useFavorites, useIsFavorite };
+export { useFavorites, useFavoritesStore, useIsFavorite };

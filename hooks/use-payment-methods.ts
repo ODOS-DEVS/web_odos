@@ -1,79 +1,94 @@
 "use client";
 
-import { useMemo } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { Logo } from "@/components/checkout/logo-badge";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { accountQueries, queryKeys } from "@/services/queries";
+import {
+  paymentMethodsService,
+  type SavedPaymentMethod,
+} from "@/services/payment-methods.service";
+import type { SavedPaymentMethodCreate } from "@/types/api";
 import { useMounted } from "./use-mounted";
 
-export type SavedPaymentMethod = {
-  id: string;
-  kind: "momo" | "card";
-  label: string;
-  subtitle: string;
-  logo: Logo;
-  isDefault?: boolean;
-};
+export type { SavedPaymentMethod };
 
-const SEED: SavedPaymentMethod[] = [
-  {
-    id: "mtn",
-    kind: "momo",
-    label: "MTN MoMo",
-    subtitle: "MTN Mobile Money · 024 897 4005",
-    isDefault: true,
-    logo: { kind: "image", src: "/payment-logos/mtn-official.png", alt: "MTN" },
-  },
-  {
-    id: "telecel",
-    kind: "momo",
-    label: "Telecel Cash",
-    subtitle: "Telecel Cash · 020 123 4567",
-    logo: { kind: "image", src: "/payment-logos/telecel-icon.png", alt: "Telecel" },
-  },
-  {
-    id: "card",
-    kind: "card",
-    label: "**** 8451",
-    subtitle: "Mastercard Debit/Credit · 8451 · 01/33",
-    logo: { kind: "image", src: "/payment-logos/mastercard-official.svg", alt: "Mastercard" },
-  },
-];
-
-type PaymentMethodsState = {
-  methods: SavedPaymentMethod[];
-  add: (method: Omit<SavedPaymentMethod, "id">) => void;
-  remove: (id: string) => void;
-  setDefault: (id: string) => void;
-};
-
-const usePaymentMethodsStore = create<PaymentMethodsState>()(
-  persist(
-    (set) => ({
-      methods: SEED,
-      add: (method) =>
-        set((state) => ({
-          methods: [...state.methods, { ...method, id: crypto.randomUUID() }],
-        })),
-      remove: (id) => set((state) => ({ methods: state.methods.filter((m) => m.id !== id) })),
-      setDefault: (id) =>
-        set((state) => ({
-          methods: state.methods.map((m) => ({ ...m, isDefault: m.id === id })),
-        })),
-    }),
-    { name: "odos-payment-methods-v3" },
-  ),
-);
-
-/** The shopper's saved momo numbers and cards. `ready` is false until the client has mounted. */
+/**
+ * Connected directly to GET /account/payment-methods with React Query caching and mutations.
+ * Strictly presents genuine backend records.
+ */
 export function usePaymentMethods() {
   const ready = useMounted();
-  const stored = usePaymentMethodsStore((s) => s.methods);
-  const add = usePaymentMethodsStore((s) => s.add);
-  const remove = usePaymentMethodsStore((s) => s.remove);
-  const setDefault = usePaymentMethodsStore((s) => s.setDefault);
+  const queryClient = useQueryClient();
 
-  const methods = useMemo(() => (ready ? stored : []), [ready, stored]);
+  const query = useQuery({
+    ...accountQueries.paymentMethods(),
+    enabled: ready,
+    retry: 1,
+  });
 
-  return { ready, methods, add, remove, setDefault };
+  const addMutation = useMutation({
+    mutationFn: async (payload: SavedPaymentMethodCreate) => {
+      return await paymentMethodsService.create(payload);
+    },
+    onSuccess: (newMethod) => {
+      queryClient.setQueryData(accountQueries.paymentMethods().queryKey, (old: SavedPaymentMethod[] = []) => [
+        ...old.filter((m) => m.id !== newMethod.id),
+        newMethod,
+      ]);
+      queryClient.invalidateQueries({ queryKey: queryKeys.paymentMethods });
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await paymentMethodsService.delete(id);
+    },
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData(accountQueries.paymentMethods().queryKey, (old: SavedPaymentMethod[] = []) =>
+        old.filter((m) => m.id !== id)
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.paymentMethods });
+    },
+  });
+
+  const setDefaultMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await paymentMethodsService.setDefault(id);
+    },
+    onSuccess: (updatedMethod) => {
+      queryClient.setQueryData(accountQueries.paymentMethods().queryKey, (old: SavedPaymentMethod[] = []) =>
+        old.map((m) => ({ ...m, isDefault: m.id === updatedMethod.id }))
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.paymentMethods });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: SavedPaymentMethodCreate }) => {
+      return await paymentMethodsService.update(id, payload);
+    },
+    onSuccess: (updatedMethod) => {
+      queryClient.setQueryData(accountQueries.paymentMethods().queryKey, (old: SavedPaymentMethod[] = []) =>
+        old.map((m) => (m.id === updatedMethod.id ? updatedMethod : m))
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.paymentMethods });
+    },
+  });
+
+  const methods = query.data ?? [];
+
+  return {
+    ready,
+    isLoading: !ready || query.isLoading,
+    isFetching: query.isFetching,
+    isError: query.isError,
+    methods,
+    add: (payload: SavedPaymentMethodCreate) => addMutation.mutate(payload),
+    addAsync: (payload: SavedPaymentMethodCreate) => addMutation.mutateAsync(payload),
+    update: (id: string, payload: SavedPaymentMethodCreate) => updateMutation.mutate({ id, payload }),
+    updateAsync: (id: string, payload: SavedPaymentMethodCreate) => updateMutation.mutateAsync({ id, payload }),
+    remove: (id: string) => removeMutation.mutate(id),
+    setDefault: (id: string) => setDefaultMutation.mutate(id),
+    isSaving: addMutation.isPending || updateMutation.isPending,
+    isRemoving: removeMutation.isPending,
+  };
 }

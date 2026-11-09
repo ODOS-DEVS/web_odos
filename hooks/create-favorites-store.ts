@@ -15,7 +15,7 @@ export function createFavoritesStore<TEntity, TItem>({
   toItem,
   getId,
 }: {
-  /** localStorage key — there's no wishlist endpoint wired up yet, so favourites live in the browser only. */
+  /** localStorage key. Guests keep favourites here; product favourites also sync to the account wishlist. */
   name: string;
   /** Builds the stored item from the entity being toggled. */
   toItem: (entity: TEntity) => TItem;
@@ -66,5 +66,6 @@ export function createFavoritesStore<TEntity, TItem>({
     return ready && saved;
   }
 
-  return { useFavorites, useIsFavorite };
+  /** `useStore` is the raw zustand store, for syncing with the account outside React render. */
+  return { useFavorites, useIsFavorite, useStore };
 }

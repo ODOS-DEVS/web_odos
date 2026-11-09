@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Clock, Mail, MapPin, MessageCircle, Phone, TreePalm, Star, Truck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Mail, MapPin, MessageCircle, MessagesSquare, Phone, TreePalm, Star, Truck } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Store } from "@/types/catalog";
 import { formatMoneyCompact } from "@/libs/format";
@@ -39,36 +39,48 @@ export function StoreHeader({ store }: { store: Store }) {
         <div className="mt-3 min-w-0 min-[400px]:mt-4">
           {/* Name + rating pill on one line, like a marketplace shop header (Etsy, Depop). */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h1 className="max-w-full text-xl leading-tight font-semibold min-[360px]:text-2xl min-[400px]:text-3xl sm:text-4xl">{store.name}</h1>
+            <h1 className="max-w-full text-xl leading-tight font-semibold min-[360px]:text-2xl min-[400px]:text-3xl sm:text-4xl">
+              {store.name}
+            </h1>
             <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-1 text-xs font-semibold min-[400px]:px-2.5 min-[400px]:text-sm">
               <Star className="size-3.5 fill-current text-warning" aria-hidden />
               {store.rating > 0 ? store.rating.toFixed(1) : "New"}
             </span>
           </div>
-          <p className="mt-1 text-[13px] leading-5 text-muted min-[400px]:text-base sm:text-lg">{[store.category, place].filter(Boolean).join(" · ")}</p>
+          <p className="mt-1 text-[13px] leading-5 text-muted min-[400px]:text-base sm:text-lg">
+            {[store.category, place].filter(Boolean).join(" · ")}
+          </p>
         </div>
 
-        {/* Primary way to reach the vendor, promoted out of the About card (Faire's Message button). */}
-        {(store.whatsappUrl || store.phone || store.email) && (
-          <div className="mt-3 flex w-full gap-2 min-[400px]:mt-4 sm:w-auto">
-            {store.whatsappUrl && (
-              <ButtonLink href={store.whatsappUrl} target="_blank" rel="noopener noreferrer" variant="accent" size="sm" className="flex-1 sm:flex-none">
-                <MessageCircle className="size-4" aria-hidden />
-                Message
-              </ButtonLink>
-            )}
-            {store.phone && (
-              <ButtonLink href={`tel:${store.phone}`} variant="outline" size="icon" aria-label={`Call ${store.name}`}>
-                <Phone className="size-4" aria-hidden />
-              </ButtonLink>
-            )}
-            {!store.whatsappUrl && store.email && (
-              <ButtonLink href={`mailto:${store.email}`} variant="outline" size="icon" aria-label={`Email ${store.name}`}>
-                <Mail className="size-4" aria-hidden />
-              </ButtonLink>
-            )}
-          </div>
-        )}
+        {/* Primary way to reach the vendor: in-app chat (always available), then WhatsApp / call / email when set. */}
+        <div className="mt-3 flex w-full gap-2 min-[400px]:mt-4 sm:w-auto">
+          <ButtonLink href={`/stores/${encodeURIComponent(store.slug)}/chat`} variant="accent" size="sm" className="flex-1 sm:flex-none">
+            <MessagesSquare className="size-4" aria-hidden />
+            Chat with store
+          </ButtonLink>
+          {store.whatsappUrl && (
+            <ButtonLink
+              href={store.whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="outline"
+              size="icon"
+              aria-label={`Message ${store.name} on WhatsApp`}
+            >
+              <MessageCircle className="size-4" aria-hidden />
+            </ButtonLink>
+          )}
+          {store.phone && (
+            <ButtonLink href={`tel:${store.phone}`} variant="outline" size="icon" aria-label={`Call ${store.name}`}>
+              <Phone className="size-4" aria-hidden />
+            </ButtonLink>
+          )}
+          {store.email && (
+            <ButtonLink href={`mailto:${store.email}`} variant="outline" size="icon" aria-label={`Email ${store.name}`}>
+              <Mail className="size-4" aria-hidden />
+            </ButtonLink>
+          )}
+        </div>
       </header>
     </>
   );
@@ -98,10 +110,17 @@ export function StoreInfoBar({ store }: { store: Store }) {
       </Cell>
       <Cell icon={<Truck className="size-5" aria-hidden />} label="Delivery">
         <span className="tabular-nums">
-          {store.deliveryFeeFrom === null ? (store.deliveryBadge ?? "At checkout") : store.deliveryFeeFrom === 0 ? "Free" : `From ${formatMoneyCompact(store.deliveryFeeFrom)}`}
+          {store.deliveryFeeFrom === null
+            ? (store.deliveryBadge ?? "At checkout")
+            : store.deliveryFeeFrom === 0
+              ? "Free"
+              : `From ${formatMoneyCompact(store.deliveryFeeFrom)}`}
         </span>
       </Cell>
-      <Cell icon={store.isOnVacation ? <TreePalm className="size-5" aria-hidden /> : <Clock className="size-5" aria-hidden />} label="Status">
+      <Cell
+        icon={store.isOnVacation ? <TreePalm className="size-5" aria-hidden /> : <Clock className="size-5" aria-hidden />}
+        label="Status"
+      >
         {store.isOnVacation ? (
           "On vacation"
         ) : (

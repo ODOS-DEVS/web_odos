@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Check, ChevronRight, Star } from "lucide-react";
+import { ChevronRight, Star } from "lucide-react";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductGrid } from "@/components/product/product-grid";
+import { ProductDelivery } from "@/components/product/product-delivery";
 import { ProductInfoGrid } from "@/components/product/product-info-grid";
+import { ProductSpecifications } from "@/components/product/product-specifications";
+import { ProductVouchers } from "@/components/product/product-vouchers";
 import { PurchasePanel } from "@/components/product/purchase-panel";
 import { ReviewsList } from "@/components/product/reviews-list";
+import { TrackEvent } from "@/components/tracking/track";
+import { WriteReview } from "@/components/product/write-review";
 import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
 import { Media } from "@/components/ui/media";
@@ -16,19 +21,18 @@ import { Rating } from "@/components/ui/rating";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { relatedProducts } from "@/libs/catalog";
 import { discountPercent } from "@/libs/format";
-import { mockProduct, mockProductReviews, mockProducts, mockStoreMap } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
-import { ApiError } from "@/services/http";
-import type { Product } from "@/types/catalog";
+import { useQuery } from "@tanstack/react-query";
+import { useProduct, useProductReviews, useSimilarProducts, useStoreMap } from "@/hooks/use-catalog";
+import { catalogQueries } from "@/services/queries";
 
 export function ProductView({ id }: { id: string }) {
-  const found = mockProduct(id);
-  const product = found
-    ? fakeQuery(found)
-    : fakeQuery(undefined as Product | undefined, { isError: true, error: new ApiError(404, "Product not found") });
-  const reviews = fakeQuery(mockProductReviews(id));
-  const all = fakeQuery(mockProducts());
-  const stores = mockStoreMap();
+  const product = useProduct(id);
+  const reviews = useProductReviews(id);
+  const similar = useSimilarProducts(id);
+  const { map: stores } = useStoreMap();
+  // Fallback for "You might also like" only: same store or category from the cached catalogue.
+  const needFallback = similar.isError || (similar.isSuccess && similar.data.length === 0);
+  const all = useQuery({ ...catalogQueries.products(), enabled: needFallback });
 
   if (product.isError) return <Container className="py-12"><QueryError error={product.error} onRetry={() => product.refetch()} title="We couldn’t load this product" /></Container>;
   if (!product.data) return <Container className="py-12"><div className="h-[32rem] animate-pulse rounded-3xl bg-surface-muted" aria-busy="true" /></Container>;
@@ -36,11 +40,14 @@ export function ProductView({ id }: { id: string }) {
   const p = product.data;
   const store = p.storeId ? stores.get(p.storeId) : undefined;
   const off = discountPercent(p.price, p.compareAtPrice);
-  const related = relatedProducts(all.data ?? [], p);
+  const related = !needFallback
+    ? (similar.data ?? []).filter((item) => item.id !== p.id).slice(0, 4)
+    : relatedProducts(all.data ?? [], p);
   const categorySlug = p.categorySlugs[0];
 
   return (
     <Container className="py-8 sm:py-12">
+      <TrackEvent event_type="product_view" product_id={p.id} store_id={p.storeId} category={p.categoryName} source_screen="product" />
       <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-1 text-sm text-muted">
         <Link href="/products" className="hover:text-foreground">Products</Link>
         {p.categoryName && (
@@ -81,28 +88,26 @@ export function ProductView({ id }: { id: string }) {
 
           <Price value={p.price} compareAt={p.compareAtPrice ?? undefined} size="lg" className="mt-5" />
 
-          {p.description && <p className="mt-5 leading-7 whitespace-pre-line text-muted">{p.description}</p>}
+          {p.description && <p className="mt-4 text-sm leading-relaxed whitespace-pre-line text-muted">{p.description}</p>}
 
           {p.specifications.length > 0 && (
-            <ul className="mt-5 space-y-2 text-sm">
-              {p.specifications.map((spec) => (
-                <li key={spec} className="flex items-start gap-2.5">
-                  <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-                  {spec}
-                </li>
-              ))}
-            </ul>
+            <ProductSpecifications specifications={p.specifications} />
           )}
 
           <div className="mt-8">
             <PurchasePanel product={p} />
+          </div>
+
+          <div className="mt-8 space-y-4">
+            {store && <ProductVouchers storeId={store.id} storeName={store.name} />}
+            <ProductDelivery product={p} />
           </div>
         </div>
       </div>
 
       {store && (
         <section className="mt-14">
-          <ProductInfoGrid store={store} />
+          <ProductInfoGrid store={store} productId={p.id} />
         </section>
       )}
 
@@ -117,8 +122,11 @@ export function ProductView({ id }: { id: string }) {
             </div>
           )}
         </div>
+        <WriteReview productId={p.id} />
         {reviews.isPending ? (
           <div className="h-32 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />
+        ) : reviews.isError ? (
+          <QueryError error={reviews.error} onRetry={() => reviews.refetch()} title="We couldn’t load reviews" />
         ) : reviews.data && reviews.data.length > 0 ? (
           <ReviewsList reviews={reviews.data} />
         ) : (

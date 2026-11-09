@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Star, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { inputClass } from "@/components/ui/field";
 import { Media } from "@/components/ui/media";
 import { useMyReviewForItem, useMyReviews } from "@/hooks/use-my-reviews";
+import { useOrders } from "@/hooks/use-orders";
 import { cn } from "@/libs/cn";
 import { formatDate } from "@/libs/format";
-import { MOCK_ORDERS } from "@/mocks/orders.mock";
+import type { Order } from "@/types/order";
 
 type ReviewableItem = {
+  orderId: string;
   orderItemId: string;
   productId: string;
   name: string;
@@ -21,18 +23,49 @@ type ReviewableItem = {
   deliveredAt: string;
 };
 
-function reviewableItems(): ReviewableItem[] {
+function extractReviewableItems(orders: Order[] | undefined): ReviewableItem[] {
+  if (!orders) return [];
   const items: ReviewableItem[] = [];
-  for (const order of MOCK_ORDERS) {
+  for (const order of orders) {
     for (const pkg of order.packages) {
       if (pkg.status !== "delivered") continue;
       const deliveredAt = order.timeline.find((t) => t.label === "Delivered")?.at ?? order.placedAt;
       for (const item of pkg.items) {
-        items.push({ orderItemId: item.id, productId: item.productId, name: item.name, imageUrl: item.imageUrl, orderNumber: order.number, deliveredAt });
+        items.push({
+          orderId: order.id,
+          orderItemId: item.id,
+          productId: item.productId,
+          name: item.name,
+          imageUrl: item.imageUrl,
+          orderNumber: order.number,
+          deliveredAt,
+        });
       }
     }
   }
   return items;
+}
+
+export function ReviewsSkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Loading reviews">
+      {Array.from({ length: 3 }, (_, i) => (
+        <div
+          key={i}
+          className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-4 sm:p-5 animate-pulse"
+        >
+          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+            <div className="size-12 shrink-0 rounded-xl bg-surface-muted" />
+            <div className="space-y-2 flex-1 min-w-0">
+              <div className="h-4 w-44 max-w-full rounded-md bg-surface-muted" />
+              <div className="h-3 w-56 max-w-full rounded-md bg-surface-muted" />
+            </div>
+          </div>
+          <div className="h-8 w-28 shrink-0 rounded-full bg-surface-muted" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function StarPicker({ value, onChange }: { value: number; onChange: (next: number) => void }) {
@@ -69,17 +102,36 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-function ReviewForm({ item, initial, onCancel, onDone }: { item: ReviewableItem; initial?: { rating: number; comment: string }; onCancel: () => void; onDone: () => void }) {
-  const { submit } = useMyReviews();
+function ReviewForm({
+  item,
+  initial,
+  onCancel,
+  onDone,
+}: {
+  item: ReviewableItem;
+  initial?: { rating: number; comment: string };
+  onCancel: () => void;
+  onDone: () => void;
+}) {
+  const { submitAsync, isSubmitting } = useMyReviews();
   const [rating, setRating] = useState(initial?.rating ?? 0);
   const [comment, setComment] = useState(initial?.comment ?? "");
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (rating === 0) return;
-    submit({ orderItemId: item.orderItemId, productId: item.productId, rating, comment: comment.trim() });
-    toast.success("Review submitted");
-    onDone();
+    try {
+      await submitAsync({
+        orderId: item.orderId,
+        productId: item.productId,
+        rating,
+        comment: comment.trim(),
+      });
+      toast.success("Review submitted");
+      onDone();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to submit review");
+    }
   };
 
   return (
@@ -102,10 +154,10 @@ function ReviewForm({ item, initial, onCancel, onDone }: { item: ReviewableItem;
         />
       </div>
       <div className="flex gap-2.5">
-        <Button type="submit" variant="accent" disabled={rating === 0}>
-          Submit review
+        <Button type="submit" variant="accent" disabled={rating === 0 || isSubmitting}>
+          {isSubmitting ? "Submitting…" : "Submit review"}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
       </div>
@@ -114,7 +166,7 @@ function ReviewForm({ item, initial, onCancel, onDone }: { item: ReviewableItem;
 }
 
 function ReviewableItemRow({ item }: { item: ReviewableItem }) {
-  const review = useMyReviewForItem(item.orderItemId);
+  const review = useMyReviewForItem(item.productId, item.orderId);
   const [open, setOpen] = useState(false);
 
   return (
@@ -138,7 +190,11 @@ function ReviewableItemRow({ item }: { item: ReviewableItem }) {
         <div className="mt-4 border-t border-line pt-4">
           <div className="flex items-center justify-between gap-3">
             <Stars value={review.rating} />
-            <button type="button" onClick={() => setOpen(true)} className="press flex items-center gap-1 text-xs font-medium text-accent hover:opacity-80">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="press flex items-center gap-1 text-xs font-medium text-accent hover:opacity-80"
+            >
               <Pencil className="size-3.5" aria-hidden />
               Edit
             </button>
@@ -160,7 +216,14 @@ function ReviewableItemRow({ item }: { item: ReviewableItem }) {
 }
 
 export function ReviewsTab() {
-  const items = reviewableItems();
+  const { data: orders, isLoading: ordersLoading } = useOrders();
+  const { isLoading: reviewsLoading } = useMyReviews();
+
+  const items = useMemo(() => extractReviewableItems(orders), [orders]);
+
+  if (ordersLoading || reviewsLoading) {
+    return <ReviewsSkeleton />;
+  }
 
   if (items.length === 0) {
     return (

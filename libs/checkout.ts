@@ -31,3 +31,6 @@ export const toOrderItems = (lines: CartLine[]): OrderItemCreate[] =>
     selected_size: l.size,
     selected_color: l.color,
   }));
+
+/** sessionStorage key for the payment reference, kept across the redirect to the hosted payment page. */
+export const PENDING_PAYMENT_KEY = "odos-pending-payment";

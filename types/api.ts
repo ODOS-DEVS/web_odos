@@ -89,6 +89,11 @@ export type AuthToken = {
   user: UserRead;
 };
 
+/** POST /auth/verify-reset-code → a short-lived token that authorises POST /auth/reset-password. */
+export type PasswordResetTokenResponse = { message: string; reset_token: string };
+
+export type VerifiedPhonesResponse = { phones: string[] };
+
 export type MessageResponse = {
   message: string;
 };
@@ -113,6 +118,40 @@ export type MarketRead = {
   image_key: string;
   image_url?: string | null;
   sort_order: number;
+};
+
+/** GET /catalog/promo-banners. `accent` is a free-form colour; `cta_link` may be relative or absolute. */
+export type PromoBannerRead = {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  cta_label: string;
+  cta_link?: string | null;
+  image_url?: string | null;
+  accent?: string | null;
+  sort_order: number;
+  campaign_tag?: string | null;
+  link_type?: string | null;
+  placement?: string | null;
+};
+
+/** GET /catalog/campaigns. */
+export type MerchandisingCampaignRead = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  banner_image_url?: string | null;
+  thumbnail_image_url?: string | null;
+  icon_key?: string | null;
+  theme_color?: string | null;
+  is_featured?: boolean;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  display_priority?: number;
+  product_count?: number;
+  seconds_remaining?: number;
 };
 
 export type ProductRead = {
@@ -148,6 +187,22 @@ export type ProductRead = {
   flash_sale_units_remaining?: number | null;
   created_at: string;
   updated_at: string;
+};
+
+/** GET /recommendations/similar/{id} (works signed out; personalised when signed in). */
+export type RecommendationFeedRead = {
+  title: string;
+  subtitle?: string | null;
+  personalized?: boolean;
+  products: ProductRead[];
+};
+
+/** GET /catalog/search — results arrive ranked by relevance. */
+export type SearchResponseRead = {
+  query: string;
+  results: { product: ProductRead; relevance_score?: number; reason?: string | null }[];
+  total_count: number;
+  has_more: boolean;
 };
 
 export type ProductReviewRead = {
@@ -353,9 +408,38 @@ export type OrderRead = {
   created_at: string;
   updated_at: string;
   items: OrderItemRead[];
-  return_requests: unknown[];
+  return_requests: ReturnRequestRead[];
   timeline: OrderStatusEventRead[];
   packages: OrderPackageRead[];
+};
+
+export type ReturnRequestRead = {
+  id: string;
+  order_id: string;
+  order_item_id: string;
+  user_id?: string;
+  request_type: string;
+  status: string;
+  quantity: number;
+  reason: string;
+  details?: string | null;
+  evidence_image_urls?: string[] | null;
+  admin_note?: string | null;
+  refund_amount?: number | null;
+  reviewed_by_user_id?: string | null;
+  reviewed_at?: string | null;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ReturnRequestCreate = {
+  order_item_id: string;
+  request_type: "refund" | "exchange" | "return";
+  quantity: number;
+  reason: string;
+  details?: string | null;
+  evidence_image_urls?: string[] | null;
 };
 
 
@@ -451,4 +535,316 @@ export type PaymentVerificationRead = {
   paid_at?: string | null;
   verified_at?: string | null;
   message: string;
+};
+
+// Cart & wishlist (login required). Money arrives as decimal strings here.
+
+export type CartItemRead = {
+  id: string;
+  product_id: string;
+  title: string;
+  image_url: string | null;
+  image_key: string | null;
+  category: string | null;
+  price: string;
+  quantity: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CartItemCreate = {
+  product_id: string;
+  title: string;
+  price: string;
+  image_url?: string | null;
+  image_key?: string | null;
+  category?: string | null;
+  quantity?: number;
+};
+
+export type WishlistItemRead = {
+  id: string;
+  product_id: string;
+  title: string;
+  image_url: string | null;
+  category: string | null;
+  price: string | null;
+  old_price: string | null;
+  rating: string | null;
+  reviews: string | null;
+  created_at: string;
+};
+
+export type WishlistItemCreate = {
+  product_id: string;
+  title: string;
+  image_url?: string | null;
+  category?: string | null;
+  price?: string | null;
+  old_price?: string | null;
+  rating?: string | null;
+  reviews?: string | null;
+};
+
+// Vouchers
+
+export type StoreVoucherRead = {
+  id: string;
+  code: string;
+  title: string;
+  description?: string | null;
+  issuer_name?: string | null;
+  scope: string;
+  availability: string;
+  store_id?: string | null;
+  store_name?: string | null;
+  reward_text: string;
+  min_subtotal: number;
+  expires_at?: string | null;
+  claimed?: boolean;
+  campaign_tag?: string | null;
+  discount_type?: string | null;
+  approval_status?: string | null;
+};
+
+export type VoucherWalletRead = Omit<StoreVoucherRead, "claimed" | "campaign_tag" | "discount_type" | "approval_status"> & {
+  status: string;
+  source?: string | null;
+};
+
+// Reviews written by the signed-in shopper
+
+/** POST /reviews. Only for a product in one of the shopper's own orders. */
+export type ReviewUpsert = { order_id: string; product_id: string; rating: number; comment: string };
+
+export type UserReviewRead = {
+  id: string;
+  order_id: string;
+  order_number: string;
+  product_id: string;
+  title: string;
+  category?: string | null;
+  image_key?: string | null;
+  image_url?: string | null;
+  rating: number;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Chat
+
+export type ChatThreadRead = {
+  id: string;
+  customer_user_id: string;
+  vendor_user_id: string;
+  thread_type?: string;
+  store: { id: string; title: string; image_key?: string | null; image_url?: string | null };
+  counterpart: { user_id: string; name: string; avatar_url?: string | null; role: string };
+  subject?: string | null;
+  product?: { id?: string | null; title?: string | null; image_url?: string | null } | null;
+  support_status?: string | null;
+  last_message_text?: string | null;
+  last_message_at?: string | null;
+  unread_count?: number;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Body of POST /chat/threads/store/{store_id}: optional product the conversation is about. */
+export type ChatThreadEnsurePayload = {
+  product_id?: string | null;
+  product_title?: string | null;
+  product_image_url?: string | null;
+};
+
+export type ChatMessageRead = {
+  id: string;
+  thread_id: string;
+  sender_user_id: string;
+  recipient_user_id: string;
+  sender_role: string;
+  body: string;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  attachment_name?: string | null;
+  attachment_duration_seconds?: number | null;
+  is_read: boolean;
+  read_at?: string | null;
+  created_at: string;
+};
+
+// Wallet & saved addresses
+
+export type WalletTransactionRead = {
+  id: string;
+  type: string;
+  amount: number;
+  description?: string | null;
+  reference?: string | null;
+  method_label?: string | null;
+  created_at: string;
+};
+
+export type WalletTopupSessionCreate = {
+  amount: number;
+  payment_method_id?: string | null;
+  callback_url?: string | null;
+};
+
+export type WalletTopupSessionRead = {
+  reference: string;
+  authorization_url?: string | null;
+  message?: string;
+  status: string;
+};
+
+export type SavedPaymentMethodRead = {
+  id: string;
+  type: "momo" | "card" | string;
+  label: string;
+  is_default: boolean;
+  network?: ("MTN" | "Telecel" | "AT") | string | null;
+  phone?: string | null;
+  card_name?: string | null;
+  card_last4?: string | null;
+  expiry?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+  // Aliases for compatibility
+  payment_type?: "momo" | "card" | string;
+  payment_label?: string;
+  payment_network?: string | null;
+  payment_phone?: string | null;
+  payment_last4?: string | null;
+  card_expiry?: string | null;
+};
+
+export type SavedPaymentMethodCreate = {
+  type: "momo" | "card";
+  label?: string | null;
+  is_default: boolean;
+  network?: ("MTN" | "Telecel" | "AT") | null;
+  phone?: string | null;
+  card_name?: string | null;
+  card_last4?: string | null;
+  expiry?: string | null;
+  // Aliases for compatibility
+  payment_type?: "momo" | "card" | string;
+  payment_label?: string;
+  payment_network?: string | null;
+  payment_phone?: string | null;
+  payment_last4?: string | null;
+  card_expiry?: string | null;
+};
+
+// Loyalty Rewards
+export type LoyaltyAccountRead = {
+  points_balance: number;
+  lifetime_points: number;
+  tier_name: string;
+  tier_multiplier?: number;
+  point_cedi_value?: number;
+  next_tier_name?: string | null;
+  points_to_next_tier?: number | null;
+};
+
+export type LoyaltyHistoryEntryRead = {
+  id: string;
+  points: number;
+  type: string;
+  reason: string;
+  order_id?: string | null;
+  created_at: string;
+};
+
+export type LoyaltyRedeemInput = {
+  points: number;
+};
+
+export type LoyaltyRedeemRead = {
+  points_redeemed: number;
+  points_balance_after: number;
+  discount_code?: string;
+  amount_off?: number;
+  message?: string;
+};
+
+export type CustomerWalletRead = {
+  id: string;
+  user_id: string;
+  currency: string;
+  available_balance: number;
+  lifetime_topups: number;
+  lifetime_spend: number;
+  lifetime_refunds: number;
+  recent_transactions: WalletTransactionRead[];
+};
+
+/** POST /wallet/customer/checkout — same order fields as a hosted checkout, paid from the wallet. */
+export type WalletCheckoutCreate = Omit<CheckoutSessionCreate, "callback_url" | "cancel_url">;
+
+export type WalletCheckoutRead = { order: OrderRead; wallet_balance_after: number; message: string };
+
+export type AddressRead = {
+  id: string;
+  label: string | null;
+  full_name: string;
+  phone: string;
+  street: string;
+  gps_code: string | null;
+  city: string;
+  region: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+// Vendor catalogue (vendor role required)
+
+export type VendorProductRead = {
+  id: string;
+  store_id: string;
+  vendor_id: string;
+  name: string;
+  description: string;
+  category: string;
+  category_slug?: string | null;
+  subcategory?: string | null;
+  /** Whole cedis. */
+  price: number;
+  old_price?: number | null;
+  discount?: string | null;
+  stock: number;
+  reserved_stock?: number;
+  available_stock?: number;
+  image_key: string;
+  image_url: string | null;
+  image_urls?: string[] | null;
+  placement_tags?: string[] | null;
+  color_options?: string[] | null;
+  size_options?: string[] | null;
+  specifications?: string[] | null;
+  is_returnable: boolean;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Flash sales
+
+/** GET /catalog/flash-sale-events/active. */
+export type FlashSaleEventRead = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+  image_url?: string | null;
+  starts_at?: string | null;
+  ends_at: string;
+  sort_order: number;
+  product_count?: number;
+  /** Server-computed at response time; prefer `ends_at` for a live countdown. */
+  seconds_remaining?: number;
 };

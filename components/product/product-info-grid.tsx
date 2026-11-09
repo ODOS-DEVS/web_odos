@@ -20,7 +20,7 @@ function InfoCard({ icon, title, trailing, children }: { icon: ReactNode; title:
 }
 
 /** Four trust-building cards about the vendor and the purchase — sold-by, delivery, item info, and returns. */
-export function ProductInfoGrid({ store }: { store: Store }) {
+export function ProductInfoGrid({ store, productId }: { store: Store; productId?: string }) {
   const location = [store.city, store.region].filter(Boolean).join(", ");
 
   return (
@@ -39,7 +39,11 @@ export function ProductInfoGrid({ store }: { store: Store }) {
           <ButtonLink href={`/stores/${store.slug}`} size="sm" variant="outline">
             Visit Store
           </ButtonLink>
-          <ButtonLink href={`/stores/${store.slug}/chat`} size="sm" variant="outline">
+          <ButtonLink
+            href={`/stores/${store.slug}/chat${productId ? `?product=${encodeURIComponent(productId)}` : ""}`}
+            size="sm"
+            variant="outline"
+          >
             Chat Store
           </ButtonLink>
         </div>

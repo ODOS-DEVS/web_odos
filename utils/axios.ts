@@ -60,8 +60,19 @@ Axios.interceptors.response.use(
 function messageFromDetail(detail: unknown, status: number) {
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
-    const msgs = detail.map((d) => (typeof d?.msg === "string" ? d.msg : null)).filter(Boolean);
-    if (msgs.length) return msgs.join(". ");
+    const msgs = detail
+      .map((d) => {
+        if (!d) return null;
+        if (typeof d === "string") return d;
+        const msg = typeof d.msg === "string" ? d.msg : null;
+        if (!msg) return null;
+        const loc = Array.isArray(d.loc)
+          ? d.loc.filter((p: unknown) => p !== "body").join(".")
+          : "";
+        return loc ? `${loc}: ${msg}` : msg;
+      })
+      .filter(Boolean);
+    if (msgs.length) return msgs.join("; ");
   }
   return status >= 500 ? "The server had a problem. Please try again." : `Request failed (${status})`;
 }

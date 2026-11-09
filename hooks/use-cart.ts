@@ -21,8 +21,9 @@ type CartState = {
 
 const clamp = (n: number, max = MAX_LINE_QUANTITY) => Math.min(Math.max(n, 0), max);
 
-// The cart lives in the browser (guests can shop) and is sent to the API when the order is placed.
-const useCartStore = create<CartState>()(
+// The cart lives in the browser (guests can shop). When signed in, `useCartSync` mirrors it to the
+// account cart (`/cart`) so it follows the shopper across devices.
+export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
       lines: [],
