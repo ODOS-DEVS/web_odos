@@ -13,6 +13,7 @@ import { STATUS_LABEL } from "@/libs/orders";
 import { useStoreMap } from "@/hooks/use-catalog";
 import { useCancelOrder, useOrder } from "@/hooks/use-orders";
 import { ApiError } from "@/services/http";
+import { DeliveryActions } from "./delivery-actions";
 import { PackageCard } from "./package-card";
 import { StatusBadge } from "./status-badge";
 
@@ -76,11 +77,13 @@ function OrderDetail({ id }: { id: string }) {
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="space-y-5">
           {o.packages.map((pkg, index) => (
-            <PackageCard key={pkg.id} pkg={pkg} store={pkg.storeId ? stores.get(pkg.storeId) : undefined} index={index} />
+            <PackageCard key={pkg.id} pkg={pkg} store={pkg.storeId ? stores.get(pkg.storeId) : undefined} index={index} orderId={o.id} />
           ))}
         </div>
 
         <div className="space-y-5 lg:tall:sticky lg:tall:top-40">
+          <DeliveryActions order={o} />
+
           <OrderSummary totals={{ items: o.subtotal, delivery: o.shipping, total: o.subtotal + o.shipping, vendors: o.packages.length }} discount={o.discount} />
 
           <section className="rounded-2xl border border-line bg-surface p-5 text-sm sm:p-6">

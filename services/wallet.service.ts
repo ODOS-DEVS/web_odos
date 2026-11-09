@@ -1,6 +1,9 @@
 import { WALLET_ENDPOINTS } from "@/libs/api-endpoint";
+import type { OrderCreate, OrderRead } from "@/types/api";
+import type { Order } from "@/types/order";
 import type { Wallet, WalletTopUpSession, WalletTransaction } from "@/types/wallet";
 import { apiFetch } from "./http";
+import { toOrder } from "./mappers";
 
 type CustomerWalletTransactionRead = {
   id: string;
@@ -84,6 +87,19 @@ export const walletService = {
       currency: session.currency,
       status: session.status,
     };
+  },
+
+  /**
+   * Pays for an order out of the wallet balance. Unlike `paymentsService.checkout` this settles
+   * immediately — there is no hosted page and nothing to redirect to — so the caller goes straight
+   * to the order instead of waiting on a provider callback.
+   */
+  async checkout(input: OrderCreate): Promise<{ order: Order; balanceAfter: number; message: string }> {
+    const result = await apiFetch<{ order: OrderRead; wallet_balance_after: number; message: string }>(
+      WALLET_ENDPOINTS.checkout,
+      { method: "POST", body: input },
+    );
+    return { order: toOrder(result.order), balanceAfter: result.wallet_balance_after, message: result.message };
   },
 
   /** Confirms a top-up when the shopper comes back from the provider. */

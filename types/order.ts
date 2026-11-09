@@ -47,6 +47,11 @@ export type OrderPackage = {
   deliveryFeeWaived: boolean;
   eta: string | null;
   problem: string | null;
+  /** Set once the vendor hands the bag to a rider — before this there is nothing to confirm. */
+  dispatchedAt: string | null;
+  deliveredAt: string | null;
+  rescheduleRequestedAt: string | null;
+  rescheduleNote: string | null;
 };
 
 export type Order = {
@@ -63,6 +68,11 @@ export type Order = {
   total: number;
   packages: OrderPackage[];
   timeline: TrackingEvent[];
+  /** 1–5 once the shopper has rated the delivery; null until then. */
+  deliveryRating: number | null;
+  deliveryProblem: string | null;
+  rescheduleRequestedAt: string | null;
+  rescheduleNote: string | null;
   /** Return/exchange/refund requests the shopper has filed against this order. */
   returnRequests: ReturnRequest[];
   address: {

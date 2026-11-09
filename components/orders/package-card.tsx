@@ -1,15 +1,35 @@
+"use client";
+
 import Link from "next/link";
-import { AlertTriangle, Truck } from "lucide-react";
+import { toast } from "sonner";
+import { AlertTriangle, PackageCheck, Truck } from "lucide-react";
 import type { OrderPackage } from "@/types/order";
 import type { Store } from "@/types/catalog";
+import { useConfirmDelivery } from "@/hooks/use-orders";
 import { formatMoney } from "@/libs/format";
 import { packageTotal } from "@/libs/orders";
+import { Button } from "@/components/ui/button";
 import { Media } from "@/components/ui/media";
 import { StatusBadge } from "./status-badge";
 import { StatusTimeline } from "./status-timeline";
 
 /** One vendor's part of an order, with its own status, delivery and totals. */
-export function PackageCard({ pkg, store, index }: { pkg: OrderPackage; store?: Store; index: number }) {
+export function PackageCard({
+  pkg,
+  store,
+  index,
+  orderId,
+}: {
+  pkg: OrderPackage;
+  store?: Store;
+  index: number;
+  orderId: string;
+}) {
+  const confirm = useConfirmDelivery(orderId);
+  // Each vendor delivers separately, so a bag that has been dispatched can be confirmed on its own
+  // without touching the others.
+  const confirmable = Boolean(pkg.dispatchedAt && !pkg.deliveredAt && pkg.status !== "cancelled");
+
   return (
     <section aria-labelledby={`pkg-${pkg.id}`} className="overflow-hidden rounded-2xl border border-line bg-surface">
       <header className="flex flex-wrap items-center gap-3 border-b border-line bg-surface-muted/50 px-4 py-3 sm:px-5">
@@ -31,6 +51,25 @@ export function PackageCard({ pkg, store, index }: { pkg: OrderPackage; store?: 
 
       <div className="space-y-5 p-4 sm:p-5">
         <StatusTimeline status={pkg.status} />
+
+        {confirmable && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={confirm.isPending}
+            onClick={() =>
+              confirm.mutate(pkg.id, {
+                onSuccess: () => toast.success(`Marked ${pkg.storeName}'s package as received`),
+                onError: (error) =>
+                  toast.error(error instanceof Error ? error.message : "We couldn't confirm that package."),
+              })
+            }
+          >
+            <PackageCheck className="size-4" aria-hidden />
+            {confirm.isPending ? "Confirming…" : "I've received this package"}
+          </Button>
+        )}
 
         {pkg.status === "delayed" && (
           <p className="flex gap-2.5 rounded-xl bg-danger-soft p-3 text-sm text-danger" role="status">

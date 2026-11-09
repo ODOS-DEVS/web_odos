@@ -204,6 +204,10 @@ function toPackage(p: OrderPackageRead, items: OrderItem[]): OrderPackage {
     deliveryFeeWaived: p.delivery_fee_waived,
     eta: p.tracking_eta ?? null,
     problem: p.delivery_problem_reason ?? null,
+    dispatchedAt: p.dispatched_at ?? null,
+    deliveredAt: p.delivered_at ?? null,
+    rescheduleRequestedAt: p.reschedule_requested_at ?? null,
+    rescheduleNote: p.reschedule_note ?? null,
   };
 }
 
@@ -252,6 +256,10 @@ export function toOrder(o: OrderRead): Order {
     total: o.total_amount,
     packages,
     timeline: (o.timeline ?? []).map((e) => ({ at: e.occurred_at, label: e.note?.trim() || humanise(e.status) })),
+    deliveryRating: o.delivery_rating ?? null,
+    deliveryProblem: o.delivery_problem_reason ?? null,
+    rescheduleRequestedAt: o.reschedule_requested_at ?? null,
+    rescheduleNote: o.reschedule_note ?? null,
     returnRequests: (o.return_requests ?? []).map(toReturnRequest),
     address: {
       name: o.address_full_name,

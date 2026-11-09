@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Lock, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
@@ -16,7 +17,8 @@ import { RegionCitySelect } from "@/components/ui/region-city-select";
 import { toOrderItems } from "@/libs/checkout";
 import { formatMoney } from "@/libs/format";
 import { useDeliveryQuote } from "@/hooks/use-delivery-quote";
-import { useCheckout } from "@/hooks/use-orders";
+import { useCheckout, useWalletCheckout } from "@/hooks/use-orders";
+import { useWallet } from "@/hooks/use-wallet";
 import { usePaymentOptions } from "@/hooks/use-payment-options";
 import { ApiError } from "@/services/http";
 import { ChoiceCard } from "./choice-card";
@@ -36,8 +38,11 @@ function Step({ number, title, children }: { number: number; title: string; chil
 
 function CheckoutForm() {
   const user = useSession()?.user;
-  const { ready, lines, subtotal, count } = useCart();
+  const { ready, lines, subtotal, count, clear } = useCart();
   const checkout = useCheckout();
+  const walletCheckout = useWalletCheckout();
+  const { balance: walletBalance, ready: walletReady } = useWallet();
+  const router = useRouter();
 
   const [name, setName] = useState(user?.full_name ?? "");
   const [phone, setPhone] = useState(user?.phone_number ?? "");
@@ -79,28 +84,53 @@ function CheckoutForm() {
   const total = subtotal + (shipping ?? 0);
   const options = quote.data?.options.filter((o) => o.available) ?? [];
 
+  const payingFromWallet = paymentMethod?.kind === "wallet";
+  const shortOnWallet = payingFromWallet && walletReady && walletBalance < total;
+  const placing = checkout.isPending || walletCheckout.isPending;
+
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (shipping === null) return;
 
+    const order = {
+      source: "cart" as const,
+      items: toOrderItems(lines),
+      subtotal_amount: subtotal,
+      shipping_amount: shipping,
+      delivery_method: method,
+      discount_amount: 0,
+      total_amount: total,
+      address_full_name: name.trim(),
+      address_phone: phone.trim(),
+      address_street: street.trim(),
+      address_city: city.trim(),
+      address_region: region,
+      delivery_instructions: notes.trim() || null,
+      // `payment_type` is free text on the API (≤30 chars).
+      payment_type: paymentMethod.kind,
+      payment_label: paymentMethod.label,
+    };
+
+    const failed = (error: unknown) =>
+      toast.error(error instanceof ApiError ? error.message : "We couldn’t start your payment. Please try again.");
+
+    // Paying from the wallet settles server-side straight away — there is no hosted page to send
+    // the shopper to, so the order is final on return and the cart can be emptied here.
+    if (paymentMethod.kind === "wallet") {
+      walletCheckout.mutate(order, {
+        onSuccess: ({ order: placed, message }) => {
+          clear();
+          toast.success(message || "Order placed");
+          router.push(`/orders/${placed.id}`);
+        },
+        onError: failed,
+      });
+      return;
+    }
+
     checkout.mutate(
       {
-        source: "cart",
-        items: toOrderItems(lines),
-        subtotal_amount: subtotal,
-        shipping_amount: shipping,
-        delivery_method: method,
-        discount_amount: 0,
-        total_amount: total,
-        address_full_name: name.trim(),
-        address_phone: phone.trim(),
-        address_street: street.trim(),
-        address_city: city.trim(),
-        address_region: region,
-        delivery_instructions: notes.trim() || null,
-        // `payment_type` is free text on the API (≤30 chars).
-        payment_type: paymentMethod.kind,
-        payment_label: paymentMethod.label,
+        ...order,
         callback_url: `${window.location.origin}/checkout/success`,
         cancel_url: `${window.location.origin}/checkout`,
       },
@@ -109,7 +139,7 @@ function CheckoutForm() {
           // The cart is cleared on the result page once the payment is confirmed, not before.
           window.location.assign(session.authorization_url);
         },
-        onError: (error) => toast.error(error instanceof ApiError ? error.message : "We couldn’t start your payment. Please try again."),
+        onError: failed,
       },
     );
   };
@@ -198,10 +228,25 @@ function CheckoutForm() {
 
       <div className="lg:sticky lg:top-40">
         <OrderSummary totals={{ items: subtotal, delivery: shipping, total, vendors: new Set(lines.map((l) => l.storeId)).size }}>
-          <Button type="submit" size="lg" variant="accent" className="w-full" disabled={checkout.isPending || shipping === null}>
+          <Button
+            type="submit"
+            size="lg"
+            variant="accent"
+            className="w-full"
+            disabled={placing || shipping === null || shortOnWallet}
+          >
             <Lock className="size-4" aria-hidden />
-            {checkout.isPending ? "Starting payment…" : `Pay ${formatMoney(total)}`}
+            {placing
+              ? payingFromWallet
+                ? "Placing order…"
+                : "Starting payment…"
+              : `${payingFromWallet ? "Pay from wallet" : "Pay"} ${formatMoney(total)}`}
           </Button>
+          {shortOnWallet && (
+            <p className="mt-2 text-center text-xs text-danger">
+              Your wallet has {formatMoney(walletBalance)}. Top it up or choose another payment method.
+            </p>
+          )}
           <p className="mt-3 text-center text-xs text-muted">
             {count} {count === 1 ? "item" : "items"} · Need to change something?{" "}
             <Link href="/cart" className="underline underline-offset-2 hover:text-foreground">
