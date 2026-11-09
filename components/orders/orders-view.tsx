@@ -8,9 +8,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
+import { useOrders } from "@/hooks/use-orders";
 import { isActive } from "@/libs/orders";
-import { MOCK_ORDERS } from "@/mocks/orders.mock";
-import { fakeQuery } from "@/mocks/query";
 import { OrderCard } from "./order-card";
 
 const TABS = [
@@ -20,9 +19,9 @@ const TABS = [
 ] as const;
 
 function OrdersList({ status }: { status?: string }) {
-  const orders = fakeQuery(MOCK_ORDERS);
+  const query = useOrders();
 
-  if (orders.isPending) {
+  if (query.isPending) {
     return (
       <div className="mt-6 space-y-4" aria-busy="true" aria-label="Loading orders">
         {[0, 1, 2].map((i) => (
@@ -31,14 +30,36 @@ function OrdersList({ status }: { status?: string }) {
       </div>
     );
   }
-  if (orders.isError) return <div className="mt-6"><QueryError error={orders.error} onRetry={() => orders.refetch()} title="We couldn’t load your orders" /></div>;
 
-  const rows = orders.data.filter((order) => (status === "active" ? isActive(order.status) : status === "delivered" ? order.status === "delivered" : true));
+  if (query.isError && !query.data) {
+    return (
+      <div className="mt-6">
+        <QueryError
+          error={query.error}
+          onRetry={() => query.refetch()}
+          title="We couldn’t load your orders"
+        />
+      </div>
+    );
+  }
+
+  const allOrders = query.data ?? [];
+  const rows = allOrders.filter((order) =>
+    status === "active"
+      ? isActive(order.status)
+      : status === "delivered"
+        ? order.status === "delivered"
+        : true,
+  );
 
   return rows.length > 0 ? (
     <ul className="mt-6 space-y-4">
       {rows.map((order, index) => (
-        <li key={order.id} className="rise-in" style={{ "--i": Math.min(index, 8) } as CSSProperties}>
+        <li
+          key={order.id}
+          className="rise-in"
+          style={{ "--i": Math.min(index, 8) } as CSSProperties}
+        >
           <OrderCard order={order} />
         </li>
       ))}
@@ -59,14 +80,18 @@ export function OrdersView({ status }: { status?: string }) {
       <h1 className="text-3xl font-semibold sm:text-4xl">Your orders</h1>
       <p className="mt-2 text-muted">Track each vendor’s package from one place.</p>
 
-      <RequireLogin next="/orders" message="Log in to see your orders and track every delivery.">
-        <div className="mt-8 flex flex-wrap gap-2">
-          {TABS.map((tab) => (
-            <FilterChip key={tab.label} href={tab.href} active={status === tab.value}>
-              {tab.label}
-            </FilterChip>
-          ))}
-        </div>
+      <div className="mt-6 flex flex-wrap gap-2">
+        {TABS.map((tab) => (
+          <FilterChip key={tab.label} href={tab.href} active={status === tab.value}>
+            {tab.label}
+          </FilterChip>
+        ))}
+      </div>
+
+      <RequireLogin
+        next={`/orders${status ? `?status=${status}` : ""}`}
+        message="Log in to view and track your orders."
+      >
         <OrdersList status={status} />
       </RequireLogin>
     </Container>

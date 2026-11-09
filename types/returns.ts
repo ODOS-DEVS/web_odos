@@ -6,6 +6,7 @@ export type ReturnEligibleItem = {
   id: string;
   orderId: string;
   orderNumber: string;
+  productId?: string;
   name: string;
   imageUrl: string | null;
   variant: string;
@@ -16,12 +17,14 @@ export type ReturnEligibleItem = {
 
 export type ReturnRequest = {
   id: string;
+  orderId?: string;
   itemId: string;
   type: ReturnRequestType;
   quantity: number;
   reason: string;
   details: string;
   photoNames: string[];
+  photoUrls?: string[];
   status: ReturnRequestStatus;
   createdAt: string;
 };

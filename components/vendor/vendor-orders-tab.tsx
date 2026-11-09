@@ -10,10 +10,10 @@ import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
 import { Pagination } from "@/components/ui/pagination";
-import { STATUS_LABEL } from "@/libs/orders";
+import { useVendorOrders } from "@/hooks/use-vendor-orders";
 import { formatDate, formatMoney } from "@/libs/format";
-import { useFakeMutation } from "@/mocks/mutation";
-import { MOCK_VENDOR_ORDERS, type VendorOrder } from "@/mocks/vendor.mock";
+import { STATUS_LABEL } from "@/libs/orders";
+import type { VendorOrder } from "@/services/vendor-orders.service";
 import type { FulfilmentStatus } from "@/types/order";
 
 const FILTERS: { value: FulfilmentStatus | "all"; label: string }[] = [
@@ -36,11 +36,17 @@ const NEXT_STEP: Partial<Record<FulfilmentStatus, { status: FulfilmentStatus; la
 
 const PAGE_SIZE = 6;
 
-function advanceOrder(input: { id: string; status: FulfilmentStatus }) {
-  return input;
-}
-
-function OrderRow({ order, onSelect, onAdvance, pending }: { order: VendorOrder; onSelect: () => void; onAdvance: () => void; pending: boolean }) {
+function OrderRow({
+  order,
+  onSelect,
+  onAdvance,
+  pending,
+}: {
+  order: VendorOrder;
+  onSelect: () => void;
+  onAdvance: () => void;
+  pending: boolean;
+}) {
   const next = NEXT_STEP[order.status];
   const [primary, ...rest] = order.items;
   const extraQty = rest.reduce((sum, item) => sum + item.quantity, 0);
@@ -48,7 +54,7 @@ function OrderRow({ order, onSelect, onAdvance, pending }: { order: VendorOrder;
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-surface">
       <button type="button" onClick={onSelect} className="flex w-full items-start gap-4 p-5 text-left">
-        <Media src={primary.imageUrl} name={primary.name} sizes="64px" className="size-16 shrink-0 rounded-xl" />
+        <Media src={primary?.imageUrl ?? null} name={primary?.name ?? "Order"} sizes="64px" className="size-16 shrink-0 rounded-xl" />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
@@ -67,12 +73,14 @@ function OrderRow({ order, onSelect, onAdvance, pending }: { order: VendorOrder;
           </div>
 
           <p className="mt-2 truncate text-sm text-muted">
-            {primary.name}
+            {primary?.name ?? "Order items"}
             {extraQty > 0 && ` +${extraQty} more item${extraQty === 1 ? "" : "s"}`}
           </p>
 
           <div className="mt-3 flex items-center justify-between gap-3">
-            <Badge tone={order.paymentStatus === "paid" ? "success" : "neutral"}>{order.paymentStatus === "paid" ? "Paid" : "Refunded"}</Badge>
+            <Badge tone={order.paymentStatus === "paid" ? "success" : "neutral"}>
+              {order.paymentStatus === "paid" ? "Paid" : "Refunded"}
+            </Badge>
             <p className="font-semibold tabular-nums">{formatMoney(order.total)}</p>
           </div>
         </div>
@@ -99,7 +107,15 @@ function OrderRow({ order, onSelect, onAdvance, pending }: { order: VendorOrder;
   );
 }
 
-function OrderDetails({ order, onAdvance, pending }: { order: VendorOrder; onAdvance: () => void; pending: boolean }) {
+function OrderDetails({
+  order,
+  onAdvance,
+  pending,
+}: {
+  order: VendorOrder;
+  onAdvance: () => void;
+  pending: boolean;
+}) {
   const next = NEXT_STEP[order.status];
   const itemsSubtotal = order.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
@@ -144,7 +160,9 @@ function OrderDetails({ order, onAdvance, pending }: { order: VendorOrder; onAdv
                     Qty {item.quantity} · {formatMoney(item.unitPrice)}
                   </p>
                 </div>
-                <p className="shrink-0 text-sm font-semibold tabular-nums">{formatMoney(item.unitPrice * item.quantity)}</p>
+                <p className="shrink-0 text-sm font-semibold tabular-nums">
+                  {formatMoney(item.unitPrice * item.quantity)}
+                </p>
               </li>
             ))}
           </ul>
@@ -165,7 +183,9 @@ function OrderDetails({ order, onAdvance, pending }: { order: VendorOrder; onAdv
           </div>
           <div className="flex items-center justify-between pt-2 text-xs text-muted">
             <span>Payment</span>
-            <Badge tone={order.paymentStatus === "paid" ? "success" : "neutral"}>{order.paymentStatus === "paid" ? "Paid" : "Refunded"}</Badge>
+            <Badge tone={order.paymentStatus === "paid" ? "success" : "neutral"}>
+              {order.paymentStatus === "paid" ? "Paid" : "Refunded"}
+            </Badge>
           </div>
         </section>
       </div>
@@ -181,15 +201,48 @@ function OrderDetails({ order, onAdvance, pending }: { order: VendorOrder; onAdv
   );
 }
 
+export function VendorOrdersSkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Loading vendor orders">
+      {Array.from({ length: 3 }, (_, i) => (
+        <div
+          key={i}
+          className="overflow-hidden rounded-2xl border border-line bg-surface p-5 animate-pulse"
+        >
+          <div className="flex items-start gap-4">
+            <div className="size-16 shrink-0 rounded-xl bg-surface-muted" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="h-4.5 w-32 rounded-md bg-surface-muted" />
+                  <div className="h-3.5 w-44 rounded bg-surface-muted" />
+                </div>
+                <div className="h-5 w-20 rounded-full bg-surface-muted" />
+              </div>
+              <div className="h-3.5 w-40 rounded bg-surface-muted" />
+              <div className="flex items-center justify-between pt-2">
+                <div className="h-4 w-12 rounded bg-surface-muted" />
+                <div className="h-5 w-24 rounded bg-surface-muted" />
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 border-t border-line/60 pt-3">
+            <div className="h-9 w-full rounded-xl bg-surface-muted" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function VendorOrdersTab() {
-  const [orders, setOrders] = useState<VendorOrder[]>(MOCK_VENDOR_ORDERS);
+  const { orders, isLoading, advanceAsync } = useVendorOrders();
+
   const [filter, setFilter] = useState<FulfilmentStatus | "all">("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [advancingId, setAdvancingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-
-  const advanceMutation = useFakeMutation(advanceOrder);
 
   const counts = useMemo(() => {
     const map = new Map<FulfilmentStatus, number>();
@@ -207,27 +260,23 @@ export function VendorOrdersTab() {
   }, [orders, filter, query]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  // Clamped during render (not via effect): keeps the page in range as filters shrink the result set,
-  // without the extra render pass a `setState` in `useEffect` would cause.
   const currentPage = Math.min(page, totalPages);
   const pageRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const selectedOrder = orders.find((order) => order.id === selectedId) ?? null;
 
-  const onAdvance = (order: VendorOrder) => {
+  const onAdvance = async (order: VendorOrder) => {
     const next = NEXT_STEP[order.status];
     if (!next) return;
     setAdvancingId(order.id);
-    advanceMutation.mutate(
-      { id: order.id, status: next.status },
-      {
-        onSuccess: ({ status }) => {
-          setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status } : o)));
-          toast.success(`Order ${order.number} marked ${STATUS_LABEL[status].toLowerCase()}`);
-          setAdvancingId(null);
-        },
-      },
-    );
+    try {
+      await advanceAsync(order.id, next.status);
+      toast.success(`Order ${order.number} marked ${STATUS_LABEL[next.status].toLowerCase()}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update order status");
+    } finally {
+      setAdvancingId(null);
+    }
   };
 
   return (
@@ -259,7 +308,9 @@ export function VendorOrdersTab() {
         </select>
       </div>
 
-      {rows.length > 0 ? (
+      {isLoading && orders.length === 0 ? (
+        <VendorOrdersSkeleton />
+      ) : rows.length > 0 ? (
         <>
           <ul className="space-y-4">
             {pageRows.map((order) => (
@@ -275,6 +326,12 @@ export function VendorOrdersTab() {
           </ul>
           <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
         </>
+      ) : orders.length === 0 ? (
+        <EmptyState
+          icon={<Package className="size-10 text-muted" aria-hidden />}
+          title="No vendor orders yet"
+          description="When customers purchase from your store, their orders will appear here for you to confirm, prepare, and dispatch."
+        />
       ) : (
         <EmptyState
           icon={<Package className="size-10 text-muted" aria-hidden />}
@@ -289,7 +346,13 @@ export function VendorOrdersTab() {
         title={selectedOrder ? `Order ${selectedOrder.number}` : "Order"}
         labelId="vendor-order-details-heading"
       >
-        {selectedOrder && <OrderDetails order={selectedOrder} onAdvance={() => onAdvance(selectedOrder)} pending={advancingId === selectedOrder.id} />}
+        {selectedOrder && (
+          <OrderDetails
+            order={selectedOrder}
+            onAdvance={() => onAdvance(selectedOrder)}
+            pending={advancingId === selectedOrder.id}
+          />
+        )}
       </Drawer>
     </div>
   );

@@ -4,9 +4,8 @@ import { useMemo } from "react";
 import { ShoppingBag } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { groupLines } from "@/libs/cart";
-import { mockStoreMap } from "@/mocks/catalog.mock";
-import { mockDeliveryQuote } from "@/mocks/delivery.mock";
-import { fakeQuery } from "@/mocks/query";
+import { useStoreMap } from "@/hooks/use-catalog";
+import { useDeliveryQuote } from "@/hooks/use-delivery-quote";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartGroup } from "./cart-group";
@@ -27,12 +26,13 @@ function CartSkeleton() {
 
 export function CartView() {
   const { ready, lines, subtotal, count } = useCart();
-  const stores = mockStoreMap();
+  const { map: stores } = useStoreMap();
 
   const groups = useMemo(() => groupLines(lines, stores), [lines, stores]);
-  const quote = fakeQuery(
-    mockDeliveryQuote({ subtotal, items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.price })) }),
-  );
+  const quote = useDeliveryQuote({
+    subtotal,
+    items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.price })),
+  });
 
   if (!ready) return <CartSkeleton />;
 

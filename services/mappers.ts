@@ -1,6 +1,25 @@
-import type { CategoryRead, ProductRead, ProductReviewRead, StoreRead } from "@/types/api";
-import type { Category, Product, ProductTag, Review, Store } from "@/types/catalog";
-import type { OrderItemRead, OrderPackageRead, OrderRead } from "@/types/api";
+import type {
+  CategoryRead,
+  MarketRead,
+  MerchandisingCampaignRead,
+  ProductRead,
+  ProductReviewRead,
+  PromoBannerRead,
+  StoreRead,
+  FlashSaleEventRead,
+} from "@/types/api";
+import type {
+  Campaign,
+  Category,
+  Market,
+  Product,
+  ProductTag,
+  PromoBanner,
+  Review,
+  Store,
+  FlashSaleEvent,
+} from "@/types/catalog";
+import type { OrderItemRead, OrderPackageRead, OrderRead, ReturnRequestRead } from "@/types/api";
 import type { FulfilmentStatus, Order, OrderItem, OrderPackage } from "@/types/order";
 import { rollupStatus } from "@/libs/orders";
 
@@ -21,6 +40,52 @@ export function toCategory(c: CategoryRead): Category {
     subtitle: c.subtitle ?? "",
     imageUrl: c.image_url ?? null,
     subcategories: c.subcategories ?? [],
+  };
+}
+
+export function toMarket(m: MarketRead): Market {
+  return { id: m.id, slug: m.slug, name: m.title, imageUrl: m.image_url ?? null };
+}
+
+/** Only pass colours the browser understands, so a stray admin value can't break the card. */
+const asCssColor = (value?: string | null) =>
+  value && /^(#[0-9a-f]{3,8}|rgba?\(|hsla?\(|oklch\()/i.test(value.trim()) ? value.trim() : null;
+
+export function toPromoBanner(b: PromoBannerRead): PromoBanner {
+  return {
+    id: b.id,
+    title: b.title,
+    subtitle: b.subtitle?.trim() || null,
+    ctaLabel: b.cta_label,
+    href:
+      b.cta_link?.trim() || (b.campaign_tag ? `/products?campaign=${encodeURIComponent(b.campaign_tag)}` : "/products"),
+    imageUrl: b.image_url ?? null,
+    accent: asCssColor(b.accent),
+  };
+}
+
+export function toCampaign(c: MerchandisingCampaignRead): Campaign {
+  return {
+    id: c.id,
+    slug: c.slug,
+    title: c.title,
+    description: c.description?.trim() || c.subtitle?.trim() || "",
+    imageUrl: c.banner_image_url ?? c.thumbnail_image_url ?? null,
+    themeColor: asCssColor(c.theme_color),
+    endsAt: c.ends_at ?? null,
+  };
+}
+
+export function toFlashSaleEvent(e: FlashSaleEventRead): FlashSaleEvent {
+  return {
+    id: e.id,
+    slug: e.slug,
+    title: e.title,
+    subtitle: e.subtitle?.trim() || null,
+    imageUrl: e.image_url ?? null,
+    startsAt: e.starts_at ?? null,
+    endsAt: e.ends_at,
+    productCount: e.product_count ?? 0,
   };
 }
 
@@ -60,7 +125,8 @@ export function toProduct(p: ProductRead): Product {
 
   const tags: ProductTag[] = [];
   if (p.section === "popular") tags.push("popular");
-  if (p.section === "flash-sale" || p.placement_tags?.includes("flash-sale") || p.flash_sale_event_slug) tags.push("flash");
+  if (p.section === "flash-sale" || p.placement_tags?.includes("flash-sale") || p.flash_sale_event_slug)
+    tags.push("flash");
   if (created && Date.now() - created < NEW_WINDOW_MS) tags.push("new");
 
   const slugs = new Set<string>([...(p.category_slugs ?? []), ...(p.category ? [slugify(p.category)] : [])]);
@@ -108,7 +174,6 @@ export function toReview(r: ProductReviewRead): Review {
 }
 
 /* ---------- Orders ---------- */
-
 
 /**
  * The API's order/package statuses are free-text with no documented enum, so match on stems
@@ -181,7 +246,9 @@ export function toOrder(o: OrderRead): Order {
     id: o.id,
     number: o.order_number,
     placedAt: o.placed_at,
-    status: packages.length ? rollupStatus(packages) : (normaliseStatus(o.delivery_status, o.vendor_status, o.status) ?? "pending"),
+    status: packages.length
+      ? rollupStatus(packages)
+      : (normaliseStatus(o.delivery_status, o.vendor_status, o.status) ?? "pending"),
     paymentStatus: o.payment_status,
     paymentLabel: o.payment_label,
     deliveryMethod: o.delivery_method,
@@ -198,5 +265,7 @@ export function toOrder(o: OrderRead): Order {
       city: o.address_city,
       region: o.address_region,
     },
+    returnRequests: (o.return_requests as ReturnRequestRead[]) ?? [],
+    deliveryRating: o.delivery_rating ?? null,
   };
 }

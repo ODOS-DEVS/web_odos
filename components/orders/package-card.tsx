@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { AlertTriangle, Truck } from "lucide-react";
 import type { OrderPackage } from "@/types/order";
 import type { Store } from "@/types/catalog";
@@ -9,7 +10,18 @@ import { StatusBadge } from "./status-badge";
 import { StatusTimeline } from "./status-timeline";
 
 /** One vendor's part of an order, with its own status, delivery and totals. */
-export function PackageCard({ pkg, store, index }: { pkg: OrderPackage; store?: Store; index: number }) {
+export function PackageCard({
+  pkg,
+  store,
+  index,
+  actions,
+}: {
+  pkg: OrderPackage;
+  store?: Store;
+  index: number;
+  /** Shopper actions for this package (confirm receipt, report a problem…), rendered at the bottom. */
+  actions?: ReactNode;
+}) {
   return (
     <section aria-labelledby={`pkg-${pkg.id}`} className="overflow-hidden rounded-2xl border border-line bg-surface">
       <header className="flex flex-wrap items-center gap-3 border-b border-line bg-surface-muted/50 px-4 py-3 sm:px-5">
@@ -88,6 +100,8 @@ export function PackageCard({ pkg, store, index }: { pkg: OrderPackage; store?: 
             <dd className="tabular-nums">{formatMoney(packageTotal(pkg))}</dd>
           </div>
         </dl>
+
+        {actions}
       </div>
     </section>
   );

@@ -1,5 +1,4 @@
-import type { Category, Store } from "@/types/catalog";
-import type { Market } from "@/mocks/catalog.mock";
+import type { Category, Market, Store } from "@/types/catalog";
 import { buildHref } from "@/libs/url";
 import { FilterChip, FilterGroup } from "@/components/product/filter-chip";
 
@@ -49,12 +48,13 @@ export function MarketFilters({
       </FilterGroup>
 
       <FilterGroup label="Market">
-        <FilterChip href={href({ market: undefined })} active={!active.market}>
+        {/* Changing market clears the picked store, which may not be in the new market. */}
+        <FilterChip href={href({ market: undefined, store: undefined })} active={!active.market}>
           All Markets
         </FilterChip>
         {markets.map((market) => (
-          <FilterChip key={market.slug} href={href({ market: market.slug })} active={active.market === market.slug}>
-            {market.title}
+          <FilterChip key={market.id} href={href({ market: market.slug, store: undefined })} active={active.market === market.slug}>
+            {market.name}
           </FilterChip>
         ))}
       </FilterGroup>

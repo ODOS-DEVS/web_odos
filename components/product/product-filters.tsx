@@ -7,6 +7,8 @@ export type ActiveFilters = {
   category?: string;
   store?: string;
   tag?: string;
+  /** Merchandising campaign slug (`campaign_tag`), set by home-page banners. */
+  campaign?: string;
   free?: string;
   sort?: string;
 };

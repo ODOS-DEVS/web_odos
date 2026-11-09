@@ -17,19 +17,24 @@ function formatVoucherDate(iso: string) {
 }
 
 function RedeemForm() {
-  const { redeem } = useSavedVouchers();
+  const { redeemAsync, isRedeeming } = useSavedVouchers();
   const [code, setCode] = useState("");
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = redeem(code);
-    if (result === "ok") {
-      toast.success("Voucher added to your wallet");
-      setCode("");
-    } else if (result === "already-redeemed") {
-      toast.error("You've already redeemed this code");
-    } else {
-      toast.error("That code isn't valid or has expired");
+    if (!code.trim()) return;
+    try {
+      const result = await redeemAsync(code);
+      if (result === "ok") {
+        toast.success("Voucher added to your wallet");
+        setCode("");
+      } else if (result === "already-redeemed") {
+        toast.error("You've already redeemed this code");
+      } else {
+        toast.error("That code isn't valid or has expired");
+      }
+    } catch {
+      toast.error("Couldn't redeem this code");
     }
   };
 
@@ -44,8 +49,8 @@ function RedeemForm() {
           onChange={(e) => setCode(e.target.value)}
           className={cn(inputClass, "sm:flex-1")}
         />
-        <Button type="submit" variant="accent" disabled={!code.trim()} className="sm:w-auto">
-          Redeem
+        <Button type="submit" variant="accent" disabled={!code.trim() || isRedeeming} className="sm:w-auto">
+          {isRedeeming ? "Redeeming…" : "Redeem"}
         </Button>
       </div>
     </form>
@@ -94,14 +99,45 @@ function SavedVoucherCard({ voucher }: { voucher: SavedVoucher }) {
   );
 }
 
+export function VouchersSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" aria-busy="true" aria-label="Loading vouchers">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div
+          key={i}
+          className="flex flex-col justify-between rounded-2xl border border-line bg-surface p-5 animate-pulse min-h-[170px]"
+        >
+          <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="h-3.5 w-16 rounded bg-surface-muted" />
+              <div className="h-5 w-20 rounded-full bg-surface-muted" />
+            </div>
+            <div className="mt-3 h-7 w-32 rounded-md bg-surface-muted" />
+            <div className="mt-1.5 h-3.5 w-24 rounded bg-surface-muted" />
+          </div>
+          <div className="mt-5 flex items-end justify-between gap-3 pt-3 border-t border-line/60">
+            <div className="space-y-1">
+              <div className="h-2.5 w-12 rounded bg-surface-muted" />
+              <div className="h-3.5 w-20 rounded bg-surface-muted" />
+            </div>
+            <div className="h-7 w-28 rounded-full bg-surface-muted" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function VouchersTab() {
-  const { vouchers } = useSavedVouchers();
+  const { vouchers, isLoading } = useSavedVouchers();
 
   return (
     <div className="space-y-5">
       <RedeemForm />
 
-      {vouchers.length === 0 ? (
+      {isLoading && vouchers.length === 0 ? (
+        <VouchersSkeleton />
+      ) : vouchers.length === 0 ? (
         <EmptyState
           icon={<Ticket className="size-6 text-muted" aria-hidden />}
           iconBadge

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Zap } from "lucide-react";
 import { CategoryStrip } from "@/components/home/category-strip";
 import { Faq } from "@/components/home/faq";
@@ -7,35 +8,62 @@ import { Hero } from "@/components/home/hero";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { MarketNearYou } from "@/components/home/market-near-you";
 import { PromoBanners } from "@/components/home/promo-banners";
+import { PromotionsStrip } from "@/components/home/promotions-strip";
 import { PromoCollage } from "@/components/home/promo-collage";
 import { WeeklyDealBanner } from "@/components/home/weekly-deal-banner";
+import { FlashSaleSection } from "@/components/flash/flash-sale-section";
 import { ProductGrid, ProductGridSkeleton } from "@/components/product/product-grid";
 import { StoreCard, StoreCardSkeleton } from "@/components/store/store-card";
 import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
 import { QueryError } from "@/components/ui/query-error";
 import { SectionHeading } from "@/components/ui/section-heading";
+import {
+  useCampaigns,
+  useCategories,
+  useDealProducts,
+  useFlashSaleEvents,
+  useMarkets,
+  useProducts,
+  usePromoBanners,
+  useStores,
+} from "@/hooks/use-catalog";
 import { newestFirst } from "@/libs/catalog";
-import { MOCK_CATEGORIES, MOCK_STORES, mockDealProducts, mockProducts } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
 
-/** Home page content. Every section reads from the query cache the server prefetched, and hides itself when empty. */
+/** The first banners fill the two-up row; the next three fill the collage further down. */
+const TOP_BANNERS = 2;
+const COLLAGE_BANNERS = 3;
+
+/**
+ * Home page content. Every query here is prefetched by `app/(store)/page.tsx` and hydrated, so the
+ * first render already has data. Optional sections hide themselves when the API returns nothing.
+ */
 export function HomeSections() {
-  const categories = fakeQuery(MOCK_CATEGORIES);
-  const stores = fakeQuery(MOCK_STORES);
-  const products = fakeQuery(mockProducts());
-  const deals = fakeQuery(mockDealProducts());
+  const categories = useCategories();
+  const stores = useStores();
+  const products = useProducts();
+  const deals = useDealProducts();
+  const flashEvents = useFlashSaleEvents();
+  /** At most two running sales on the home page; the rest are on /flash-sales. */
+  const liveEvents = (flashEvents.data ?? []).slice(0, 2);
+  const markets = useMarkets();
+  const banners = usePromoBanners();
+  const campaigns = useCampaigns();
 
-  const storeMap = new Map((stores.data ?? []).map((s) => [s.id, s]));
-  const all = products.data ?? [];
+  const storeMap = useMemo(() => new Map((stores.data ?? []).map((s) => [s.id, s])), [stores.data]);
+  const all = useMemo(() => products.data ?? [], [products.data]);
   const flash = deals.data?.length ? deals.data : all.filter((p) => p.tags.includes("flash"));
   const hasEndDate = flash.some((p) => p.flashSale?.endsAt);
   const popular = all.filter((p) => p.tags.includes("popular"));
-  const newest = newestFirst(all).slice(0, 4);
+  const newest = useMemo(() => newestFirst(all).slice(0, 4), [all]);
+
+  const bannerList = banners.data ?? [];
+  const topBanners = bannerList.slice(0, TOP_BANNERS);
+  const collageBanners = bannerList.slice(TOP_BANNERS, TOP_BANNERS + COLLAGE_BANNERS);
 
   return (
     <>
-      <Hero />
+      <Hero categories={categories.data ?? []} />
 
       {categories.data && categories.data.length > 0 && (
         <Container className="mt-14">
@@ -44,33 +72,46 @@ export function HomeSections() {
         </Container>
       )}
 
-      {flash.length > 0 && (
+      {/* Running flash sale events take this slot; plain deal products are the fallback. */}
+      {liveEvents.length > 0
+        ? liveEvents.map((event) => (
+            <Container key={event.id} className="mt-20">
+              <FlashSaleSection event={event} stores={storeMap} />
+            </Container>
+          ))
+        : flash.length > 0 && (
+            <Container className="mt-20">
+              <SectionHeading
+                title="Flash deals"
+                description="Limited-time prices from vendors near you."
+                href="/products?tag=flash"
+                eyebrow={
+                  // Only claim urgency when a deal actually has an end date.
+                  hasEndDate ? (
+                    <Badge tone="accent">
+                      <Zap className="size-3" aria-hidden /> Limited time
+                    </Badge>
+                  ) : undefined
+                }
+              />
+              <ProductGrid products={flash.slice(0, 4)} stores={storeMap} />
+            </Container>
+          )}
+
+      <Container className="mt-20">
+        <PromotionsStrip />
+      </Container>
+
+      {topBanners.length > 0 && (
         <Container className="mt-20">
-          <SectionHeading
-            title="Flash deals"
-            description="Limited-time prices from vendors near you."
-            href="/products?tag=flash"
-            eyebrow={
-              // Only claim urgency when a deal actually has an end date.
-              hasEndDate ? (
-                <Badge tone="accent">
-                  <Zap className="size-3" aria-hidden /> Limited time
-                </Badge>
-              ) : undefined
-            }
-          />
-          <ProductGrid products={flash.slice(0, 4)} stores={storeMap} />
+          <PromoBanners banners={topBanners} />
         </Container>
       )}
 
-      <Container className="mt-20">
-        <PromoBanners />
-      </Container>
-
-      {flash.length > 0 && (
+      {flash.length > 4 && (
         <Container className="mt-20">
           <SectionHeading title="Best deals" href="/products?tag=flash" />
-          <ProductGrid products={flash.slice(0, 4)} stores={storeMap} />
+          <ProductGrid products={flash.slice(4, 8)} stores={storeMap} />
         </Container>
       )}
 
@@ -105,9 +146,11 @@ export function HomeSections() {
         )}
       </Container>
 
-      <Container className="mt-20">
-        <PromoCollage />
-      </Container>
+      {collageBanners.length > 0 && (
+        <Container className="mt-20">
+          <PromoCollage banners={collageBanners} />
+        </Container>
+      )}
 
       {popular.length > 0 && (
         <Container className="mt-20">
@@ -127,12 +170,14 @@ export function HomeSections() {
         )}
       </Container>
 
-      <div className="mt-20">
-        <WeeklyDealBanner />
-      </div>
+      {campaigns.data && campaigns.data.length > 0 && (
+        <div className="mt-20">
+          <WeeklyDealBanner campaigns={campaigns.data} />
+        </div>
+      )}
 
       <Container className="mt-20">
-        <MarketNearYou stores={stores.data ?? []} />
+        <MarketNearYou markets={markets.data ?? []} stores={stores.data ?? []} />
       </Container>
 
       <HowItWorks />

@@ -86,3 +86,45 @@ export type Review = {
   body: string;
   vendorReply: string | null;
 };
+
+export type Market = {
+  id: string;
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+};
+
+/** A marketing banner managed from the admin console. */
+export type PromoBanner = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  ctaLabel: string;
+  href: string;
+  imageUrl: string | null;
+  /** Background colour from the admin console, when it is a usable CSS colour. */
+  accent: string | null;
+};
+
+/** A merchandising campaign (Christmas deals, end-of-year sale…). */
+export type Campaign = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  imageUrl: string | null;
+  themeColor: string | null;
+  endsAt: string | null;
+};
+
+/** A time-boxed sale event grouping discounted products (e.g. "Friday Flash Sale"). */
+export type FlashSaleEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string | null;
+  startsAt: string | null;
+  endsAt: string;
+  productCount: number;
+};

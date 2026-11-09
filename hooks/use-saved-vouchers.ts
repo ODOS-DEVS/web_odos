@@ -1,48 +1,70 @@
 "use client";
 
-import { useMemo } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SavedVoucher } from "@/types/voucher";
-import { MOCK_REDEEMABLE_CODES, SEED_SAVED_VOUCHERS } from "@/mocks/voucher-wallet.mock";
+import { queryKeys, voucherQueries } from "@/services/queries";
+import { vouchersService } from "@/services/vouchers.service";
 import { useMounted } from "./use-mounted";
 
-type RedeemResult = "ok" | "already-redeemed" | "invalid";
+export type RedeemResult = "ok" | "already-redeemed" | "invalid";
 
-type SavedVouchersState = {
-  vouchers: SavedVoucher[];
-  save: (voucher: Omit<SavedVoucher, "id">) => void;
-  redeem: (code: string) => RedeemResult;
-};
-
-// No vouchers endpoint wired up yet, so the shopper's wallet lives in the browser like favorites/wallet.
-const useSavedVouchersStore = create<SavedVouchersState>()(
-  persist(
-    (set, get) => ({
-      vouchers: SEED_SAVED_VOUCHERS,
-      save: (voucher) => set({ vouchers: [{ ...voucher, id: crypto.randomUUID() }, ...get().vouchers] }),
-      redeem: (code) => {
-        const key = code.trim().toUpperCase();
-        if (!key) return "invalid";
-        if (get().vouchers.some((v) => v.code === key)) return "already-redeemed";
-        const template = MOCK_REDEEMABLE_CODES[key];
-        if (!template) return "invalid";
-        set({ vouchers: [{ ...template, code: key, id: crypto.randomUUID() }, ...get().vouchers] });
-        return "ok";
-      },
-    }),
-    { name: "odos-saved-vouchers-v1" },
-  ),
-);
-
-/** The shopper's saved/redeemed vouchers. `ready` is false until the client has mounted. */
+/**
+ * Connected directly to GET /vouchers/mine with React Query caching and live mutations.
+ * Strictly presents genuine backend vouchers.
+ */
 export function useSavedVouchers() {
   const ready = useMounted();
-  const stored = useSavedVouchersStore((s) => s.vouchers);
-  const save = useSavedVouchersStore((s) => s.save);
-  const redeem = useSavedVouchersStore((s) => s.redeem);
+  const queryClient = useQueryClient();
 
-  const vouchers = useMemo(() => (ready ? stored : []), [ready, stored]);
+  const query = useQuery({
+    ...voucherQueries.mine(),
+    enabled: ready,
+    retry: 1,
+  });
 
-  return { ready, vouchers, save, redeem };
+  const redeemMutation = useMutation({
+    mutationFn: async (code: string): Promise<RedeemResult> => {
+      const key = code.trim().toUpperCase();
+      if (!key) return "invalid";
+
+      const current = query.data ?? [];
+      if (current.some((v) => v.code.toUpperCase() === key)) {
+        return "already-redeemed";
+      }
+
+      try {
+        await vouchersService.redeemCode(key);
+        return "ok";
+      } catch {
+        return "invalid";
+      }
+    },
+    onSuccess: (result) => {
+      if (result === "ok") {
+        queryClient.invalidateQueries({ queryKey: queryKeys.myVouchers });
+      }
+    },
+  });
+
+  const claimMutation = useMutation({
+    mutationFn: async (voucherId: string) => {
+      return await vouchersService.claim(voucherId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.myVouchers });
+    },
+  });
+
+  const vouchers = query.data ?? [];
+
+  return {
+    ready,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    vouchers,
+    claim: (voucherId: string) => claimMutation.mutate(voucherId),
+    redeem: (code: string) => redeemMutation.mutate(code),
+    redeemAsync: (code: string) => redeemMutation.mutateAsync(code),
+    isRedeeming: redeemMutation.isPending,
+  };
 }

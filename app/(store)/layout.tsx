@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { AccountSync } from "@/components/providers/account-sync";
 
 // No server-side prefetch here for now: the catalogue is served from `mocks/`, read directly by each
 // client component, so there is no query cache to warm ahead of time. Restore the prefetch once the
@@ -14,6 +15,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
+      <AccountSync />
       <SiteHeader />
       <main id="main" className="flex-1">
         {children}

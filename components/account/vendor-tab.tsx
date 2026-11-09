@@ -1,21 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, MapPin, Store } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Clock, MapPin, Store } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import { TogglePill } from "@/components/ui/toggle-pill";
 import { useSession } from "@/hooks/use-auth";
+import { useCategories, useMarkets } from "@/hooks/use-catalog";
 import { useQueryParam } from "@/hooks/use-query-param";
 import { GHANA_REGIONS } from "@/libs/checkout";
 import { cn } from "@/libs/cn";
-import { useFakeMutation } from "@/mocks/mutation";
+import { vendorService, type VendorApplicationCreate, type VendorApplicationRead } from "@/services/vendor.service";
+import { canUploadPhotos, uploadPhoto } from "@/services/upload.service";
 import { MOCK_MARKETS } from "@/mocks/catalog.mock";
 
-const BUSINESS_CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   "Fashion & Accessories",
   "Beauty & Personal Care",
   "Electronics",
@@ -42,10 +45,6 @@ const STATUS_TONE: Record<ApplicationStatus, BadgeTone> = {
   rejected: "danger",
 };
 
-function mockSubmitVendorApplication(input: Record<string, unknown>) {
-  return input;
-}
-
 function UploadSlot({
   label,
   buttonLabel,
@@ -71,7 +70,7 @@ function UploadSlot({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="press block aspect-square w-full overflow-hidden rounded-xl bg-surface-muted bg-cover bg-center"
+        className="press block aspect-square w-full overflow-hidden rounded-xl bg-surface-muted bg-cover bg-center border border-line"
         style={preview ? { backgroundImage: `url(${preview})` } : undefined}
         aria-label={buttonLabel}
       />
@@ -83,31 +82,86 @@ function UploadSlot({
   );
 }
 
-function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: () => void }) {
-  const submit = useFakeMutation(mockSubmitVendorApplication);
+function VendorApplicationForm({
+  initial,
+  onClose,
+  onSubmitted,
+}: {
+  initial?: VendorApplicationRead | null;
+  onClose: () => void;
+  onSubmitted: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: categoriesData } = useCategories();
+  const { data: marketsData } = useMarkets();
 
-  const [businessName, setBusinessName] = useState("");
-  const [businessCategory, setBusinessCategory] = useState<(typeof BUSINESS_CATEGORIES)[number] | null>(null);
-  const [businessDescription, setBusinessDescription] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const categories = useMemo(() => {
+    if (categoriesData && categoriesData.length > 0) {
+      return categoriesData.map((c) => c.name);
+    }
+    return DEFAULT_CATEGORIES;
+  }, [categoriesData]);
 
-  const [storeName, setStoreName] = useState("");
-  const [storeDescription, setStoreDescription] = useState("");
-  const [region, setRegion] = useState("Greater Accra");
-  const [city, setCity] = useState("");
+  const markets = useMemo(() => {
+    if (marketsData && marketsData.length > 0) {
+      return marketsData;
+    }
+    return MOCK_MARKETS;
+  }, [marketsData]);
+
+  const [businessName, setBusinessName] = useState(initial?.business_name ?? "");
+  const [businessCategory, setBusinessCategory] = useState<string | null>(initial?.business_category ?? null);
+  const [businessDescription, setBusinessDescription] = useState(initial?.business_description ?? "");
+  const [phoneNumber, setPhoneNumber] = useState(initial?.phone_number ?? "");
+
+  const [storeName, setStoreName] = useState(initial?.store_name ?? "");
+  const [storeDescription, setStoreDescription] = useState(initial?.store_description ?? "");
+  const [region, setRegion] = useState(initial?.region || "Greater Accra");
+  const [city, setCity] = useState(initial?.city ?? "");
 
   const [locationInput, setLocationInput] = useState("");
-  const [preferredMarket, setPreferredMarket] = useState<string | null>(null);
+  const [preferredMarket, setPreferredMarket] = useState<string | null>(initial?.preferred_market ?? null);
 
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+
+  const [shopPhotoFile, setShopPhotoFile] = useState<File | null>(null);
   const [shopPhotoPreview, setShopPhotoPreview] = useState<string | null>(null);
 
-  const readAsDataUrl = (file: File, onLoaded: (url: string) => void) => {
-    const reader = new FileReader();
-    reader.onload = () => onLoaded(reader.result as string);
-    reader.readAsDataURL(file);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handlePickLogo = (file: File) => {
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
   };
+
+  const handlePickBanner = (file: File) => {
+    setBannerFile(file);
+    setBannerPreview(URL.createObjectURL(file));
+  };
+
+  const handlePickShop = (file: File) => {
+    setShopPhotoFile(file);
+    setShopPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const submit = useMutation({
+    mutationFn: async (payload: VendorApplicationCreate) => {
+      return await vendorService.submitApplication(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendor", "application"] });
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      toast.success("Vendor application submitted — we'll email you once it's reviewed.");
+      onSubmitted();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to submit application");
+    },
+  });
 
   const canSubmit =
     businessName.trim() &&
@@ -120,30 +174,48 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
     locationInput.trim() &&
     preferredMarket;
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSubmit) return;
-    submit.mutate(
-      {
-        businessName,
-        businessCategory,
-        businessDescription,
-        phoneNumber,
-        storeName,
-        storeDescription,
+
+    setIsUploading(true);
+    let logo_url: string | undefined = undefined;
+    let banner_url: string | undefined = undefined;
+
+    if (canUploadPhotos()) {
+      try {
+        if (logoFile) {
+          logo_url = await uploadPhoto(logoFile, "odos/vendors/logos");
+        }
+        if (bannerFile) {
+          banner_url = await uploadPhoto(bannerFile, "odos/vendors/banners");
+        }
+      } catch (err) {
+        console.warn("Visuals upload warning:", err);
+      }
+    }
+
+    try {
+      await submit.mutateAsync({
+        business_name: businessName.trim(),
+        business_category: businessCategory,
+        business_description: businessDescription.trim(),
+        phone_number: phoneNumber.trim(),
+        store_name: storeName.trim(),
+        store_description: storeDescription.trim(),
         region,
-        city,
-        locationInput,
-        preferredMarket,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Vendor application submitted — we'll email you once it's reviewed.");
-          onSubmitted();
-        },
-      },
-    );
+        city: city.trim(),
+        location_input: locationInput.trim(),
+        preferred_market: preferredMarket,
+        logo_url,
+        banner_url,
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
+
+  const busy = submit.isPending || isUploading;
 
   return (
     <form onSubmit={onSubmit} className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
@@ -153,6 +225,7 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
             type="button"
             onClick={onClose}
             aria-label="Back"
+            disabled={busy}
             className="press mt-0.5 grid size-7 shrink-0 place-items-center rounded-full hover:bg-surface-muted"
           >
             <ChevronLeft className="size-4" aria-hidden />
@@ -183,8 +256,12 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
         <div>
           <p className="mb-1.5 text-sm font-medium">Business Category *</p>
           <div className="flex flex-wrap gap-2">
-            {BUSINESS_CATEGORIES.map((category) => (
-              <TogglePill key={category} selected={businessCategory === category} onClick={() => setBusinessCategory(category)}>
+            {categories.map((category) => (
+              <TogglePill
+                key={category}
+                selected={businessCategory === category}
+                onClick={() => setBusinessCategory(category)}
+              >
                 {category}
               </TogglePill>
             ))}
@@ -198,53 +275,44 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
             id="businessDescription"
             rows={3}
             required
-            placeholder="Tell ODOS what you sell and how your business operates."
+            placeholder="Tell us what you sell and how you source your items"
             value={businessDescription}
             onChange={(e) => setBusinessDescription(e.target.value)}
-            className={cn(inputClass, "h-auto min-h-24 resize-none py-3")}
+            className={cn(inputClass, "h-auto resize-none py-3")}
           />
         </div>
         <Field
-          id="businessPhone"
-          label="Phone Number *"
+          id="phoneNumber"
+          label="Business Phone Number *"
           type="tel"
-          placeholder="eg. 0241234568"
           required
+          placeholder="024 123 4567"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
         />
       </div>
 
-      <div className="mt-8 space-y-5 border-t border-line pt-6">
-        <h3 className="text-sm font-semibold">Store setup</h3>
-        <Field
-          id="storeName"
-          label="Store Name *"
-          placeholder="eg. The name customers will see"
-          required
-          value={storeName}
-          onChange={(e) => setStoreName(e.target.value)}
-        />
-        <div>
-          <label htmlFor="storeDescription" className="mb-1.5 block text-sm font-medium">
-            Store Description *
-          </label>
-          <textarea
-            id="storeDescription"
-            rows={3}
+      <div className="mt-8 border-t border-line pt-6">
+        <h3 className="text-sm font-semibold">Store information</h3>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field
+            id="storeName"
+            label="Store Name *"
+            placeholder="eg. Irma Fashions"
             required
-            placeholder="eg. Optional short summary"
-            value={storeDescription}
-            onChange={(e) => setStoreDescription(e.target.value)}
-            className={cn(inputClass, "h-auto min-h-24 resize-none py-3")}
+            value={storeName}
+            onChange={(e) => setStoreName(e.target.value)}
           />
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="region" className="mb-1.5 block text-sm font-medium">
+            <label htmlFor="store-region" className="mb-1.5 block text-sm font-medium">
               Region *
             </label>
-            <select id="region" name="region" required value={region} onChange={(e) => setRegion(e.target.value)} className={inputClass}>
+            <select
+              id="store-region"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              className={inputClass}
+            >
               {GHANA_REGIONS.map((r) => (
                 <option key={r} value={r}>
                   {r}
@@ -252,73 +320,121 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
               ))}
             </select>
           </div>
-          <Field id="city" label="City *" placeholder="eg. Accra" required value={city} onChange={(e) => setCity(e.target.value)} />
+          <div className="sm:col-span-2">
+            <Field
+              id="storeCity"
+              label="City / Town *"
+              placeholder="eg. Osu, Accra"
+              required
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor="storeDescription" className="mb-1.5 block text-sm font-medium">
+              Store Description *
+            </label>
+            <textarea
+              id="storeDescription"
+              rows={3}
+              required
+              placeholder="Short description customers will see on your store page"
+              value={storeDescription}
+              onChange={(e) => setStoreDescription(e.target.value)}
+              className={cn(inputClass, "h-auto resize-none py-3")}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="mt-8 space-y-4 border-t border-line pt-6">
-        <div>
-          <h3 className="text-sm font-semibold">Where is your store</h3>
-          <p className="mt-0.5 text-xs text-muted">
-            Pinpoint your GhanaPost GPS (eg. GA-143-2301), describe the landmark, or use the buttons below — you never need
-            to enter map pins, ODOS handles that for you.
-          </p>
-        </div>
+      <div className="mt-8 border-t border-line pt-6 space-y-4">
+        <h3 className="text-sm font-semibold">Location & Map</h3>
         <Field
-          id="location"
-          label="GhanaPost GPS or Landmark *"
-          placeholder="eg. GA-143-2301 or Accra Mall (King Road)"
+          id="locationInput"
+          label="GhanaPost GPS / Landmark *"
+          placeholder="eg. GA-492-8291 or Oxford Street, opposite Total"
           required
           value={locationInput}
           onChange={(e) => setLocationInput(e.target.value)}
         />
-        <Button type="button" variant="accent" size="lg" className="w-full" onClick={() => toast("Finding your location on the map…")}>
-          Find on map
-        </Button>
-        <Button type="button" variant="outline" size="lg" className="w-full" onClick={() => toast("Using your current location…")}>
-          I&apos;m at my store
-        </Button>
         <div className="grid aspect-video place-items-center rounded-xl bg-surface-muted">
           <div className="flex flex-col items-center gap-1.5 text-muted">
             <MapPin className="size-6" aria-hidden />
-            <span className="text-xs">Map preview</span>
+            <span className="text-xs">Location pinned on ODOS dispatch network</span>
           </div>
         </div>
-        <p className="text-center text-xs text-muted">
-          Tip: if &quot;Find on map&quot; marks your GPS code, stand at your shop and tap &quot;I&apos;m at my store&quot;.
-        </p>
       </div>
 
       <div className="mt-8 border-t border-line pt-6">
         <p className="mb-2 text-sm font-medium">Preferred Market *</p>
         <div className="flex flex-wrap gap-2">
-          {MOCK_MARKETS.map((market) => (
-            <TogglePill key={market.slug} selected={preferredMarket === market.title} onClick={() => setPreferredMarket(market.title)}>
-              {market.title}
-            </TogglePill>
-          ))}
+          {markets.map((market) => {
+            const label = ("name" in market && market.name) ? market.name : ("title" in market ? (market as { title: string }).title : market.slug);
+            return (
+              <TogglePill
+                key={market.slug}
+                selected={preferredMarket === label}
+                onClick={() => setPreferredMarket(label)}
+              >
+                {label}
+              </TogglePill>
+            );
+          })}
         </div>
       </div>
 
       <div className="mt-8 border-t border-line pt-6">
         <h3 className="text-sm font-semibold">Store visuals</h3>
-        <p className="mt-0.5 text-xs text-muted">Upload a clean store logo and banner so your storefront feels trustworthy from day one.</p>
+        <p className="mt-0.5 text-xs text-muted">
+          Upload a clean store logo and banner so your storefront feels trustworthy from day one.
+        </p>
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <UploadSlot label="Store logo" buttonLabel="Upload logo" preview={logoPreview} onPick={(f) => readAsDataUrl(f, setLogoPreview)} />
-          <UploadSlot label="Store Banner" buttonLabel="Upload Banner" preview={bannerPreview} onPick={(f) => readAsDataUrl(f, setBannerPreview)} />
           <UploadSlot
-            label="Store Phone"
+            label="Store logo"
+            buttonLabel="Upload logo"
+            preview={logoPreview}
+            onPick={handlePickLogo}
+          />
+          <UploadSlot
+            label="Store Banner"
+            buttonLabel="Upload Banner"
+            preview={bannerPreview}
+            onPick={handlePickBanner}
+          />
+          <UploadSlot
+            label="Shop Photo"
             buttonLabel="Upload Shop Photo"
             preview={shopPhotoPreview}
-            onPick={(f) => readAsDataUrl(f, setShopPhotoPreview)}
+            onPick={handlePickShop}
           />
         </div>
       </div>
 
-      <Button type="submit" variant="accent" size="lg" className="mt-8 w-full" disabled={!canSubmit || submit.isPending}>
-        {submit.isPending ? "Submitting…" : "Submit Vendor Application"}
+      <Button
+        type="submit"
+        variant="accent"
+        size="lg"
+        className="mt-8 w-full"
+        disabled={!canSubmit || busy}
+      >
+        {busy ? "Submitting Application…" : "Submit Vendor Application"}
       </Button>
     </form>
+  );
+}
+
+export function VendorSkeleton() {
+  return (
+    <div className="space-y-5" aria-busy="true" aria-label="Loading vendor status">
+      <div className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-5 sm:p-6 animate-pulse">
+        <div className="size-12 shrink-0 rounded-2xl bg-surface-muted" />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="h-5 w-36 rounded-md bg-surface-muted" />
+          <div className="h-3.5 w-72 max-w-full rounded bg-surface-muted" />
+        </div>
+        <div className="h-9 w-24 shrink-0 rounded-full bg-surface-muted" />
+      </div>
+    </div>
   );
 }
 
@@ -326,18 +442,35 @@ export function VendorTab() {
   const user = useSession()?.user;
   const [submitted, setSubmitted] = useState(false);
 
-  // Kept in the URL (like the outer account tab) so a refresh or shared link doesn't drop the open form.
+  // Read application status live from GET /vendor/applications/me
+  const applicationQuery = useQuery({
+    queryKey: ["vendor", "application"],
+    queryFn: () => vendorService.myApplication(),
+    enabled: Boolean(user),
+  });
+
   const [applyParam, setApplyParam] = useQueryParam("apply");
   const applying = applyParam === "1";
   const setApplying = (next: boolean) => setApplyParam(next ? "1" : null);
 
-  const baseStatus: ApplicationStatus = user?.vendor_status === "pending" || user?.vendor_status === "under_review"
-    ? "pending"
-    : user?.vendor_status === "approved"
+  if (applicationQuery.isLoading) {
+    return <VendorSkeleton />;
+  }
+
+  const apiApp = applicationQuery.data;
+  const apiAppStatus = apiApp?.status;
+  const baseStatus: ApplicationStatus =
+    user?.vendor_status === "approved" || apiAppStatus === "approved"
       ? "approved"
-      : user?.vendor_status === "rejected"
-        ? "rejected"
-        : "none";
+      : user?.vendor_status === "pending" ||
+        user?.vendor_status === "under_review" ||
+        apiAppStatus === "pending" ||
+        apiAppStatus === "under_review"
+      ? "pending"
+      : user?.vendor_status === "rejected" || apiAppStatus === "rejected"
+      ? "rejected"
+      : "none";
+
   const status: ApplicationStatus = submitted ? "pending" : baseStatus;
 
   return (
@@ -348,7 +481,9 @@ export function VendorTab() {
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold">Become a Vendor</p>
-          <p className="mt-0.5 text-sm text-muted">Apply once and manage your store from the same ODOS account after approval.</p>
+          <p className="mt-0.5 text-sm text-muted">
+            Apply once and manage your store from the same ODOS account after approval.
+          </p>
         </div>
         {status === "none" && (
           <button
@@ -376,8 +511,54 @@ export function VendorTab() {
         ) : null}
       </div>
 
+      {status === "pending" && !applying && (
+        <div className="rounded-2xl border border-warning/30 bg-surface p-5 sm:p-6 space-y-2">
+          <div className="flex items-center gap-2 text-warning font-semibold text-sm">
+            <Clock className="size-4.5" /> Application under review
+          </div>
+          <p className="text-sm text-muted leading-relaxed">
+            We have received your vendor application for{" "}
+            <strong className="text-foreground">
+              {apiApp?.store_name || apiApp?.business_name || "your store"}
+            </strong>
+            . Our compliance team verifies marketplace stores within 24–48 hours. You will be able to access your Seller Center as soon as approval is granted.
+          </p>
+        </div>
+      )}
+
+      {status === "rejected" && !applying && (
+        <div className="rounded-2xl border border-danger/30 bg-surface p-5 sm:p-6 space-y-3">
+          <div className="flex items-center gap-2 text-danger font-semibold text-sm">
+            <AlertTriangle className="size-4.5" /> Application not approved
+          </div>
+          <p className="text-sm text-muted leading-relaxed">
+            {apiApp?.rejection_reason ||
+              user?.vendor_rejection_reason ||
+              "Your application could not be verified with the provided information. Please review and update your business and location details to re-apply."}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => setApplying(true)}>
+            Update details & re-apply
+          </Button>
+        </div>
+      )}
+
+      {status === "approved" && (
+        <div className="rounded-2xl border border-success/30 bg-surface p-5 sm:p-6 space-y-3">
+          <div className="flex items-center gap-2 text-success font-semibold text-sm">
+            <CheckCircle2 className="size-4.5" /> You're a verified ODOS Vendor!
+          </div>
+          <p className="text-sm text-muted leading-relaxed">
+            Your storefront is active. You can start listing products, managing inventory, receiving orders, and viewing payouts in the Seller Center.
+          </p>
+          <ButtonLink href="/account?tab=dashboard" variant="accent" size="sm">
+            Open Seller Center
+          </ButtonLink>
+        </div>
+      )}
+
       {applying && (
         <VendorApplicationForm
+          initial={apiApp}
           onClose={() => setApplying(false)}
           onSubmitted={() => {
             setSubmitted(true);

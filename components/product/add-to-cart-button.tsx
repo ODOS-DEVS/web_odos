@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { Product } from "@/types/catalog";
 import { useCart } from "@/hooks/use-cart";
 import { Button } from "@/components/ui/button";
+import { trackBehavior } from "@/services/tracking.service";
 
 type Variant = { size?: string | null; color?: string | null };
 
@@ -15,6 +16,13 @@ export function useAddToCart(product: Product) {
 
   return (quantity = 1, variant: Variant = {}) => {
     add({ product, quantity, size: variant.size ?? null, color: variant.color ?? null });
+    trackBehavior({
+      event_type: "add_to_cart",
+      product_id: product.id,
+      store_id: product.storeId,
+      category: product.categoryName,
+      metadata: { quantity, size: variant.size ?? null, color: variant.color ?? null },
+    });
     toast.success(`Added ${product.name}`, {
       action: { label: "View cart", onClick: () => router.push("/cart") },
     });

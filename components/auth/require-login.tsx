@@ -11,11 +11,22 @@ import { useSession } from "@/hooks/use-auth";
  * Renders `children` only for a logged-in shopper; otherwise a friendly prompt that returns them here
  * after logging in. Shows a skeleton until the client knows whether a session exists (no login flash).
  */
-export function RequireLogin({ children, next, message = "Log in to continue." }: { children: ReactNode; next: string; message?: string }) {
+export function RequireLogin({
+  children,
+  next,
+  message = "Log in to continue.",
+  fallback,
+}: {
+  children: ReactNode;
+  next: string;
+  message?: string;
+  /** Shown until the client knows whether there's a session; defaults to a plain block. */
+  fallback?: ReactNode;
+}) {
   const mounted = useMounted();
   const session = useSession();
 
-  if (!mounted) return <div className="h-72 animate-pulse rounded-3xl bg-surface-muted" aria-busy="true" />;
+  if (!mounted) return <>{fallback ?? <div className="h-72 animate-pulse rounded-3xl bg-surface-muted" aria-busy="true" />}</>;
   if (session) return <>{children}</>;
 
   const query = `?next=${encodeURIComponent(next)}`;

@@ -4,6 +4,7 @@ import { AccountMenu } from "./account-menu";
 import { CartButton } from "./cart-button";
 import { CategoryNav } from "./category-nav";
 import { FavoritesButton } from "./favorites-button";
+import { NotificationsButton } from "./notifications-button";
 import { SearchForm } from "./search-form";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -19,10 +20,11 @@ export function SiteHeader() {
         <SearchForm className="mx-auto hidden max-w-xl flex-1 md:block" />
 
         <div className="ml-auto flex items-center gap-0 min-[320px]:gap-1 md:ml-0">
-          <AccountMenu />
           <ThemeToggle />
           <FavoritesButton />
           <CartButton />
+          <NotificationsButton />
+          <AccountMenu />
         </div>
       </Container>
 

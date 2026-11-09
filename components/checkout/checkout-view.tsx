@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Lock, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import type { DeliverySpeed } from "@/types/delivery";
@@ -12,15 +13,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field, inputClass } from "@/components/ui/field";
 import { useSession } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
-import { GHANA_REGIONS, toOrderItems } from "@/libs/checkout";
+import { useDeliveryQuote } from "@/hooks/use-delivery-quote";
+import { useCheckout, useCheckoutAddresses, useWalletBalance, useWalletCheckout } from "@/hooks/use-orders";
+import { GHANA_REGIONS, PENDING_PAYMENT_KEY, toOrderItems } from "@/libs/checkout";
 import { formatMoney } from "@/libs/format";
-import { mockDeliveryQuote } from "@/mocks/delivery.mock";
-import { useFakeMutation } from "@/mocks/mutation";
-import { mockCheckout } from "@/mocks/payments.mock";
-import { fakeQuery } from "@/mocks/query";
 import { ApiError } from "@/services/http";
 import { ChoiceCard } from "./choice-card";
-import { PAYMENT_METHODS, PaymentMethodPicker } from "./payment-method-picker";
+import { PAYMENT_LABELS, PaymentMethodPicker, type PaymentChoice } from "./payment-method-picker";
 
 function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
   return (
@@ -36,8 +35,13 @@ function Step({ number, title, children }: { number: number; title: string; chil
 
 function CheckoutForm() {
   const user = useSession()?.user;
-  const { ready, lines, subtotal, count } = useCart();
-  const checkout = useFakeMutation(mockCheckout);
+  const router = useRouter();
+  const { ready, lines, subtotal, count, clear } = useCart();
+  const checkout = useCheckout();
+  const walletCheckout = useWalletCheckout();
+  const wallet = useWalletBalance();
+  const savedAddresses = useCheckoutAddresses();
+  const placing = checkout.isPending || walletCheckout.isPending;
 
   const [name, setName] = useState(user?.full_name ?? "");
   const [phone, setPhone] = useState(user?.phone_number ?? "");
@@ -46,21 +50,32 @@ function CheckoutForm() {
   const [region, setRegion] = useState<string>(user?.region ?? "Greater Accra");
   const [notes, setNotes] = useState("");
   const [method, setMethod] = useState<DeliverySpeed>("economy");
-  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS.find((m) => m.isDefault) ?? PAYMENT_METHODS[0]);
+  const [payment, setPayment] = useState<PaymentChoice>("online");
+
+  // Prefill once from the account's default saved address, without overwriting anything typed.
+  const [prefilled, setPrefilled] = useState(false);
+  useEffect(() => {
+    const saved = savedAddresses.data?.[0];
+    if (prefilled || !saved) return;
+    setPrefilled(true);
+    setName((v) => v || saved.fullName);
+    setPhone((v) => v || saved.phone);
+    setStreet((v) => v || saved.street);
+    setCity((v) => v || saved.city);
+    if ((GHANA_REGIONS as readonly string[]).includes(saved.region)) setRegion(saved.region);
+  }, [savedAddresses.data, prefilled]);
 
   // Region (not city) drives pricing, so typing a city doesn't fire a new quote per keystroke.
-  const quote = fakeQuery(
-    mockDeliveryQuote({
-      subtotal,
-      method,
-      region,
-      items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.price })),
-    }),
-  );
+  const quote = useDeliveryQuote({
+    subtotal,
+    method,
+    region,
+    items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.price })),
+  });
 
   if (!ready) return <div className="h-96 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;
 
-  if (lines.length === 0 && !checkout.isPending && !checkout.isSuccess) {
+  if (lines.length === 0 && !placing && !checkout.isSuccess && !walletCheckout.isSuccess) {
     return (
       <EmptyState
         icon={<ShoppingBag className="size-10 text-muted" aria-hidden />}
@@ -78,35 +93,59 @@ function CheckoutForm() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (shipping === null) return;
+    if (shipping === null || placing) return;
+
+    const order = {
+      source: "cart" as const,
+      items: toOrderItems(lines),
+      subtotal_amount: subtotal,
+      shipping_amount: shipping,
+      delivery_method: method,
+      discount_amount: 0,
+      total_amount: total,
+      address_full_name: name.trim(),
+      address_phone: phone.trim(),
+      address_street: street.trim(),
+      address_city: city.trim(),
+      address_region: region,
+      delivery_instructions: notes.trim() || null,
+      // `payment_type` is free text on the API (≤30 chars).
+      payment_type: PAYMENT_LABELS[payment].type,
+      payment_label: PAYMENT_LABELS[payment].label,
+    };
+    const onError = (error: Error) =>
+      toast.error(error instanceof ApiError ? error.message : "We couldn’t place your order. Please try again.");
+
+    if (payment === "wallet") {
+      walletCheckout.mutate(order, {
+        onSuccess: ({ order: placed }) => {
+          clear();
+          toast.success(`Order ${placed.number} placed and paid from your wallet`);
+          router.replace(`/orders/${placed.id}`);
+        },
+        onError,
+      });
+      return;
+    }
 
     checkout.mutate(
       {
-        source: "cart",
-        items: toOrderItems(lines),
-        subtotal_amount: subtotal,
-        shipping_amount: shipping,
-        delivery_method: method,
-        discount_amount: 0,
-        total_amount: total,
-        address_full_name: name.trim(),
-        address_phone: phone.trim(),
-        address_street: street.trim(),
-        address_city: city.trim(),
-        address_region: region,
-        delivery_instructions: notes.trim() || null,
-        // `payment_type` is free text on the API (≤30 chars).
-        payment_type: paymentMethod.kind,
-        payment_label: paymentMethod.label,
+        ...order,
         callback_url: `${window.location.origin}/checkout/success`,
         cancel_url: `${window.location.origin}/checkout`,
       },
       {
         onSuccess: (session) => {
+          // Not every provider appends the reference to the callback URL, so keep it for the result page.
+          try {
+            sessionStorage.setItem(PENDING_PAYMENT_KEY, session.reference);
+          } catch {
+            // Storage blocked: the result page falls back to the URL's reference.
+          }
           // The cart is cleared on the result page once the payment is confirmed, not before.
           window.location.assign(session.authorization_url);
         },
-        onError: (error) => toast.error(error instanceof ApiError ? error.message : "We couldn’t start your payment. Please try again."),
+        onError,
       },
     );
   };
@@ -189,15 +228,15 @@ function CheckoutForm() {
         </Step>
 
         <Step number={3} title="Payment">
-          <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
+          <PaymentMethodPicker value={payment} onChange={setPayment} total={total} walletBalance={wallet.data} />
         </Step>
       </div>
 
       <div className="lg:sticky lg:top-40">
         <OrderSummary totals={{ items: subtotal, delivery: shipping, total, vendors: new Set(lines.map((l) => l.storeId)).size }}>
-          <Button type="submit" size="lg" variant="accent" className="w-full" disabled={checkout.isPending || shipping === null}>
+          <Button type="submit" size="lg" variant="accent" className="w-full" disabled={placing || shipping === null}>
             <Lock className="size-4" aria-hidden />
-            {checkout.isPending ? "Starting payment…" : `Pay ${formatMoney(total)}`}
+            {placing ? (payment === "wallet" ? "Placing order…" : "Starting payment…") : `Pay ${formatMoney(total)}`}
           </Button>
           <p className="mt-3 text-center text-xs text-muted">
             {count} {count === 1 ? "item" : "items"} · Need to change something?{" "}

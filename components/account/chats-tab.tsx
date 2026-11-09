@@ -4,11 +4,10 @@ import { useState } from "react";
 import { ChevronRight, MessageCircle, Search } from "lucide-react";
 import { ChatThread } from "@/components/chat/chat-view";
 import { Media } from "@/components/ui/media";
-import { useChatThreads } from "@/hooks/use-chats";
+import { useChatThreads, type ChatThreadSummary } from "@/hooks/use-chats";
 import { useQueryParam } from "@/hooks/use-query-param";
 import { cn } from "@/libs/cn";
 import { formatChatListTime } from "@/libs/format";
-import type { ChatThreadSummary } from "@/mocks/chat.mock";
 
 function ThreadRow({ thread, onOpen }: { thread: ChatThreadSummary; onOpen: () => void }) {
   return (
@@ -59,12 +58,74 @@ function SidebarRow({ thread, active, onOpen }: { thread: ChatThreadSummary; act
   );
 }
 
+export function ChatsSkeleton() {
+  return (
+    <div className="space-y-5" aria-busy="true" aria-label="Loading chats">
+      <div className="space-y-1.5 animate-pulse">
+        <div className="h-6 w-52 rounded-md bg-surface-muted" />
+        <div className="h-4 w-80 max-w-full rounded bg-surface-muted" />
+      </div>
+
+      {/* Narrow screens: card list skeleton */}
+      <div className="space-y-3 lg:hidden">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 animate-pulse"
+          >
+            <div className="size-12 shrink-0 rounded-xl bg-surface-muted" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="h-4 w-36 rounded-md bg-surface-muted" />
+              <div className="h-3 w-56 max-w-full rounded-md bg-surface-muted" />
+            </div>
+            <div className="h-3 w-12 rounded bg-surface-muted shrink-0" />
+          </div>
+        ))}
+      </div>
+
+      {/* Wide screens: 2-column inbox skeleton */}
+      <div className="hidden overflow-hidden rounded-3xl border border-line lg:flex lg:h-[75vh] lg:min-h-136 animate-pulse">
+        <div className="flex w-72 shrink-0 flex-col border-r border-line bg-surface">
+          <div className="border-b border-line p-3">
+            <div className="h-10 w-full rounded-full bg-surface-muted" />
+          </div>
+          <div className="flex-1 divide-y divide-line p-2 space-y-2">
+            {Array.from({ length: 5 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3 px-2 py-3">
+                <div className="size-10 shrink-0 rounded-full bg-surface-muted" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <div className="h-3.5 w-24 rounded bg-surface-muted" />
+                    <div className="h-2.5 w-10 rounded bg-surface-muted" />
+                  </div>
+                  <div className="h-3 w-32 rounded bg-surface-muted" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 grid place-items-center bg-surface/30 p-6">
+          <div className="text-center space-y-2">
+            <div className="mx-auto size-10 rounded-full bg-surface-muted" />
+            <div className="h-4 w-36 mx-auto rounded bg-surface-muted" />
+            <div className="h-3 w-48 mx-auto rounded bg-surface-muted" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ChatsTab() {
-  const { threads, markRead } = useChatThreads();
+  const { threads, markRead, ready, query } = useChatThreads();
   // Kept in the URL (like the other account tabs) so refreshing an open thread doesn't drop back to the list.
   const [activeSlug, setActiveSlug] = useQueryParam("thread");
   const [search, setSearch] = useState("");
   const activeThread = threads.find((t) => t.store.slug === activeSlug) ?? null;
+
+  if (!ready || (query.isLoading && threads.length === 0)) {
+    return <ChatsSkeleton />;
+  }
 
   const filtered = search.trim()
     ? threads.filter((t) => t.store.name.toLowerCase().includes(search.trim().toLowerCase()))

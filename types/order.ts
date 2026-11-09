@@ -1,4 +1,5 @@
 import type { DeliverySpeed } from "./delivery";
+import type { ReturnRequestRead } from "./api";
 
 export type { DeliverySpeed };
 
@@ -69,4 +70,7 @@ export type Order = {
     city: string;
     region: string;
   };
+  returnRequests?: ReturnRequestRead[];
+  /** The shopper's 1–5 rating of the delivery, once given. */
+  deliveryRating?: number | null;
 };

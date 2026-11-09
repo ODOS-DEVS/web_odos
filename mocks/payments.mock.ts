@@ -14,6 +14,7 @@ export function mockPaymentVerification(reference: string): PaymentVerification 
   return {
     reference,
     paid,
+    pending: false,
     status: paid ? "paid" : "failed",
     message: paid ? "Payment confirmed." : "We couldn't find a payment for that reference.",
     order,

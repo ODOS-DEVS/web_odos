@@ -6,33 +6,69 @@ import { DeliveryNote } from "@/components/store/delivery-note";
 import { StoreContact } from "@/components/store/store-contact";
 import { StoreHeader, StoreInfoBar } from "@/components/store/store-header";
 import { StoreOffers } from "@/components/store/store-offers";
+import { TrackEvent } from "@/components/tracking/track";
 import { VoucherCard } from "@/components/store/voucher-card";
 import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
 import { QueryError } from "@/components/ui/query-error";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { mockProducts, mockStoreBySlug, mockStoreSections } from "@/mocks/catalog.mock";
-import { fakeQuery } from "@/mocks/query";
-import { mockStoreVouchers } from "@/mocks/vouchers.mock";
-import { ApiError } from "@/services/http";
-import type { Product, Store } from "@/types/catalog";
+import { useProducts, useStore, useStoreBySlug, useStoreSections } from "@/hooks/use-catalog";
+import { useStoreVouchers } from "@/hooks/use-product-extras";
+import type { Product } from "@/types/catalog";
 
+/** Placeholder shaped like the store page: banner, info bar, product grid beside the details column. */
+function StoreSkeleton() {
+  return (
+    <Container className="pt-4 pb-8 sm:pt-6" aria-busy="true" aria-label="Loading store">
+      <div className="aspect-[3/1] min-h-44 animate-pulse rounded-3xl bg-surface-muted" />
+      <div className="mt-6 h-16 animate-pulse rounded-2xl bg-surface-muted" />
+      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_21rem] lg:gap-12">
+        <ProductGridSkeleton count={6} className="lg:grid-cols-3" />
+        <div className="space-y-5">
+          <div className="h-44 animate-pulse rounded-2xl bg-surface-muted" />
+          <div className="h-36 animate-pulse rounded-2xl bg-surface-muted" />
+        </div>
+      </div>
+    </Container>
+  );
+}
+
+/**
+ * A store's page. The slug resolves to the store's id through the cached store list, then the detail
+ * record, its products (`store_id`), its own sections and its vouchers load by id.
+ */
 export function StoreView({ slug }: { slug: string }) {
-  const found = mockStoreBySlug(slug);
-  const { data: store, isPending, isError, error, refetch } = found
-    ? fakeQuery(found)
-    : fakeQuery(undefined as Store | undefined, { isError: true, error: new ApiError(404, "Store not found") });
-  const products = fakeQuery(mockProducts({ store_id: store?.id }));
-  const sections = fakeQuery(mockStoreSections(store?.id ?? ""));
+  const listed = useStoreBySlug(slug);
+  const storeId = listed.data?.id;
+  const detail = useStore(storeId);
+  // The detail record can carry more than the list row; show the list row until it arrives.
+  const store = detail.data ?? listed.data;
+  const products = useProducts({ store_id: storeId });
+  const sections = useStoreSections(storeId);
+  const voucherQuery = useStoreVouchers(storeId);
 
-  if (isError) return <Container className="py-12"><QueryError error={error} onRetry={() => refetch()} title="We couldn’t load this store" /></Container>;
-  if (isPending || !store) return <Container className="py-12"><div className="h-96 animate-pulse rounded-3xl bg-surface-muted" aria-busy="true" /></Container>;
+  if (listed.isError) {
+    return (
+      <Container className="py-12">
+        <QueryError error={listed.error} onRetry={() => listed.refetch()} title="We couldn’t load this store" />
+      </Container>
+    );
+  }
+  if (listed.isPending) return <StoreSkeleton />;
+  if (!store) {
+    return (
+      <Container className="py-12">
+        <QueryError error={new Error("This store doesn’t exist or is no longer on ODOS.")} title="Store not found" />
+      </Container>
+    );
+  }
 
-  const list = products.data ?? [];
+  // The products endpoint is filtered by `store_id`; guard anyway so another vendor's item never shows.
+  const list = (products.data ?? []).filter((p) => !p.storeId || p.storeId === store.id);
   const storeMap = new Map([[store.id, store]]);
   const flash = list.filter((p) => p.tags.includes("flash"));
   const hasEndDate = flash.some((p) => p.flashSale?.endsAt);
-  const vouchers = fakeQuery(mockStoreVouchers(store.id)).data ?? [];
+  const vouchers = voucherQuery.data ?? [];
 
   // Vendors group their products into their own sections ("Shoes", "Bags"…); anything left over follows.
   const grouped: { id: string; title: string; items: Product[] }[] = [];
@@ -50,6 +86,7 @@ export function StoreView({ slug }: { slug: string }) {
     <Container className="pt-4 pb-8 sm:pt-6">
       <StoreHeader store={store} />
 
+      <TrackEvent event_type="store_view" store_id={store.id} source_screen="store" />
       <div className="mt-6">
         <StoreInfoBar store={store} />
       </div>
@@ -100,10 +137,10 @@ export function StoreView({ slug }: { slug: string }) {
 
           {vouchers.length > 0 && (
             <section aria-labelledby="vouchers-heading">
-              <SectionHeading title="Voucher" />
+              <SectionHeading title="Vouchers" />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {vouchers.map((voucher) => (
-                  <VoucherCard key={voucher.id} voucher={voucher} />
+                  <VoucherCard key={voucher.id} voucher={voucher} storeId={store.id} />
                 ))}
               </div>
             </section>
