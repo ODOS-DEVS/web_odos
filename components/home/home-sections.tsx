@@ -131,7 +131,7 @@ export function HomeSections() {
       </div>
 
       <Container className="mt-20">
-        <MarketNearYou stores={stores.data ?? []} />
+        <MarketNearYou />
       </Container>
 
       <HowItWorks />
