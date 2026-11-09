@@ -110,7 +110,11 @@ function CheckoutForm() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (shipping === null) return;
+    // Never a dead click: say why rather than returning silently.
+    if (shipping === null) {
+      toast.error("We're still pricing delivery. Give it a moment and try again.");
+      return;
+    }
 
     const order = {
       source: "cart" as const,
@@ -192,31 +196,35 @@ function CheckoutForm() {
             </div>
           )}
 
-          <div
-            className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2", usingSaved && addresses.length > 0 && "hidden")}
-          >
-            <Field id="name" label="Full name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} className="sm:col-span-2" />
-            <Field id="phone" label="Phone number" type="tel" autoComplete="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <Field id="street" label="Street address" autoComplete="street-address" required value={street} onChange={(e) => setStreet(e.target.value)} className="sm:col-span-2" />
-            <RegionCitySelect
-              idPrefix="checkout"
-              required
-              cityLabel="City or town"
-              region={region}
-              city={city}
-              onRegionChange={setRegion}
-              onCityChange={setCity}
-            />
-            <Field
-              id="notes"
-              label="Delivery notes"
-              hint="Optional"
-              placeholder="Landmark, gate code, leave with security…"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="sm:col-span-2"
-            />
-          </div>
+          {/* Rendered, not CSS-hidden: a `required` field inside a hidden block is invalid and
+              unfocusable, which makes the browser refuse to submit the form and do nothing at all. */}
+          {!usingSaved && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field id="name" label="Full name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} className="sm:col-span-2" />
+              <Field id="phone" label="Phone number" type="tel" autoComplete="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <Field id="street" label="Street address" autoComplete="street-address" required value={street} onChange={(e) => setStreet(e.target.value)} className="sm:col-span-2" />
+              <RegionCitySelect
+                idPrefix="checkout"
+                required
+                cityLabel="City or town"
+                region={region}
+                city={city}
+                onRegionChange={setRegion}
+                onCityChange={setCity}
+              />
+            </div>
+          )}
+
+          {/* Always available: delivery notes belong to this order, not to the saved address. */}
+          <Field
+            id="notes"
+            label="Delivery notes"
+            hint="Optional"
+            placeholder="Landmark, gate code, leave with security…"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className={cn(!usingSaved && "mt-4")}
+          />
         </Step>
 
         <Step number={2} title="Delivery speed">
