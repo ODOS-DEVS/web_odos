@@ -15,8 +15,10 @@ import { useSession } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
 import { RegionCitySelect } from "@/components/ui/region-city-select";
 import { toOrderItems } from "@/libs/checkout";
+import { cn } from "@/libs/cn";
 import { formatMoney } from "@/libs/format";
 import { useDeliveryQuote } from "@/hooks/use-delivery-quote";
+import { useAddresses } from "@/hooks/use-addresses";
 import { useCheckout, useWalletCheckout } from "@/hooks/use-orders";
 import { useWallet } from "@/hooks/use-wallet";
 import { usePaymentOptions } from "@/hooks/use-payment-options";
@@ -42,6 +44,7 @@ function CheckoutForm() {
   const checkout = useCheckout();
   const walletCheckout = useWalletCheckout();
   const { balance: walletBalance, ready: walletReady } = useWallet();
+  const { addresses } = useAddresses();
   const router = useRouter();
 
   const [name, setName] = useState(user?.full_name ?? "");
@@ -50,6 +53,23 @@ function CheckoutForm() {
   const [city, setCity] = useState(user?.city ?? "");
   const [region, setRegion] = useState<string>(user?.region ?? "Greater Accra");
   const [notes, setNotes] = useState("");
+
+  /**
+   * Which saved address to deliver to — the one picked here, else the account default. `"new"`
+   * means the shopper is typing a one-off address, so the fields below are theirs to fill.
+   */
+  const [addressChoice, setAddressChoice] = useState<string | null>(null);
+  const defaultAddress = addresses.find((a) => a.isDefault) ?? addresses[0];
+  const selectedAddress =
+    addressChoice === "new" ? undefined : (addresses.find((a) => a.id === addressChoice) ?? defaultAddress);
+
+  // The form mirrors whichever saved address is selected; typing is only possible under "new".
+  const usingSaved = Boolean(selectedAddress);
+  const fullName = usingSaved ? selectedAddress!.fullName : name;
+  const phoneNumber = usingSaved ? selectedAddress!.phone : phone;
+  const streetLine = usingSaved ? selectedAddress!.street : street;
+  const cityName = usingSaved ? selectedAddress!.city : city;
+  const regionName = usingSaved ? selectedAddress!.region : region;
   const [method, setMethod] = useState<DeliverySpeed>("economy");
   const paymentOptions = usePaymentOptions();
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
@@ -62,7 +82,7 @@ function CheckoutForm() {
   const quote = useDeliveryQuote({
     subtotal,
     method,
-    region,
+    region: regionName,
     items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.price })),
   });
 
@@ -100,11 +120,11 @@ function CheckoutForm() {
       delivery_method: method,
       discount_amount: 0,
       total_amount: total,
-      address_full_name: name.trim(),
-      address_phone: phone.trim(),
-      address_street: street.trim(),
-      address_city: city.trim(),
-      address_region: region,
+      address_full_name: fullName.trim(),
+      address_phone: phoneNumber.trim(),
+      address_street: streetLine.trim(),
+      address_city: cityName.trim(),
+      address_region: regionName,
       delivery_instructions: notes.trim() || null,
       // `payment_type` is free text on the API (≤30 chars).
       payment_type: paymentMethod.kind,
@@ -148,7 +168,33 @@ function CheckoutForm() {
     <form onSubmit={onSubmit} className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
       <div className="space-y-5">
         <Step number={1} title="Delivery address">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {addresses.length > 0 && (
+            <div className="mb-5 space-y-2.5">
+              {addresses.map((address) => (
+                <ChoiceCard
+                  key={address.id}
+                  name="address"
+                  value={address.id}
+                  checked={selectedAddress?.id === address.id}
+                  onChange={setAddressChoice}
+                  title={`${address.label}${address.isDefault ? " · Default" : ""}`}
+                  description={`${address.fullName} · ${address.street}, ${address.city}, ${address.region}`}
+                />
+              ))}
+              <ChoiceCard
+                name="address"
+                value="new"
+                checked={addressChoice === "new"}
+                onChange={setAddressChoice}
+                title="Deliver somewhere else"
+                description="Use a one-off address for this order"
+              />
+            </div>
+          )}
+
+          <div
+            className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2", usingSaved && addresses.length > 0 && "hidden")}
+          >
             <Field id="name" label="Full name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} className="sm:col-span-2" />
             <Field id="phone" label="Phone number" type="tel" autoComplete="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} />
             <Field id="street" label="Street address" autoComplete="street-address" required value={street} onChange={(e) => setStreet(e.target.value)} className="sm:col-span-2" />

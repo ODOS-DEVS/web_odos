@@ -125,13 +125,33 @@ export const ORDERS_ENDPOINTS = {
 } as const;
 
 /**
- * Hosted checkout: `checkout` creates the order and a payment session in one call and returns the
- * `authorization_url` to redirect to; `verify` confirms the `reference` when the shopper comes back.
- * The provider webhooks (`/payments/paystack/webhook`, `/payments/ipay/ipn`) are server-to-server
- * callbacks and are deliberately not modelled here.
+ * Which gateway collects order payments.
+ *
+ * KutanaPay is the live collector, same as the mobile app. Paystack stays reachable because a
+ * single env var is the fastest way back if a live collection problem has to be rolled back
+ * without shipping a build — and because vendor payouts run on Paystack's transfer API either way
+ * (KutanaPay's public API covers checkouts only), so this setting does not affect them.
+ *
+ * Mirrors `constants/payments.ts` in the mobile app; keep the two in step.
+ */
+export type CollectionsProvider = "kutanapay" | "paystack";
+
+const configuredProvider = process.env.NEXT_PUBLIC_COLLECTIONS_PROVIDER?.trim().toLowerCase();
+
+export const COLLECTIONS_PROVIDER: CollectionsProvider =
+  configuredProvider === "paystack" ? "paystack" : "kutanapay";
+
+/**
+ * Hosted checkout: creates the order and a payment session in one call and returns the
+ * `authorization_url` to redirect to; `verify` confirms the `reference` when the shopper comes
+ * back. Verification is provider-agnostic — the API dispatches on the provider that actually took
+ * the money, so there is only one verify path.
+ *
+ * The provider webhooks (`/payments/kutanapay/webhook`, `/payments/paystack/webhook`) are
+ * server-to-server callbacks and are deliberately not modelled here.
  */
 export const PAYMENTS_ENDPOINTS = {
-  checkout: "/payments/checkout",
+  checkout: COLLECTIONS_PROVIDER === "kutanapay" ? "/payments/kutanapay/checkout" : "/payments/checkout",
   verify: (reference: string) => `/payments/checkout/${enc(reference)}/verify`,
 } as const;
 
