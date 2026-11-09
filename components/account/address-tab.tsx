@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import { GHANA_REGIONS } from "@/libs/checkout";
-import { useAddresses, type SavedAddress } from "@/hooks/use-addresses";
+import { useAddresses } from "@/hooks/use-addresses";
+import type { AddressInput } from "@/services/account.service";
+import type { SavedAddress } from "@/types/account";
 import { useQueryParam } from "@/hooks/use-query-param";
 
-type Draft = Omit<SavedAddress, "id">;
+type Draft = AddressInput;
 
 const EMPTY_DRAFT: Draft = { label: "Home", fullName: "", phone: "", street: "", city: "", region: "Greater Accra" };
 
@@ -82,13 +84,27 @@ function AddressRow({ address, onEdit }: { address: SavedAddress; onEdit: () => 
           Edit
         </button>
         {!address.isDefault && (
-          <button type="button" onClick={() => setDefault(address.id)} className="press text-xs font-medium text-accent hover:opacity-80">
+          <button
+            type="button"
+            onClick={() =>
+              setDefault(address.id, {
+                onSuccess: () => toast.success("Default address updated"),
+                onError: () => toast.error("We couldn't update your default address"),
+              })
+            }
+            className="press text-xs font-medium text-accent hover:opacity-80"
+          >
             Make default
           </button>
         )}
         <button
           type="button"
-          onClick={() => remove(address.id)}
+          onClick={() =>
+            remove(address.id, {
+              onSuccess: () => toast.success("Address removed"),
+              onError: () => toast.error("We couldn't remove that address"),
+            })
+          }
           className="press flex items-center gap-1.5 text-xs font-medium text-muted hover:text-danger"
         >
           <Trash2 className="size-3.5" aria-hidden />
@@ -118,11 +134,15 @@ export function AddressTab() {
             key={address.id}
             initial={editing}
             onCancel={() => setEditingId(null)}
-            onDone={(draft) => {
-              update(address.id, draft);
-              toast.success("Address updated");
-              setEditingId(null);
-            }}
+            onDone={(draft) =>
+              update(address.id, draft, {
+                onSuccess: () => {
+                  toast.success("Address updated");
+                  setEditingId(null);
+                },
+                onError: () => toast.error("We couldn't save that address"),
+              })
+            }
           />
         ) : (
           <AddressRow key={address.id} address={address} onEdit={() => setEditingId(address.id)} />
@@ -132,11 +152,15 @@ export function AddressTab() {
       {adding ? (
         <AddressForm
           onCancel={() => setAdding(false)}
-          onDone={(draft) => {
-            add(draft);
-            toast.success("Address added");
-            setAdding(false);
-          }}
+          onDone={(draft) =>
+            add(draft, {
+              onSuccess: () => {
+                toast.success("Address added");
+                setAdding(false);
+              },
+              onError: () => toast.error("We couldn't save that address"),
+            })
+          }
         />
       ) : (
         <Button type="button" variant="outline" className="w-full" onClick={() => setAdding(true)}>

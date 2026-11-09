@@ -1,49 +1,36 @@
 "use client";
 
-import { useMemo } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { useMounted } from "./use-mounted";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys, walletQueries } from "@/services/queries";
+import { walletService, type WalletTopUpInput } from "@/services/wallet.service";
+import { useSession } from "./use-auth";
 
-export type WalletTransaction = {
-  id: string;
-  type: "topup";
-  amount: number;
-  methodLabel: string;
-  createdAt: string;
-};
-
-type WalletState = {
-  balance: number;
-  transactions: WalletTransaction[];
-  topUp: (amount: number, methodLabel: string) => void;
-};
-
-// There's no wallet endpoint wired up yet, so the balance lives in the browser like cart/favorites.
-const useWalletStore = create<WalletState>()(
-  persist(
-    (set) => ({
-      balance: 600,
-      transactions: [],
-      topUp: (amount, methodLabel) =>
-        set((state) => ({
-          balance: state.balance + amount,
-          transactions: [
-            { id: crypto.randomUUID(), type: "topup", amount, methodLabel, createdAt: new Date().toISOString() },
-            ...state.transactions,
-          ],
-        })),
-    }),
-    { name: "odos-wallet-v1" },
-  ),
-);
-
-/** The shopper's ODOS Wallet balance and top-up history. `ready` is false until the client has mounted. */
+/** The shopper's ODOS Wallet. `ready` is false until the balance has actually arrived. */
 export function useWallet() {
-  const ready = useMounted();
-  const balance = useWalletStore((s) => s.balance);
-  const transactions = useWalletStore((s) => s.transactions);
-  const topUp = useWalletStore((s) => s.topUp);
+  const session = useSession();
+  const query = useQuery({ ...walletQueries.detail(), enabled: Boolean(session) });
 
-  return { ready, balance: ready ? balance : 0, transactions: useMemo(() => (ready ? transactions : []), [ready, transactions]), topUp };
+  return {
+    ready: Boolean(session) && query.isSuccess,
+    balance: query.data?.balance ?? 0,
+    currency: query.data?.currency,
+    transactions: query.data?.transactions ?? [],
+    wallet: query.data,
+    isPending: query.isPending,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  };
+}
+
+/**
+ * Starts a wallet top-up. The caller redirects to `authorizationUrl`; the balance only changes once
+ * the provider confirms the payment, so nothing is credited here.
+ */
+export function useTopUpWallet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: WalletTopUpInput) => walletService.topUp(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.wallet }),
+  });
 }

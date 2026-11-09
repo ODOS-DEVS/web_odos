@@ -2,25 +2,19 @@
 
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { ArrowUpRight, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
-import { useWallet } from "@/hooks/use-wallet";
-import { useFakeMutation } from "@/mocks/mutation";
+import { useTopUpWallet, useWallet } from "@/hooks/use-wallet";
 import { formatDateTime, formatMoney } from "@/libs/format";
 
 const QUICK_AMOUNTS = [50, 100, 200, 500];
 
-function mockTopUp(input: { amount: number }) {
-  return input;
-}
-
 function TopUpForm() {
   const { methods } = usePaymentMethods();
-  const { topUp } = useWallet();
-  const topUpMutation = useFakeMutation(mockTopUp);
+  const topUpMutation = useTopUpWallet();
 
   const [amount, setAmount] = useState<number | "">(100);
   const [methodId, setMethodId] = useState(methods[0]?.id);
@@ -30,13 +24,17 @@ function TopUpForm() {
     event.preventDefault();
     if (!amount || amount <= 0 || !method) return;
     topUpMutation.mutate(
-      { amount },
       {
-        onSuccess: () => {
-          topUp(amount, method.label);
-          toast.success(`${formatMoney(amount)} added to your wallet`);
-          setAmount(100);
-        },
+        amount,
+        payment_type: method.kind,
+        payment_label: method.label,
+        callback_url: `${window.location.origin}/account?tab=wallet`,
+        cancel_url: `${window.location.origin}/account?tab=wallet`,
+      },
+      {
+        onSuccess: (session) => window.location.assign(session.authorizationUrl),
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : "We couldn't start your top-up. Please try again."),
       },
     );
   };
@@ -81,14 +79,14 @@ function TopUpForm() {
       )}
 
       <Button type="submit" variant="accent" size="lg" className="mt-5 w-full" disabled={topUpMutation.isPending || !amount || !method}>
-        {topUpMutation.isPending ? "Topping up…" : `Top up ${amount ? formatMoney(Number(amount)) : ""}`}
+        {topUpMutation.isPending ? "Starting payment…" : `Top up ${amount ? formatMoney(Number(amount)) : ""}`}
       </Button>
     </form>
   );
 }
 
 export function WalletTab() {
-  const { balance, transactions } = useWallet();
+  const { balance, transactions, isPending } = useWallet();
 
   return (
     <div className="space-y-5">
@@ -97,31 +95,45 @@ export function WalletTab() {
           <Wallet className="size-4" aria-hidden />
           Available balance
         </div>
-        <p className="mt-2 text-4xl font-semibold tabular-nums">{formatMoney(balance)}</p>
+        {isPending ? (
+          <div className="mt-2 h-10 w-40 animate-pulse rounded-lg bg-surface-muted" aria-busy="true" />
+        ) : (
+          <p className="mt-2 text-4xl font-semibold tabular-nums">{formatMoney(balance)}</p>
+        )}
       </div>
 
       <TopUpForm />
 
       {transactions.length > 0 && (
         <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-          <h2 className="text-lg font-semibold tracking-normal">Recent top-ups</h2>
+          <h2 className="text-lg font-semibold tracking-normal">Recent activity</h2>
           <ul className="mt-4 divide-y divide-line">
-            {transactions.map((tx) => (
-              <li key={tx.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-success-soft text-success">
-                    <ArrowUpRight className="size-4" aria-hidden />
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium">Wallet top-up</p>
-                    <p className="text-xs text-muted">
-                      {tx.methodLabel} · {formatDateTime(tx.createdAt)}
-                    </p>
+            {transactions.map((tx) => {
+              const credit = tx.amount >= 0;
+              return (
+                <li key={tx.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={
+                        credit
+                          ? "grid size-9 shrink-0 place-items-center rounded-full bg-success-soft text-success"
+                          : "grid size-9 shrink-0 place-items-center rounded-full bg-surface-muted text-muted"
+                      }
+                    >
+                      {credit ? <ArrowUpRight className="size-4" aria-hidden /> : <ArrowDownLeft className="size-4" aria-hidden />}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium">{tx.title}</p>
+                      <p className="text-xs text-muted">{formatDateTime(tx.createdAt)}</p>
+                    </div>
                   </div>
-                </div>
-                <span className="font-medium tabular-nums text-success">+{formatMoney(tx.amount)}</span>
-              </li>
-            ))}
+                  <span className={credit ? "font-medium tabular-nums text-success" : "font-medium tabular-nums"}>
+                    {credit ? "+" : "−"}
+                    {formatMoney(Math.abs(tx.amount))}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

@@ -6,9 +6,7 @@ import { useIsStoreFavorite, useStoreFavorites } from "@/hooks/use-store-favorit
 import { Media } from "@/components/ui/media";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { favoriteShareActions, SpeedDial } from "@/components/ui/speed-dial";
-import { MOCK_MARKETS } from "@/mocks/catalog.mock";
-
-const MARKET_TITLES = new Map(MOCK_MARKETS.map((market) => [market.slug, market.title]));
+import { useMarkets } from "@/hooks/use-catalog";
 
 /** A row of nearby vendor cards — a photo-led alternative to the `StoreCard` list in "Stores near you". */
 export function MarketNearYou({ stores }: { stores: Store[] }) {
@@ -31,8 +29,10 @@ export function MarketNearYou({ stores }: { stores: Store[] }) {
 function MarketCard({ store }: { store: Store }) {
   const { toggle } = useStoreFavorites();
   const saved = useIsStoreFavorite(store.id);
+  const markets = useMarkets();
 
-  const marketTitle = (store.marketSlug && MARKET_TITLES.get(store.marketSlug)) || store.name;
+  const market = store.marketSlug ? markets.data?.find((m) => m.slug === store.marketSlug) : undefined;
+  const marketTitle = market?.name ?? store.name;
   const marketHref = store.marketSlug ? `/market?market=${store.marketSlug}` : "/market";
 
   const actions = favoriteShareActions({

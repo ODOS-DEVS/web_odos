@@ -28,8 +28,7 @@ import { useSession } from "@/hooks/use-auth";
 import { GHANA_REGIONS } from "@/libs/checkout";
 import { cn } from "@/libs/cn";
 import { formatDate } from "@/libs/format";
-import { mockUpdateMe } from "@/mocks/auth.mock";
-import { useFakeMutation } from "@/mocks/mutation";
+import { useUpdateProfile } from "@/hooks/use-auth";
 
 const TABS = [
   { id: "profile", label: "Profile" },
@@ -90,7 +89,7 @@ function Switch({ checked, onChange, label, description }: { checked: boolean; o
 }
 
 function ProfileDetailsForm({ user }: { user: UserRead }) {
-  const update = useFakeMutation(mockUpdateMe);
+  const update = useUpdateProfile();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { first, last } = splitName(user.full_name);
@@ -144,7 +143,10 @@ function ProfileDetailsForm({ user }: { user: UserRead }) {
       analytics_enabled: analyticsEnabled,
       social_sharing_enabled: socialSharingEnabled,
     };
-    update.mutate(input, { onSuccess: () => toast.success("Profile updated") });
+    update.mutate(input, {
+      onSuccess: () => toast.success("Profile updated"),
+      onError: (error) => toast.error(error instanceof Error ? error.message : "We couldn't save your changes"),
+    });
   };
 
   return (

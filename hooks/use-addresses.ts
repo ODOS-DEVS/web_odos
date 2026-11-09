@@ -1,89 +1,46 @@
 "use client";
 
-import { useMemo } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { useMounted } from "./use-mounted";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { accountService, type AddressInput } from "@/services/account.service";
+import { accountQueries, queryKeys } from "@/services/queries";
+import type { SavedAddress } from "@/types/account";
+import { useSession } from "./use-auth";
 
-export type SavedAddress = {
-  id: string;
-  label: string;
-  fullName: string;
-  phone: string;
-  street: string;
-  city: string;
-  region: string;
-  isDefault?: boolean;
-};
+export type { SavedAddress };
 
-const SEED: SavedAddress[] = [
-  {
-    id: "home",
-    label: "Home",
-    fullName: "Tricia Kanate",
-    phone: "+233241112233",
-    street: "18 Independence Ave",
-    city: "Accra",
-    region: "Greater Accra",
-    isDefault: true,
-  },
-];
+type Options = { onSuccess?: () => void; onError?: (error: unknown) => void };
 
-type AddressesState = {
-  addresses: SavedAddress[];
-  add: (address: Omit<SavedAddress, "id">) => void;
-  update: (id: string, address: Omit<SavedAddress, "id">) => void;
-  remove: (id: string) => void;
-  setDefault: (id: string) => void;
-};
-
-const useAddressesStore = create<AddressesState>()(
-  persist(
-    (set) => ({
-      addresses: SEED,
-      add: (address) =>
-        set((state) => {
-          const isDefault = address.isDefault || state.addresses.length === 0;
-          return {
-            addresses: [
-              ...(isDefault ? state.addresses.map((a) => ({ ...a, isDefault: false })) : state.addresses),
-              { ...address, isDefault, id: crypto.randomUUID() },
-            ],
-          };
-        }),
-      update: (id, address) =>
-        set((state) => ({
-          addresses: state.addresses.map((a) => {
-            if (a.id === id) return { ...address, id, isDefault: address.isDefault || a.isDefault };
-            return address.isDefault ? { ...a, isDefault: false } : a;
-          }),
-        })),
-      remove: (id) =>
-        set((state) => {
-          const removed = state.addresses.find((a) => a.id === id);
-          const rest = state.addresses.filter((a) => a.id !== id);
-          if (removed?.isDefault && rest.length > 0) rest[0] = { ...rest[0], isDefault: true };
-          return { addresses: rest };
-        }),
-      setDefault: (id) =>
-        set((state) => ({
-          addresses: state.addresses.map((a) => ({ ...a, isDefault: a.id === id })),
-        })),
-    }),
-    { name: "odos-addresses-v1" },
-  ),
-);
-
-/** The shopper's saved delivery addresses. `ready` is false until the client has mounted. */
+/**
+ * The shopper's saved delivery addresses, on the account rather than in this browser — so they are
+ * there on their phone too. `ready` is false until the list has actually arrived.
+ */
 export function useAddresses() {
-  const ready = useMounted();
-  const stored = useAddressesStore((s) => s.addresses);
-  const add = useAddressesStore((s) => s.add);
-  const update = useAddressesStore((s) => s.update);
-  const remove = useAddressesStore((s) => s.remove);
-  const setDefault = useAddressesStore((s) => s.setDefault);
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const query = useQuery({ ...accountQueries.addresses(), enabled: Boolean(session) });
 
-  const addresses = useMemo(() => (ready ? stored : []), [ready, stored]);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.addresses });
 
-  return { ready, addresses, add, update, remove, setDefault };
+  const create = useMutation({ mutationFn: (input: AddressInput) => accountService.createAddress(input), onSuccess: invalidate });
+  const patch = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: AddressInput }) => accountService.updateAddress(id, input),
+    onSuccess: invalidate,
+  });
+  const destroy = useMutation({ mutationFn: (id: string) => accountService.deleteAddress(id), onSuccess: invalidate });
+  // Promoting one address demotes the others server-side, so the whole list is refetched.
+  const makeDefault = useMutation({ mutationFn: (id: string) => accountService.setDefaultAddress(id), onSuccess: invalidate });
+
+  return {
+    ready: Boolean(session) && query.isSuccess,
+    addresses: query.data ?? [],
+    isPending: query.isPending,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+    isSaving: create.isPending || patch.isPending,
+    add: (input: AddressInput, options?: Options) => create.mutate(input, options),
+    update: (id: string, input: AddressInput, options?: Options) => patch.mutate({ id, input }, options),
+    remove: (id: string, options?: Options) => destroy.mutate(id, options),
+    setDefault: (id: string, options?: Options) => makeDefault.mutate(id, options),
+  };
 }

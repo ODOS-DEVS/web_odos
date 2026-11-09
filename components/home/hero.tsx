@@ -7,11 +7,11 @@ import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Media } from "@/components/ui/media";
 import { cn } from "@/libs/cn";
-import { MOCK_CATEGORIES } from "@/mocks/catalog.mock";
+import { useCategories } from "@/hooks/use-catalog";
 
 /** Hero copy plus a tile collage built from the live category photos (gradient tiles until they load). */
 export function Hero() {
-  const categories = MOCK_CATEGORIES;
+  const categories = useCategories().data ?? [];
   const tiles = categories.slice(0, 3);
   // Keep the collage shape even before data arrives.
   const slots = [0, 1, 2].map((i) => tiles[i]);

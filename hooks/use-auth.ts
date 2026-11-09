@@ -2,10 +2,10 @@
 
 import { useSyncExternalStore } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { clearSession, getSession, setSession, subscribeSession } from "@/libs/auth-session";
+import { clearSession, getSession, setSession, subscribeSession, updateSessionUser } from "@/libs/auth-session";
 import { authService } from "@/services/auth.service";
 import { queryKeys } from "@/services/queries";
-import type { UserCreate } from "@/types/api";
+import type { UserCreate, UserUpdate } from "@/types/api";
 
 /**
  * Current session (or null). `null` on the server and during hydration, then the stored session, so
@@ -33,6 +33,18 @@ export function useSignup() {
     mutationFn: async (input: UserCreate) => {
       await authService.signup(input);
       return login.mutateAsync({ email: input.email, password: input.password });
+    },
+  });
+}
+
+/** Saves profile changes. The signed-in user is stored in the session, so it moves with the update. */
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UserUpdate) => authService.updateMe(input),
+    onSuccess: (user) => {
+      updateSessionUser(user);
+      queryClient.setQueryData(queryKeys.me, user);
     },
   });
 }

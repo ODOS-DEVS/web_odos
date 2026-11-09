@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { accountService } from "./account.service";
 import { authService } from "./auth.service";
 import {
   catalogService,
@@ -10,6 +11,8 @@ import { ordersService } from "./orders.service";
 import { paymentsService } from "./payments.service";
 import { reviewsService } from "./reviews.service";
 import { vouchersService } from "./vouchers.service";
+import { walletService } from "./wallet.service";
+import { wishlistService } from "./wishlist.service";
 
 const MINUTE = 60_000;
 
@@ -31,6 +34,9 @@ export const queryKeys = {
   storeVouchers: (storeId: string) => ["vouchers", "store", storeId] as const,
   promotions: ["vouchers", "promotions"] as const,
   myVouchers: ["vouchers", "me"] as const,
+  addresses: ["account", "addresses"] as const,
+  wallet: ["wallet"] as const,
+  wishlist: ["wishlist"] as const,
   me: ["auth", "me"] as const,
   orders: ["orders"] as const,
   paymentVerification: (reference: string) => ["payments", "verify", reference] as const,
@@ -122,6 +128,33 @@ export const voucherQueries = {
       queryKey: queryKeys.myVouchers,
       queryFn: () => vouchersService.mine(),
       staleTime: 30_000,
+    }),
+};
+
+export const accountQueries = {
+  addresses: () =>
+    queryOptions({
+      queryKey: queryKeys.addresses,
+      queryFn: () => accountService.addresses(),
+      staleTime: 60_000,
+    }),
+};
+
+export const wishlistQueries = {
+  list: () =>
+    queryOptions({
+      queryKey: queryKeys.wishlist,
+      queryFn: () => wishlistService.list(),
+      staleTime: 30_000,
+    }),
+};
+
+export const walletQueries = {
+  detail: () =>
+    queryOptions({
+      queryKey: queryKeys.wallet,
+      queryFn: () => walletService.get(),
+      staleTime: 15_000,
     }),
 };
 
