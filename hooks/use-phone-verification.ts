@@ -18,7 +18,7 @@ const RESEND_SECONDS = 60;
  * the profile through here: send a code, enter it, and the verify response comes back as the
  * updated user.
  */
-export function usePhoneVerification(rawPhone: string) {
+export function usePhoneVerification(rawPhone: string, { linkToProfile = true }: { linkToProfile?: boolean } = {}) {
   const session = useSession();
   const queryClient = useQueryClient();
   /** Which number the current code was sent for, so changing the number invalidates it by itself. */
@@ -54,7 +54,7 @@ export function usePhoneVerification(rawPhone: string) {
   const sendCode = useMutation({
     mutationFn: () => {
       if (!normalized) throw new Error(validationError ?? "Enter a valid Ghana phone number.");
-      return authService.sendPhoneCode(normalized);
+      return authService.sendPhoneCode(normalized, linkToProfile);
     },
     onSuccess: () => {
       setSentFor(normalized);
@@ -66,12 +66,17 @@ export function usePhoneVerification(rawPhone: string) {
   const verify = useMutation({
     mutationFn: (code: string) => {
       if (!normalized) throw new Error(validationError ?? "Enter a valid Ghana phone number.");
-      return authService.verifyPhone(normalized, code);
+      return authService.verifyPhone(normalized, code, linkToProfile);
     },
     onSuccess: (user) => {
-      // The verify response is the updated account, so the stored session moves with it.
-      updateSessionUser(user);
-      queryClient.setQueryData(queryKeys.me, user);
+      // Profile verification updates the signed-in user; payment-method verification must not.
+      if (linkToProfile) {
+        updateSessionUser(user);
+        queryClient.setQueryData(queryKeys.me, user);
+      }
+      queryClient.setQueryData<string[]>(queryKeys.verifiedPhones, (current = []) =>
+        current.some((phone) => normalizeGhanaPhone(phone) === normalized) ? current : [...current, normalized!],
+      );
       queryClient.invalidateQueries({ queryKey: queryKeys.verifiedPhones });
       setSentFor(null);
       setResendAt(0);

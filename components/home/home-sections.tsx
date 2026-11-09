@@ -39,7 +39,7 @@ export function HomeSections() {
       {categories.data && categories.data.length > 0 && (
         <Container className="mt-14">
           <SectionHeading title="Shop by category" href="/categories" hrefLabel="All categories" />
-          <CategoryStrip categories={categories.data} limit={9} />
+          <CategoryStrip categories={categories.data} />
         </Container>
       )}
 

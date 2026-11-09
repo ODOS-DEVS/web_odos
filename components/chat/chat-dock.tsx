@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronDown, MessageCircle, X } from "lucide-react";
 import { ChatConversation } from "@/components/chat/chat-view";
@@ -57,6 +57,21 @@ export function ChatDock() {
   const { threads, unreadCount, isPending } = useChatThreads();
   const [open, setOpen] = useState(false);
   const [openThreadId, setOpenThreadId] = useState<string | null>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOutside = (event: PointerEvent) => {
+      if (dockRef.current && event.target instanceof Node && !dockRef.current.contains(event.target)) {
+        setOpen(false);
+        setOpenThreadId(null);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [open]);
 
   if (!session || HIDDEN_ON.some((pattern) => pattern.test(pathname))) return null;
 
@@ -82,7 +97,7 @@ export function ChatDock() {
   }
 
   return (
-    <div className="fixed right-4 bottom-4 z-40 flex w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl sm:right-6 sm:bottom-6">
+    <div ref={dockRef} className="fixed right-4 bottom-4 z-40 flex w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl sm:right-6 sm:bottom-6">
       {activeThread ? (
         <ChatConversation
           peer={{ name: activeThread.counterpartName, logoUrl: activeThread.counterpartAvatarUrl, slug: null }}
@@ -115,7 +130,7 @@ export function ChatDock() {
             </div>
           </div>
 
-          <div className="max-h-[22rem] divide-y divide-line overflow-y-auto">
+          <div className="max-h-[10.5rem] divide-y divide-line overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
             {isPending ? (
               <div className="space-y-2 p-3" aria-busy="true">
                 {[0, 1, 2].map((i) => (
