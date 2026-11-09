@@ -32,7 +32,7 @@ export function StoreHeader({ store }: { store: Store }) {
           priority
           sizes="112px"
           className="-mt-8 size-16 shrink-0 rounded-2xl bg-surface ring-4 ring-background min-[360px]:-mt-10 min-[360px]:size-20 min-[400px]:-mt-12 min-[400px]:size-24 min-[400px]:rounded-3xl sm:-mt-14 sm:size-28"
-          imgClassName="object-contain p-1.5"
+          imgClassName="object-cover"
         />
 
         {/* Full-width below the logo, not squeezed beside it. */}
@@ -48,13 +48,16 @@ export function StoreHeader({ store }: { store: Store }) {
           <p className="mt-1 text-[13px] leading-5 text-muted min-[400px]:text-base sm:text-lg">{[store.category, place].filter(Boolean).join(" · ")}</p>
         </div>
 
-        {/* Primary way to reach the vendor, promoted out of the About card (Faire's Message button). */}
-        {(store.whatsappUrl || store.phone || store.email) && (
-          <div className="mt-3 flex w-full gap-2 min-[400px]:mt-4 sm:w-auto">
+        {/* In-app chat stays available even when the vendor has not published external contact details. */}
+        <div className="mt-3 flex w-full flex-wrap gap-2 min-[400px]:mt-4 sm:w-auto">
+            <ButtonLink href={`/stores/${store.slug}/chat`} variant="accent" size="sm" className="flex-1 sm:flex-none">
+              <MessageCircle className="size-4" aria-hidden />
+              Chat
+            </ButtonLink>
             {store.whatsappUrl && (
-              <ButtonLink href={store.whatsappUrl} target="_blank" rel="noopener noreferrer" variant="accent" size="sm" className="flex-1 sm:flex-none">
+              <ButtonLink href={store.whatsappUrl} target="_blank" rel="noopener noreferrer" variant="outline" size="sm" className="flex-1 sm:flex-none">
                 <MessageCircle className="size-4" aria-hidden />
-                Message
+                WhatsApp
               </ButtonLink>
             )}
             {store.phone && (
@@ -67,33 +70,71 @@ export function StoreHeader({ store }: { store: Store }) {
                 <Mail className="size-4" aria-hidden />
               </ButtonLink>
             )}
-          </div>
-        )}
+        </div>
       </header>
     </>
   );
 }
 
-function Cell({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 bg-surface p-3 min-[400px]:p-4">
+function Cell({
+  icon,
+  label,
+  children,
+  href,
+  ariaLabel,
+}: {
+  icon: ReactNode;
+  label: string;
+  children: ReactNode;
+  href?: string;
+  ariaLabel?: string;
+}) {
+  const content = (
+    <>
       <span className="hidden size-10 shrink-0 place-items-center rounded-full bg-accent-soft text-accent min-[400px]:grid">{icon}</span>
       <div className="min-w-0">
         <dt className="text-xs text-muted">{label}</dt>
         <dd className="text-sm leading-snug font-semibold">{children}</dd>
       </div>
-    </div>
+    </>
+  );
+
+  const className = "flex items-center gap-3 bg-surface p-3 min-[400px]:p-4";
+
+  return href ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={ariaLabel}
+      className={`${className} press hover:bg-surface-muted`}
+    >
+      {content}
+    </a>
+  ) : (
+    <div className={className}>{content}</div>
   );
 }
 
 /** The four facts a shopper scans first: rating, place, delivery, availability. */
 export function StoreInfoBar({ store }: { store: Store }) {
+  const destination =
+    store.latitude !== null && store.longitude !== null
+      ? `${store.latitude},${store.longitude}`
+      : [store.address, store.city, store.region, "Ghana"].filter(Boolean).join(", ");
+  const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+
   return (
     <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-line bg-line min-[320px]:grid-cols-2 lg:grid-cols-4">
       <Cell icon={<Star className="size-5" aria-hidden />} label="Rating">
         {store.rating > 0 ? <span className="tabular-nums">{store.rating.toFixed(1)} / 5</span> : "New on ODOS"}
       </Cell>
-      <Cell icon={<MapPin className="size-5" aria-hidden />} label="Location">
+      <Cell
+        icon={<MapPin className="size-5" aria-hidden />}
+        label="Location"
+        href={directionsHref}
+        ariaLabel={`Get directions to ${store.name} in Google Maps`}
+      >
         {store.city ?? "Ghana"}
       </Cell>
       <Cell icon={<Truck className="size-5" aria-hidden />} label="Delivery">

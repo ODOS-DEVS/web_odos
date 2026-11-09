@@ -27,11 +27,23 @@ type ChatMessageRead = {
   created_at: string;
 };
 
+function formatChatName(name: string) {
+  return name.includes("_")
+    ? name
+        .replace(/_+/g, " ")
+        .replace(/\b\w/g, (character) => character.toUpperCase())
+        .trim()
+    : name;
+}
+
 function toThread(t: ChatThreadRead): ChatThread {
+  const storeName = t.store ? formatChatName(t.store.title) : null;
+  const counterpartName = t.counterpart?.name ? formatChatName(t.counterpart.name) : storeName;
+
   return {
     id: t.id,
-    store: t.store ? { id: t.store.id, name: t.store.title, imageUrl: t.store.image_url ?? null } : null,
-    counterpartName: t.counterpart?.name ?? t.store?.title ?? "ODOS",
+    store: t.store ? { id: t.store.id, name: storeName!, imageUrl: t.store.image_url ?? null } : null,
+    counterpartName: counterpartName ?? "ODOS",
     counterpartAvatarUrl: t.counterpart?.avatar_url ?? t.store?.image_url ?? null,
     subject: t.subject ?? null,
     lastMessage: t.last_message_text ?? null,

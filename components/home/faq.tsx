@@ -51,7 +51,7 @@ export function Faq() {
           <p className="mt-2 text-muted">Everything you need to know about Odos</p>
         </div>
 
-        <div className="rounded-3xl bg-surface px-5 sm:px-6">
+        <div className="rounded-3xl bg-surface px-5 shadow-2xl shadow-black/5 sm:px-6 dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
           {FAQS.map((item, index) => {
             const isOpen = openIndex === index;
             return (

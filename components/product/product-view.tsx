@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Check, ChevronRight, Star } from "lucide-react";
+import { useId, useState } from "react";
+import { Check, ChevronDown, ChevronRight, ListChecks, Star } from "lucide-react";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductGrid } from "@/components/product/product-grid";
 import { ProductInfoGrid } from "@/components/product/product-info-grid";
@@ -18,6 +19,53 @@ import { relatedProducts } from "@/libs/catalog";
 import { discountPercent } from "@/libs/format";
 import { useProduct, useProductReviews, useProducts, useStoreMap } from "@/hooks/use-catalog";
 
+const LONG_DESCRIPTION_LENGTH = 420;
+const MAX_PRODUCT_NAME_LENGTH = 48;
+
+function conciseProductName(name: string) {
+  const withoutTrailingDetails = name.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  const candidate = withoutTrailingDetails || name;
+  if (candidate.length <= MAX_PRODUCT_NAME_LENGTH) return candidate;
+
+  const shortened = candidate
+    .slice(0, MAX_PRODUCT_NAME_LENGTH - 1)
+    .replace(/\s+\S*$/, "")
+    .trimEnd();
+  return `${shortened || candidate.slice(0, MAX_PRODUCT_NAME_LENGTH - 1)}…`;
+}
+
+function ProductDescription({ description }: { description: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const descriptionId = useId();
+  const isLong = description.trim().length > LONG_DESCRIPTION_LENGTH;
+
+  return (
+    <div className="mt-5">
+      <p
+        id={descriptionId}
+        className={`leading-7 whitespace-pre-line text-muted ${isLong && !expanded ? "line-clamp-6" : ""}`}
+      >
+        {description}
+      </p>
+      {isLong && (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={descriptionId}
+          onClick={() => setExpanded((current) => !current)}
+          className="press mt-2 inline-flex items-center gap-1 text-sm font-semibold text-accent hover:opacity-80"
+        >
+          {expanded ? "Show less" : "Show more"}
+          <ChevronDown
+            className={`size-4 transition-transform duration-200 motion-reduce:transition-none ${expanded ? "rotate-180" : ""}`}
+            aria-hidden
+          />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ProductView({ id }: { id: string }) {
   const product = useProduct(id);
   const reviews = useProductReviews(id);
@@ -32,6 +80,7 @@ export function ProductView({ id }: { id: string }) {
   const off = discountPercent(p.price, p.compareAtPrice);
   const related = relatedProducts(all.data ?? [], p);
   const categorySlug = p.categorySlugs[0];
+  const displayName = conciseProductName(p.name);
 
   return (
     <Container className="py-8 sm:py-12">
@@ -46,7 +95,7 @@ export function ProductView({ id }: { id: string }) {
           </>
         )}
         <ChevronRight className="size-3.5" aria-hidden />
-        <span aria-current="page" className="text-foreground">{p.name}</span>
+        <span aria-current="page" title={p.name} className="max-w-full truncate text-foreground">{displayName}</span>
       </nav>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14">
@@ -64,7 +113,7 @@ export function ProductView({ id }: { id: string }) {
             </Link>
           )}
 
-          <h1 className="mt-5 text-3xl leading-tight font-semibold sm:text-4xl">{p.name}</h1>
+          <h1 title={p.name} className="mt-5 text-3xl leading-tight font-semibold sm:text-4xl">{displayName}</h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {p.reviewCount > 0 && <Rating value={p.rating} count={p.reviewCount} />}
@@ -75,17 +124,35 @@ export function ProductView({ id }: { id: string }) {
 
           <Price value={p.price} compareAt={p.compareAtPrice ?? undefined} size="lg" className="mt-5" />
 
-          {p.description && <p className="mt-5 leading-7 whitespace-pre-line text-muted">{p.description}</p>}
+          {p.description && <ProductDescription description={p.description} />}
 
           {p.specifications.length > 0 && (
-            <ul className="mt-5 space-y-2 text-sm">
-              {p.specifications.map((spec) => (
-                <li key={spec} className="flex items-start gap-2.5">
-                  <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-                  {spec}
-                </li>
-              ))}
-            </ul>
+            <details className="group mt-5 overflow-hidden rounded-2xl border border-line bg-surface">
+              <summary className="press flex cursor-pointer list-none items-center justify-between gap-4 p-4 marker:hidden hover:bg-surface-muted [&::-webkit-details-marker]:hidden">
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
+                    <ListChecks className="size-4.5" aria-hidden />
+                  </span>
+                  <span className="min-w-0 text-left">
+                    <span className="block text-sm font-semibold">Product details</span>
+                    <span className="mt-0.5 block text-xs font-normal text-muted">
+                      {p.specifications.length} {p.specifications.length === 1 ? "specification" : "specifications"}
+                    </span>
+                  </span>
+                </span>
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-muted text-muted group-open:bg-accent-soft group-open:text-accent">
+                  <ChevronDown className="size-4 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+                </span>
+              </summary>
+              <ul className="space-y-2.5 border-t border-line px-4 py-4 text-sm">
+                {p.specifications.map((spec) => (
+                  <li key={spec} className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+                    {spec}
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
 
           <div className="mt-8">

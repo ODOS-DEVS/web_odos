@@ -36,6 +36,15 @@ export type ChatPeer = {
   slug?: string | null;
 };
 
+function formatPeerName(name: string) {
+  return name.includes("_")
+    ? name
+        .replace(/_+/g, " ")
+        .replace(/\b\w/g, (character) => character.toUpperCase())
+        .trim()
+    : name;
+}
+
 /**
  * One conversation, for a thread that is already known. `ChatThread` wraps this for the store page
  * (where only the store is known); the account "Chats" tab renders it directly from its thread list.
@@ -58,6 +67,7 @@ export function ChatConversation({
   const send = useSendMessage(threadId);
   const [draft, setDraft] = useState("");
   const items = useMemo(() => withDayDividers(messages.data ?? []), [messages.data]);
+  const peerName = formatPeerName(peer.name);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -89,9 +99,9 @@ export function ChatConversation({
             </Link>
           )
         )}
-        <Media src={peer.logoUrl} name={peer.name} sizes="40px" className="size-10 shrink-0 rounded-full" />
+        <Media src={peer.logoUrl} name={peerName} sizes="40px" className="size-10 shrink-0 rounded-full" />
         <div className="min-w-0">
-          <p className="truncate font-semibold">{peer.name}</p>
+          <p className="truncate font-semibold">{peerName}</p>
           <p className="text-xs text-muted">Usually replies within a few hours</p>
         </div>
       </div>
@@ -111,7 +121,7 @@ export function ChatConversation({
             </button>
           </li>
         ) : items.length === 0 ? (
-          <li className="py-10 text-center text-sm text-muted">No messages yet — say hello to {peer.name}.</li>
+          <li className="py-10 text-center text-sm text-muted">No messages yet. Say hello to {peerName}.</li>
         ) : null}
 
         {items.map((item) => {
@@ -135,7 +145,7 @@ export function ChatConversation({
         })}
       </ul>
 
-      <form onSubmit={onSubmit} className="flex items-center gap-2 border-t border-line p-4">
+      <form onSubmit={onSubmit} className="flex min-w-0 items-center gap-2 border-t border-line p-4">
         <button
           type="button"
           onClick={() => toast("Attachments aren’t available yet")}
@@ -148,8 +158,8 @@ export function ChatConversation({
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={`Message ${peer.name}…`}
-          className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-sm outline-none focus-visible:outline-none focus:border-foreground"
+          placeholder={`Message ${peerName}…`}
+          className="h-11 min-w-0 flex-1 rounded-full border border-line bg-surface px-4 text-sm outline-none focus-visible:outline-none focus:border-foreground"
         />
         {draft.trim() ? (
           <button

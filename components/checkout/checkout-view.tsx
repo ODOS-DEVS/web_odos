@@ -23,8 +23,10 @@ import { useCheckout, useWalletCheckout } from "@/hooks/use-orders";
 import { useWallet } from "@/hooks/use-wallet";
 import { usePaymentOptions } from "@/hooks/use-payment-options";
 import { ApiError } from "@/services/http";
+import type { VoucherPreview } from "@/services/vouchers.service";
 import { ChoiceCard } from "./choice-card";
 import { PaymentMethodPicker } from "./payment-method-picker";
+import { VoucherCard } from "./voucher-card";
 
 function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
   return (
@@ -71,6 +73,7 @@ function CheckoutForm() {
   const cityName = usingSaved ? selectedAddress!.city : city;
   const regionName = usingSaved ? selectedAddress!.region : region;
   const [method, setMethod] = useState<DeliverySpeed>("economy");
+  const [appliedVoucher, setAppliedVoucher] = useState<VoucherPreview | null>(null);
   const paymentOptions = usePaymentOptions();
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
   const paymentMethod =
@@ -101,7 +104,9 @@ function CheckoutForm() {
   }
 
   const shipping = quote.data?.shippingAmount ?? null;
-  const total = subtotal + (shipping ?? 0);
+  const discount = appliedVoucher?.discount_amount ?? 0;
+  const rawTotal = subtotal + (shipping ?? 0);
+  const total = Math.max(0, rawTotal - discount);
   const options = quote.data?.options.filter((o) => o.available) ?? [];
 
   const payingFromWallet = paymentMethod?.kind === "wallet";
@@ -122,8 +127,9 @@ function CheckoutForm() {
       subtotal_amount: subtotal,
       shipping_amount: shipping,
       delivery_method: method,
-      discount_amount: 0,
+      discount_amount: discount,
       total_amount: total,
+      voucher_code: appliedVoucher?.code ?? null,
       address_full_name: fullName.trim(),
       address_phone: phoneNumber.trim(),
       address_street: streetLine.trim(),
@@ -280,8 +286,11 @@ function CheckoutForm() {
         </Step>
       </div>
 
-      <div className="lg:sticky lg:top-40">
-        <OrderSummary totals={{ items: subtotal, delivery: shipping, total, vendors: new Set(lines.map((l) => l.storeId)).size }}>
+      <div className="space-y-5 lg:sticky lg:top-40">
+        <OrderSummary
+          totals={{ items: subtotal, delivery: shipping, total: rawTotal, vendors: new Set(lines.map((l) => l.storeId)).size }}
+          discount={discount}
+        >
           <Button
             type="submit"
             size="lg"
@@ -308,6 +317,15 @@ function CheckoutForm() {
             </Link>
           </p>
         </OrderSummary>
+
+        <VoucherCard
+          lines={lines}
+          subtotal={subtotal}
+          shipping={shipping}
+          appliedVoucher={appliedVoucher}
+          onApplyVoucher={setAppliedVoucher}
+          onRemoveVoucher={() => setAppliedVoucher(null)}
+        />
       </div>
     </form>
   );

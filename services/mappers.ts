@@ -50,10 +50,17 @@ export function toPromoBanner(b: PromoBannerRead): PromoBanner {
 }
 
 export function toStore(s: StoreRead): Store {
+  const displayName = s.title.includes("_")
+    ? s.title
+        .replace(/_+/g, " ")
+        .replace(/\b\w/g, (character) => character.toUpperCase())
+        .trim()
+    : s.title;
+
   return {
     id: s.id,
     slug: s.slug,
-    name: s.title,
+    name: displayName,
     category: s.category ?? "",
     description: s.description ?? "",
     logoUrl: s.image_url ?? null,
@@ -62,6 +69,8 @@ export function toStore(s: StoreRead): Store {
     city: s.city ?? null,
     region: s.region ?? null,
     address: s.address ?? null,
+    latitude: s.latitude ?? null,
+    longitude: s.longitude ?? null,
     phone: s.phone ?? null,
     email: s.email ?? null,
     whatsappUrl: s.whatsapp_url ?? null,

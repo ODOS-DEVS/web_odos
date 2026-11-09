@@ -1,8 +1,83 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { inputClass } from "@/components/ui/field";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GHANA_REGIONS, getCitiesForRegion, matchGhanaRegion } from "@/libs/ghana-locations";
+import { cn } from "@/libs/cn";
+
+function SearchableSelect({
+  id,
+  name,
+  value,
+  options,
+  placeholder,
+  searchPlaceholder,
+  emptyMessage,
+  disabled = false,
+  required = false,
+  onChange,
+}: {
+  id: string;
+  name: string;
+  value: string;
+  options: readonly string[];
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyMessage: string;
+  disabled?: boolean;
+  required?: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const listId = `${id}-options`;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          id={id}
+          type="button"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-required={required}
+          disabled={disabled}
+          className={cn(inputClass, "flex items-center justify-between gap-3 text-left")}
+        >
+          <span className={cn("truncate", !value && "text-muted/70")}>{value || placeholder}</span>
+          <ChevronsUpDown className="size-4 shrink-0 text-muted" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)]">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList id={listId}>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option}
+                  value={option}
+                  onSelect={() => {
+                    onChange(option);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("mr-2 size-4 shrink-0", value === option ? "opacity-100" : "opacity-0")} aria-hidden />
+                  {option}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+      <input type="hidden" name={name} value={value} />
+    </Popover>
+  );
+}
 
 /**
  * Region, and the towns inside it — the same pair of dropdowns the mobile app uses, from the same
@@ -47,47 +122,35 @@ export function RegionCitySelect({
         <label htmlFor={regionId} className="mb-1.5 block text-sm font-medium">
           Region
         </label>
-        <select
+        <SearchableSelect
           id={regionId}
           name="region"
           required={required}
           value={matchGhanaRegion(region) ?? ""}
-          onChange={(e) => onRegion(e.target.value)}
-          className={inputClass}
-        >
-          <option value="" disabled>
-            Select a region
-          </option>
-          {GHANA_REGIONS.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+          options={GHANA_REGIONS}
+          placeholder="Select a region"
+          searchPlaceholder="Search regions..."
+          emptyMessage="No region found."
+          onChange={onRegion}
+        />
       </div>
 
       <div>
         <label htmlFor={cityId} className="mb-1.5 block text-sm font-medium">
           {cityLabel}
         </label>
-        <select
+        <SearchableSelect
           id={cityId}
           name="city"
           required={required}
           value={city}
-          onChange={(e) => onCityChange(e.target.value)}
           disabled={towns.length === 0}
-          className={inputClass}
-        >
-          <option value="" disabled>
-            {towns.length === 0 ? "Pick a region first" : `Select a ${cityLabel.toLowerCase()}`}
-          </option>
-          {towns.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
+          options={towns}
+          placeholder={towns.length === 0 ? "Pick a region first" : `Select a ${cityLabel.toLowerCase()}`}
+          searchPlaceholder={`Search ${cityLabel.toLowerCase()}...`}
+          emptyMessage={`No ${cityLabel.toLowerCase()} found.`}
+          onChange={onCityChange}
+        />
       </div>
     </>
   );

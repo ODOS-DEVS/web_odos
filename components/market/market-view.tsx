@@ -49,7 +49,7 @@ export function MarketView({ filters }: { filters: MarketActiveFilters }) {
     <Container className="py-8 sm:py-12">
       <header className="mb-8">
         <h1 className="text-3xl font-semibold sm:text-4xl">Market</h1>
-        <p className="mt-2 text-muted">Markets are physical trading hubs — pick one to see the vendors trading there.</p>
+        <p className="mt-2 text-muted">Markets are physical trading hubs. Pick one to see the vendors trading there.</p>
       </header>
 
       <MarketStrip

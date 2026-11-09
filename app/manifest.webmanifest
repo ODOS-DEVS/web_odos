@@ -1,0 +1,22 @@
+{
+  "name": "ODOS — One cart, every vendor",
+  "short_name": "ODOS",
+  "description": "Shop from many local vendors, check out once. Each vendor delivers their part of your order.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fbfaf7",
+  "theme_color": "#cf4310",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

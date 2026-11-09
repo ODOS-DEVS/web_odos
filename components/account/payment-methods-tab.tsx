@@ -2,52 +2,107 @@
 
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { CreditCard, Plus, Trash2 } from "lucide-react";
+import { CreditCard, Plus, ShieldAlert, Trash2 } from "lucide-react";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { LogoBadge } from "@/components/checkout/logo-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
 import { QueryError } from "@/components/ui/query-error";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
+import { usePhoneVerification } from "@/hooks/use-phone-verification";
 import { useQueryParam } from "@/hooks/use-query-param";
 import { detectCardBrand, logoForMethod, MOMO_NETWORKS, subtitleForMethod } from "@/libs/payment-logos";
-import { formatPhoneInput, validateGhanaPhone } from "@/libs/phone";
+import { formatPhoneInput, normalizeGhanaPhone, validateGhanaPhone } from "@/libs/phone";
+import { ApiError } from "@/services/http";
+import type { PaymentMethodInput } from "@/services/account.service";
 import type { SavedPaymentMethod } from "@/types/account";
 
 function AddMethodForm({ onDone }: { onDone: () => void }) {
-  const { add, isSaving } = usePaymentMethods();
+  const { methods, add, isSaving } = usePaymentMethods();
   const [type, setType] = useState<"momo" | "card">("momo");
   const [network, setNetwork] = useState(MOMO_NETWORKS[0]);
   const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
   const [cardName, setCardName] = useState("");
   const [cardLast4, setCardLast4] = useState("");
   const [expiry, setExpiry] = useState("");
 
   const phoneError = validateGhanaPhone(phone);
+  const verifiedForThisMethod = Boolean(phone.trim()) && verifiedPhone === phone.trim();
+  const { isVerified, codeSent, canResendIn, sendCode, verify } = usePhoneVerification(phone, {
+    linkToProfile: false,
+  });
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (type === "momo" && (phoneError || !phone.trim())) return;
+  const errorMessage = (error: unknown, fallback: string) =>
+    error instanceof ApiError || error instanceof Error ? error.message : fallback;
 
-    const input =
-      type === "momo"
-        ? { type: "momo" as const, label: network.label, network: network.id, phone: phone.trim() }
-        : {
-            type: "card" as const,
-            label: `•••• ${cardLast4}`,
-            cardName: cardName.trim() || detectCardBrand(cardLast4).label,
-            cardLast4,
-            expiry: expiry.trim() || null,
-          };
+  const sendVerificationCode = () =>
+    sendCode.mutate(undefined, {
+      onSuccess: (result) => toast.success(result?.message || "We sent a verification code"),
+      onError: (error) => toast.error(errorMessage(error, "We couldn't send the code. Please try again.")),
+    });
 
+  const mobileMoneyInput = (): PaymentMethodInput => ({
+    type: "momo",
+    label: network.label,
+    network: network.id,
+    phone: phone.trim(),
+  });
+
+  const saveMethod = (input: PaymentMethodInput) =>
     add(input, {
       onSuccess: () => {
         toast.success("Payment method added");
         onDone();
       },
       onError: (error) => toast.error(error instanceof Error ? error.message : "We couldn't save that payment method"),
+    });
+
+  const verifyCode = () =>
+    verify.mutate(code, {
+      onSuccess: () => {
+        setCode("");
+        setVerifiedPhone(phone.trim());
+        saveMethod(mobileMoneyInput());
+      },
+      onError: (error) => toast.error(errorMessage(error, "We couldn't verify that code.")),
+    });
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (type === "momo") {
+      if (phoneError || !phone.trim()) return;
+      const normalizedPhone = normalizeGhanaPhone(phone);
+      const alreadyAdded = methods.some(
+        (method) => method.kind === "momo" && normalizeGhanaPhone(method.phone ?? "") === normalizedPhone,
+      );
+      if (alreadyAdded) {
+        toast.error("This mobile money number is already added");
+        return;
+      }
+      if (!verifiedForThisMethod) {
+        if (isVerified) {
+          saveMethod(mobileMoneyInput());
+          return;
+        }
+        if (!codeSent) sendVerificationCode();
+        return;
+      }
+      saveMethod(mobileMoneyInput());
+      return;
+    }
+
+    saveMethod({
+      type: "card",
+      label: `•••• ${cardLast4}`,
+      cardName: cardName.trim() || detectCardBrand(cardLast4).label,
+      cardLast4,
+      expiry: expiry.trim() || null,
     });
   };
 
@@ -80,6 +135,54 @@ function AddMethodForm({ onDone }: { onDone: () => void }) {
             onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
             error={phoneError ?? undefined}
           />
+
+          {codeSent && !verifiedForThisMethod && !isVerified && (
+            <div className="rounded-2xl border border-line bg-surface-muted p-4">
+              <p className="flex items-start gap-2 text-xs text-muted">
+                <ShieldAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                We sent a verification code to {phone}. Enter it below to add this payment method.
+              </p>
+              <div className="mt-3">
+                <label htmlFor="momo-phone-code" className="mb-2 block text-sm font-medium">
+                  Enter the 6-digit code
+                </label>
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                  <InputOTP
+                    id="momo-phone-code"
+                    maxLength={6}
+                    pattern={REGEXP_ONLY_DIGITS}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={code}
+                    onChange={setCode}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                    </InputOTPGroup>
+                    <InputOTPSeparator />
+                    <InputOTPGroup>
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                  <Button type="button" variant="accent" onClick={verifyCode} disabled={code.length !== 6 || verify.isPending || isSaving}>
+                    {verify.isPending || isSaving ? "Adding…" : "Verify & add"}
+                  </Button>
+                </div>
+                <button
+                  type="button"
+                  onClick={sendVerificationCode}
+                  disabled={canResendIn > 0 || sendCode.isPending}
+                  className="press mt-2 text-xs font-medium text-accent hover:opacity-80 disabled:text-muted disabled:hover:opacity-100"
+                >
+                  {canResendIn > 0 ? `Resend in ${canResendIn}s` : "Resend code"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -120,9 +223,21 @@ function AddMethodForm({ onDone }: { onDone: () => void }) {
       )}
 
       <div className="mt-5 flex gap-2.5">
-        <Button type="submit" variant="accent" disabled={isSaving}>
-          {isSaving ? "Saving…" : "Save method"}
-        </Button>
+        {!(type === "momo" && codeSent && !verifiedForThisMethod && !isVerified) && (
+          <Button
+            type="submit"
+            variant="accent"
+            disabled={isSaving || sendCode.isPending || (type === "momo" && (!phone.trim() || Boolean(phoneError)))}
+          >
+            {isSaving
+              ? "Saving…"
+              : sendCode.isPending
+                ? "Sending code…"
+                : type === "momo" && !verifiedForThisMethod && !isVerified
+                  ? "Continue"
+                  : "Save method"}
+          </Button>
+        )}
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>

@@ -9,6 +9,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useLogout, useSession } from "@/hooks/use-auth";
+import { useDetailsDismiss } from "@/hooks/use-details-dismiss";
 
 /** Logged out: Log in / Sign up. Logged in: an avatar menu with orders and log out. */
 export function AccountMenu() {
@@ -17,6 +18,7 @@ export function AccountMenu() {
   const router = useRouter();
   const menu = useRef<HTMLDetailsElement>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  useDetailsDismiss(menu);
 
   if (!session) {
     return (
@@ -38,7 +40,8 @@ export function AccountMenu() {
     );
   }
 
-  const { full_name: name, email, avatar_url: avatarUrl } = session.user;
+  const { full_name: name, email, avatar_url: avatarUrl, role } = session.user;
+  const roleLabel = `${role.charAt(0).toUpperCase()}${role.slice(1)}`;
   const close = () => menu.current?.removeAttribute("open");
 
   return (
@@ -55,57 +58,67 @@ export function AccountMenu() {
             className="size-9 text-xs min-[320px]:size-10 min-[320px]:text-sm"
           />
         </summary>
-        <div className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-line bg-surface p-2 shadow-lg">
-          <div className="flex items-center gap-2.5 border-b border-line px-3 py-2.5">
-            <UserAvatar name={name} avatarUrl={avatarUrl} sizes="36px" className="size-9 text-sm" />
+        <div className="absolute right-0 z-50 mt-3 w-[min(24rem,calc(100vw-1rem))] rounded-[1.5rem] border border-line bg-surface p-2 shadow-[0_24px_70px_rgba(22,20,15,0.18)]">
+          <div className="flex items-center gap-3.5 rounded-[1.15rem] bg-surface-muted p-4">
+            <UserAvatar
+              name={name}
+              avatarUrl={avatarUrl}
+              sizes="64px"
+              className="size-14 shrink-0 text-base sm:size-16 sm:text-lg"
+            />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{name}</p>
-              <p className="truncate text-xs text-muted">{email}</p>
+              <p className="truncate text-sm font-bold sm:text-base">{name}</p>
+              <p className="mt-0.5 truncate text-xs text-muted sm:text-sm">{email}</p>
+              <span className="mt-2 inline-flex rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-accent">
+                {roleLabel}
+              </span>
             </div>
           </div>
-          <Link
-            href="/account"
-            onClick={close}
-            className="press mt-1 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
-          >
-            <User className="size-4 text-muted" aria-hidden />
-            Personal Account
-          </Link>
-          <Link
-            href="/account?tab=vendor"
-            onClick={close}
-            className="press flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
-          >
-            <Store className="size-4 text-muted" aria-hidden />
-            Vendor Account
-          </Link>
-          <Link
-            href="/orders"
-            onClick={close}
-            className="press flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
-          >
-            <ShoppingBag className="size-4 text-muted" aria-hidden />
-            Your Orders
-          </Link>
-          <Link
-            href="/account?tab=loyalty"
-            onClick={close}
-            className="press flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-surface-muted"
-          >
-            <Award className="size-4 text-muted" aria-hidden />
-            Loyalty Points
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              close();
-              setConfirmOpen(true);
-            }}
-            className="press flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-surface-muted"
-          >
-            <LogOut className="size-4 text-muted" aria-hidden />
-            Log out
-          </button>
+          <nav aria-label="Account" className="mt-2 space-y-0.5 pb-0.5">
+            <Link
+              href="/account"
+              onClick={close}
+              className="press flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm hover:bg-surface-muted sm:text-base"
+            >
+              <User className="size-5 shrink-0 text-muted" aria-hidden />
+              Personal Account
+            </Link>
+            <Link
+              href="/account?tab=vendor"
+              onClick={close}
+              className="press flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm hover:bg-surface-muted sm:text-base"
+            >
+              <Store className="size-5 shrink-0 text-muted" aria-hidden />
+              Vendor Account
+            </Link>
+            <Link
+              href="/orders"
+              onClick={close}
+              className="press flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm hover:bg-surface-muted sm:text-base"
+            >
+              <ShoppingBag className="size-5 shrink-0 text-muted" aria-hidden />
+              Your Orders
+            </Link>
+            <Link
+              href="/account?tab=loyalty"
+              onClick={close}
+              className="press flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm hover:bg-surface-muted sm:text-base"
+            >
+              <Award className="size-5 shrink-0 text-muted" aria-hidden />
+              Loyalty Points
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                close();
+                setConfirmOpen(true);
+              }}
+              className="press flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-left text-sm hover:bg-surface-muted sm:text-base"
+            >
+              <LogOut className="size-5 shrink-0 text-muted" aria-hidden />
+              Log out
+            </button>
+          </nav>
         </div>
       </details>
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Info, ShieldCheck, Store as StoreIcon, Truck } from "lucide-react";
+import { ShieldCheck, Store as StoreIcon, Truck } from "lucide-react";
 import type { Store } from "@/types/catalog";
 import { ButtonLink } from "@/components/ui/button";
 import { formatMoneyCompact } from "@/libs/format";
@@ -63,12 +63,6 @@ export function ProductInfoGrid({ store }: { store: Store }) {
             </div>
           )}
         </dl>
-      </InfoCard>
-
-      <InfoCard icon={<Info className="size-4" aria-hidden />} title="About this item">
-        <p className="text-sm leading-6 text-muted">
-          This listing is shared directly by {store.name}. Photos, pricing and specifications reflect what the vendor has provided to ODOS.
-        </p>
       </InfoCard>
 
       <InfoCard icon={<ShieldCheck className="size-4" aria-hidden />} title="Returns & Support">
