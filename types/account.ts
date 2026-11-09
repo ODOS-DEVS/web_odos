@@ -23,3 +23,17 @@ export type FavoriteItem = {
   imageUrl: string | null;
   savedAt: string;
 };
+
+/** A saved momo wallet or card reference. The backend never holds a full card number — only the last 4. */
+export type SavedPaymentMethod = {
+  id: string;
+  kind: "momo" | "card";
+  label: string;
+  isDefault: boolean;
+  /** "MTN" | "Telecel" | "AT" for momo, null for cards. */
+  network: string | null;
+  phone: string | null;
+  cardName: string | null;
+  cardLast4: string | null;
+  expiry: string | null;
+};

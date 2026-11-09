@@ -30,13 +30,17 @@ import { RegionCitySelect } from "@/components/ui/region-city-select";
 import { cn } from "@/libs/cn";
 import { formatDate } from "@/libs/format";
 import { useUpdateProfile } from "@/hooks/use-auth";
+import { useVendorStatus } from "@/hooks/use-vendor";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 const TABS = [
   { id: "profile", label: "Profile" },
-  { id: "dashboard", label: "Dashboard" },
-  { id: "orders", label: "Orders" },
-  { id: "products", label: "Products" },
-  { id: "customers", label: "Customers" },
+  // `vendorOnly` tabs are the seller workspace: hidden unless the account is an approved vendor,
+  // matching the mobile app, which refuses these screens for every other vendor status.
+  { id: "dashboard", label: "Dashboard", vendorOnly: true },
+  { id: "orders", label: "Orders", vendorOnly: true },
+  { id: "products", label: "Products", vendorOnly: true },
+  { id: "customers", label: "Customers", vendorOnly: true },
   { id: "payment", label: "Payment methods" },
   { id: "wallet", label: "Wallet" },
   { id: "returns", label: "Returns" },
@@ -44,7 +48,9 @@ const TABS = [
   { id: "reviews", label: "Reviews" },
   { id: "vouchers", label: "Vouchers" },
   { id: "help", label: "Help & Support" },
-  { id: "vendor", label: "Become a Vendor" },
+  // Replaced by the workspace tabs once approved; still shown while an application is in flight,
+  // because that is where its progress is reported.
+  { id: "vendor", label: "Become a Vendor", shopperOnly: true },
 ] as const;
 
 // Still reachable by direct link (e.g. from checkout), just not shown as its own pill above.
@@ -284,6 +290,7 @@ function isTabId(value: string | null): value is TabId {
 
 function ProfileTabs() {
   const user = useSession()?.user;
+  const { isVendor } = useVendorStatus();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -301,12 +308,19 @@ function ProfileTabs() {
   // Only ever mounts inside `RequireLogin`'s authenticated branch, so `user` is always set here.
   if (!user) return null;
 
+  const visibleTabs = TABS.filter((t) => {
+    if ("vendorOnly" in t && t.vendorOnly) return isVendor;
+    if ("shopperOnly" in t && t.shopperOnly) return !isVendor;
+    return true;
+  });
+  // A direct link (or a stale bookmark) must not render the workspace for a non-vendor either.
+  const allowed = isVendor || !TABS.some((t) => t.id === tab && "vendorOnly" in t && t.vendorOnly);
+  const activeTab = allowed ? tab : "profile";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-5 sm:p-6">
-        <span className="grid size-16 shrink-0 place-items-center rounded-full bg-accent-soft text-xl font-semibold text-accent">
-          {user.full_name.trim().charAt(0).toUpperCase() || "?"}
-        </span>
+        <UserAvatar name={user.full_name} avatarUrl={user.avatar_url} sizes="64px" className="size-16 text-xl" />
         <div className="min-w-0">
           <p className="truncate text-lg font-semibold">{user.full_name}</p>
           <p className="truncate text-sm text-muted">{user.email}</p>
@@ -315,16 +329,16 @@ function ProfileTabs() {
       </div>
 
       <div role="tablist" className="no-scrollbar flex gap-5 overflow-x-auto border-b border-line">
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t.id}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
+            aria-selected={activeTab === t.id}
             onClick={() => setTab(t.id)}
             className={cn(
               "press shrink-0 border-b-2 pb-3 text-sm font-medium transition-colors",
-              tab === t.id ? "border-foreground text-foreground" : "border-transparent text-muted hover:text-foreground",
+              activeTab === t.id ? "border-foreground text-foreground" : "border-transparent text-muted hover:text-foreground",
             )}
           >
             {t.label}
@@ -333,21 +347,21 @@ function ProfileTabs() {
       </div>
 
       <div className="mt-6">
-        {tab === "profile" && <ProfileDetailsForm user={user} />}
-        {tab === "dashboard" && <SellerCenter />}
-        {tab === "orders" && <VendorOrdersTab />}
-        {tab === "products" && <VendorProductsTab />}
-        {tab === "customers" && <VendorCustomersTab />}
-        {tab === "payment" && <PaymentMethodsTab />}
-        {tab === "wallet" && <WalletTab />}
-        {tab === "address" && <AddressTab />}
-        {tab === "returns" && <ReturnsTab />}
-        {tab === "reviews" && <ReviewsTab />}
-        {tab === "vouchers" && <VouchersTab />}
-        {tab === "help" && <HelpSupportTab />}
-        {tab === "vendor" && <VendorTab />}
-        {tab === "chats" && <ChatsTab />}
-        {tab === "loyalty" && <LoyaltyTab />}
+        {activeTab === "profile" && <ProfileDetailsForm user={user} />}
+        {activeTab === "dashboard" && <SellerCenter />}
+        {activeTab === "orders" && <VendorOrdersTab />}
+        {activeTab === "products" && <VendorProductsTab />}
+        {activeTab === "customers" && <VendorCustomersTab />}
+        {activeTab === "payment" && <PaymentMethodsTab />}
+        {activeTab === "wallet" && <WalletTab />}
+        {activeTab === "address" && <AddressTab />}
+        {activeTab === "returns" && <ReturnsTab />}
+        {activeTab === "reviews" && <ReviewsTab />}
+        {activeTab === "vouchers" && <VouchersTab />}
+        {activeTab === "help" && <HelpSupportTab />}
+        {activeTab === "vendor" && <VendorTab />}
+        {activeTab === "chats" && <ChatsTab />}
+        {activeTab === "loyalty" && <LoyaltyTab />}
       </div>
     </div>
   );

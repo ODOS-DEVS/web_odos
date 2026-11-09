@@ -7,6 +7,7 @@ import { Award, LogOut, ShoppingBag, Store, User } from "lucide-react";
 import { toast } from "sonner";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useLogout, useSession } from "@/hooks/use-auth";
 
 /** Logged out: Log in / Sign up. Logged in: an avatar menu with orders and log out. */
@@ -37,22 +38,30 @@ export function AccountMenu() {
     );
   }
 
-  const { full_name: name, email } = session.user;
+  const { full_name: name, email, avatar_url: avatarUrl } = session.user;
   const close = () => menu.current?.removeAttribute("open");
 
   return (
     <>
       <details ref={menu} className="group relative">
         <summary
-          className="press grid size-9 cursor-pointer list-none place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent marker:hidden min-[320px]:size-10 min-[320px]:text-sm [&::-webkit-details-marker]:hidden"
+          className="press cursor-pointer list-none rounded-full marker:hidden [&::-webkit-details-marker]:hidden"
           aria-label={`Account menu for ${name}`}
         >
-          {name.trim().charAt(0).toUpperCase() || "?"}
+          <UserAvatar
+            name={name}
+            avatarUrl={avatarUrl}
+            sizes="40px"
+            className="size-9 text-xs min-[320px]:size-10 min-[320px]:text-sm"
+          />
         </summary>
         <div className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-line bg-surface p-2 shadow-lg">
-          <div className="border-b border-line px-3 py-2.5">
-            <p className="truncate text-sm font-semibold">{name}</p>
-            <p className="truncate text-xs text-muted">{email}</p>
+          <div className="flex items-center gap-2.5 border-b border-line px-3 py-2.5">
+            <UserAvatar name={name} avatarUrl={avatarUrl} sizes="36px" className="size-9 text-sm" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{name}</p>
+              <p className="truncate text-xs text-muted">{email}</p>
+            </div>
           </div>
           <Link
             href="/account"

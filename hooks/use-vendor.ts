@@ -5,8 +5,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { vendorService, type VendorProductCreate, type VendorProductUpdate } from "@/services/vendor.service";
 import { queryKeys, vendorQueries } from "@/services/queries";
 import { isActive } from "@/libs/orders";
+import type { VendorStatus } from "@/types/api";
 import type { SellerStats, VendorProduct, VendorProductStatus } from "@/types/vendor";
 import { useSession } from "./use-auth";
+
+/**
+ * Vendor standing for the signed-in user.
+ *
+ * Only `approved` opens the seller workspace — the mobile app turns `pending`, `under_review`,
+ * `rejected` and `suspended` away from those screens, so the website must not offer tabs the phone
+ * would refuse. Reads the session rather than firing a request: `vendor_status` rides on the user.
+ */
+export function useVendorStatus(): { status: VendorStatus; isVendor: boolean; hasApplied: boolean } {
+  const user = useSession()?.user;
+  const status: VendorStatus = user?.vendor_status ?? "none";
+  return { status, isVendor: status === "approved", hasApplied: status !== "none" };
+}
 
 /** Everything in the seller centre is private, so every query here waits for a session. */
 function useVendorGate() {

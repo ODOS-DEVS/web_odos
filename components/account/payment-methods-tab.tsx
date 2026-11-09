@@ -2,57 +2,53 @@
 
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
-import { LogoBadge, type Logo } from "@/components/checkout/logo-badge";
+import { CreditCard, Plus, Trash2 } from "lucide-react";
+import { LogoBadge } from "@/components/checkout/logo-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
 import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
-import { usePaymentMethods, type SavedPaymentMethod } from "@/hooks/use-payment-methods";
+import { QueryError } from "@/components/ui/query-error";
+import { usePaymentMethods } from "@/hooks/use-payment-methods";
 import { useQueryParam } from "@/hooks/use-query-param";
-
-const NETWORKS: { id: string; label: string; logo: Logo }[] = [
-  { id: "mtn", label: "MTN MoMo", logo: { kind: "image", src: "/payment-logos/mtn-official.png", alt: "MTN" } },
-  { id: "telecel", label: "Telecel Cash", logo: { kind: "image", src: "/payment-logos/telecel-icon.png", alt: "Telecel" } },
-  { id: "at", label: "AT Money", logo: { kind: "image", src: "/payment-logos/at-official.png", alt: "AT" } },
-];
-
-const VISA_LOGO: Logo = { kind: "image", src: "/payment-logos/visa-official.svg", alt: "Visa" };
-const MASTERCARD_LOGO: Logo = { kind: "image", src: "/payment-logos/mastercard-official.svg", alt: "Mastercard" };
-
-/** Identifies the card network from its IIN/BIN prefix so we can show the real brand mark instead of a placeholder. */
-function detectCardBrand(cardNumber: string): { label: string; logo: Logo } {
-  const digits = cardNumber.replace(/\D/g, "");
-  if (/^4/.test(digits)) return { label: "Visa", logo: VISA_LOGO };
-  if (/^5[1-5]/.test(digits) || /^2(2[2-9]\d|[3-6]\d\d|7[01]\d|720)/.test(digits)) return { label: "Mastercard", logo: MASTERCARD_LOGO };
-  return { label: "Card", logo: { kind: "monogram", text: "••", bg: "#1f2937", fg: "#ffffff" } };
-}
+import { detectCardBrand, logoForMethod, MOMO_NETWORKS, subtitleForMethod } from "@/libs/payment-logos";
+import { formatPhoneInput, validateGhanaPhone } from "@/libs/phone";
+import type { SavedPaymentMethod } from "@/types/account";
 
 function AddMethodForm({ onDone }: { onDone: () => void }) {
-  const { add } = usePaymentMethods();
+  const { add, isSaving } = usePaymentMethods();
   const [type, setType] = useState<"momo" | "card">("momo");
-  const [network, setNetwork] = useState(NETWORKS[0]);
+  const [network, setNetwork] = useState(MOMO_NETWORKS[0]);
   const [phone, setPhone] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [cardLast4, setCardLast4] = useState("");
   const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
+
+  const phoneError = validateGhanaPhone(phone);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const brand = detectCardBrand(cardNumber);
-    const last4 = cardNumber.trim().slice(-4) || "0000";
-    const method: Omit<SavedPaymentMethod, "id"> =
+    if (type === "momo" && (phoneError || !phone.trim())) return;
+
+    const input =
       type === "momo"
-        ? { kind: "momo", label: network.label, subtitle: `${network.label} · ${phone.trim()}`, logo: network.logo }
+        ? { type: "momo" as const, label: network.label, network: network.id, phone: phone.trim() }
         : {
-            kind: "card",
-            label: `**** ${last4}`,
-            subtitle: `${brand.label} Debit/Credit · ${last4} · ${expiry.trim() || "--/--"}`,
-            logo: brand.logo,
+            type: "card" as const,
+            label: `•••• ${cardLast4}`,
+            cardName: cardName.trim() || detectCardBrand(cardLast4).label,
+            cardLast4,
+            expiry: expiry.trim() || null,
           };
-    add(method);
-    toast.success("Payment method added");
-    onDone();
+
+    add(input, {
+      onSuccess: () => {
+        toast.success("Payment method added");
+        onDone();
+      },
+      onError: (error) => toast.error(error instanceof Error ? error.message : "We couldn't save that payment method"),
+    });
   };
 
   return (
@@ -69,31 +65,63 @@ function AddMethodForm({ onDone }: { onDone: () => void }) {
       {type === "momo" ? (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            {NETWORKS.map((n) => (
+            {MOMO_NETWORKS.map((n) => (
               <LogoPill key={n.id} selected={network.id === n.id} logo={n.logo} label={n.label} onClick={() => setNetwork(n)} />
             ))}
           </div>
-          <Field id="momo-phone" label="Phone number" type="tel" required placeholder="024 000 0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <Field
+            id="momo-phone"
+            label="Phone number"
+            type="tel"
+            inputMode="numeric"
+            required
+            placeholder="0240000000"
+            value={phone}
+            onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
+            error={phoneError ?? undefined}
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <Field id="card-number" label="Card number" required placeholder="4242 4242 4242 4242" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} />
-            {cardNumber.trim() && (
+          <Field
+            id="card-name"
+            label="Card type"
+            placeholder="Visa, Mastercard…"
+            value={cardName}
+            onChange={(e) => setCardName(e.target.value)}
+            className="sm:col-span-2"
+          />
+          <div>
+            <Field
+              id="card-last4"
+              label="Last 4 digits"
+              inputMode="numeric"
+              maxLength={4}
+              required
+              placeholder="8451"
+              value={cardLast4}
+              onChange={(e) => setCardLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            />
+            {cardLast4.length === 4 && (
               <div className="mt-1.5 flex items-center gap-1.5">
-                <LogoBadge logo={detectCardBrand(cardNumber).logo} className="size-5" />
-                <span className="text-xs text-muted">{detectCardBrand(cardNumber).label}</span>
+                <LogoBadge logo={detectCardBrand(cardName).logo} className="size-5" />
+                <span className="text-xs text-muted">{detectCardBrand(cardName).label}</span>
               </div>
             )}
           </div>
-          <Field id="card-expiry" label="Expiry" required placeholder="MM/YY" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
-          <Field id="card-cvv" label="CVV" type="password" inputMode="numeric" maxLength={4} required placeholder="123" value={cvv} onChange={(e) => setCvv(e.target.value)} />
+          <Field id="card-expiry" label="Expiry" placeholder="MM/YY" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
+          {/* Only the last 4 digits are stored — the full card number and CVV are never collected
+              or transmitted, so there is nothing here to leak. The card is charged on the
+              provider's own hosted page at checkout. */}
+          <p className="text-xs text-muted sm:col-span-2">
+            This only saves a reference to the card. You’ll enter the full details on the secure payment page when you check out.
+          </p>
         </div>
       )}
 
       <div className="mt-5 flex gap-2.5">
-        <Button type="submit" variant="accent">
-          Save method
+        <Button type="submit" variant="accent" disabled={isSaving}>
+          {isSaving ? "Saving…" : "Save method"}
         </Button>
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
@@ -105,24 +133,39 @@ function AddMethodForm({ onDone }: { onDone: () => void }) {
 
 function MethodRow({ method }: { method: SavedPaymentMethod }) {
   const { remove, setDefault } = usePaymentMethods();
+
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4">
-      <LogoBadge logo={method.logo} className="size-10" />
+      <LogoBadge logo={logoForMethod(method)} className="size-10" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate font-semibold">{method.label}</p>
           {method.isDefault && <Badge tone="neutral">Default</Badge>}
         </div>
-        <p className="truncate text-xs text-muted">{method.subtitle}</p>
+        <p className="truncate text-xs text-muted">{subtitleForMethod(method)}</p>
       </div>
       {!method.isDefault && (
-        <button type="button" onClick={() => setDefault(method.id)} className="press shrink-0 text-xs font-medium text-accent hover:opacity-80">
+        <button
+          type="button"
+          onClick={() =>
+            setDefault(method.id, {
+              onSuccess: () => toast.success("Default payment method updated"),
+              onError: () => toast.error("We couldn't update your default method"),
+            })
+          }
+          className="press shrink-0 text-xs font-medium text-accent hover:opacity-80"
+        >
           Make default
         </button>
       )}
       <button
         type="button"
-        onClick={() => remove(method.id)}
+        onClick={() =>
+          remove(method.id, {
+            onSuccess: () => toast.success("Payment method removed"),
+            onError: () => toast.error("We couldn't remove that method"),
+          })
+        }
         aria-label={`Remove ${method.label}`}
         className="press grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-muted hover:text-danger"
       >
@@ -133,13 +176,34 @@ function MethodRow({ method }: { method: SavedPaymentMethod }) {
 }
 
 export function PaymentMethodsTab() {
-  const { methods } = usePaymentMethods();
+  const { methods, isPending, isError, error, refetch } = usePaymentMethods();
   const [addingParam, setAddingParam] = useQueryParam("payment");
   const adding = addingParam === "new";
   const setAdding = (next: boolean) => setAddingParam(next ? "new" : null);
 
+  if (isPending) {
+    return (
+      <div className="space-y-4" aria-busy="true">
+        {[0, 1].map((i) => (
+          <div key={i} className="h-[4.5rem] animate-pulse rounded-2xl bg-surface-muted" />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError) return <QueryError error={error} onRetry={() => refetch()} title="We couldn’t load your payment methods" />;
+
   return (
     <div className="space-y-4">
+      {methods.length === 0 && !adding && (
+        <EmptyState
+          icon={<CreditCard className="size-6 text-muted" aria-hidden />}
+          iconBadge
+          title="No payment methods yet"
+          description="Save a mobile money wallet or a card so checkout is quicker next time."
+        />
+      )}
+
       {methods.map((method) => (
         <MethodRow key={method.id} method={method} />
       ))}

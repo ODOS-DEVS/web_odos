@@ -5,7 +5,6 @@ import { ChevronDown, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/libs/cn";
-import { formatMoney } from "@/libs/format";
 import { LogoBadge, type Logo } from "./logo-badge";
 
 export type PaymentMethod = {
@@ -18,56 +17,15 @@ export type PaymentMethod = {
   logo: Logo;
 };
 
-export const PAYMENT_METHODS: PaymentMethod[] = [
-  {
-    id: "wallet",
-    label: "ODOS Wallet",
-    subtitle: `${formatMoney(600)} available`,
-    cta: "Pay with wallet",
-    kind: "wallet",
-    logo: { kind: "monogram", text: "O", bg: "#fde3d2", fg: "#cf4310" },
-  },
-  {
-    id: "mtn",
-    label: "MTN MoMo",
-    subtitle: "MTN Mobile Money · 024 897 4005",
-    cta: "Pay with MTN MoMo",
-    kind: "momo",
-    isDefault: true,
-    logo: { kind: "image", src: "/payment-logos/mtn-official.png", alt: "MTN" },
-  },
-  {
-    id: "telecel",
-    label: "Telecel Cash",
-    subtitle: "Telecel Cash · 020 123 4567",
-    cta: "Pay with Telecel Cash",
-    kind: "momo",
-    logo: { kind: "image", src: "/payment-logos/telecel-icon.png", alt: "Telecel" },
-  },
-  {
-    id: "at",
-    label: "AT Money",
-    subtitle: "AT Mobile Money · 027 456 7890",
-    cta: "Pay with AT Money",
-    kind: "momo",
-    // AirtelTigo rebranded to "AT" in 2023 — this is their current mark, from at.com.gh.
-    logo: { kind: "image", src: "/payment-logos/at-official.png", alt: "AT" },
-  },
-  {
-    id: "card",
-    label: "**** 8451",
-    subtitle: "Mastercard Debit/Credit · 8451 01/33",
-    cta: "Pay with card",
-    kind: "card",
-    logo: { kind: "monogram", text: "••", bg: "#1f2937", fg: "#ffffff" },
-  },
-];
 
 export function PaymentMethodPicker({
   value,
+  options,
   onChange,
 }: {
   value: PaymentMethod;
+  /** The shopper's real options — see `usePaymentOptions`. */
+  options: PaymentMethod[];
   onChange: (method: PaymentMethod) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -108,7 +66,7 @@ export function PaymentMethodPicker({
         <div className="mt-5 space-y-4 border-t border-dashed border-line pt-5">
           <p className="text-sm font-medium">Choose a payment method</p>
           <div className="space-y-3">
-            {PAYMENT_METHODS.map((method) => (
+            {options.map((method) => (
               <PaymentMethodRow
                 key={method.id}
                 method={method}

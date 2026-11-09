@@ -39,6 +39,7 @@ export const queryKeys = {
   promotions: ["vouchers", "promotions"] as const,
   myVouchers: ["vouchers", "me"] as const,
   addresses: ["account", "addresses"] as const,
+  paymentMethods: ["account", "payment-methods"] as const,
   myVendorApplication: ["vendor", "application", "me"] as const,
   vendorStore: ["vendor", "store"] as const,
   vendorProducts: ["vendor", "products"] as const,
@@ -158,6 +159,12 @@ export const voucherQueries = {
 };
 
 export const accountQueries = {
+  paymentMethods: () =>
+    queryOptions({
+      queryKey: queryKeys.paymentMethods,
+      queryFn: () => accountService.paymentMethods(),
+      staleTime: 60_000,
+    }),
   addresses: () =>
     queryOptions({
       queryKey: queryKeys.addresses,

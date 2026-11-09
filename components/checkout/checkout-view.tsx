@@ -17,9 +17,10 @@ import { toOrderItems } from "@/libs/checkout";
 import { formatMoney } from "@/libs/format";
 import { useDeliveryQuote } from "@/hooks/use-delivery-quote";
 import { useCheckout } from "@/hooks/use-orders";
+import { usePaymentOptions } from "@/hooks/use-payment-options";
 import { ApiError } from "@/services/http";
 import { ChoiceCard } from "./choice-card";
-import { PAYMENT_METHODS, PaymentMethodPicker } from "./payment-method-picker";
+import { PaymentMethodPicker } from "./payment-method-picker";
 
 function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
   return (
@@ -45,7 +46,12 @@ function CheckoutForm() {
   const [region, setRegion] = useState<string>(user?.region ?? "Greater Accra");
   const [notes, setNotes] = useState("");
   const [method, setMethod] = useState<DeliverySpeed>("economy");
-  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS.find((m) => m.isDefault) ?? PAYMENT_METHODS[0]);
+  const paymentOptions = usePaymentOptions();
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
+  const paymentMethod =
+    paymentOptions.find((m) => m.id === paymentMethodId) ??
+    paymentOptions.find((m) => m.isDefault) ??
+    paymentOptions[0];
 
   // Region (not city) drives pricing, so typing a city doesn't fire a new quote per keystroke.
   const quote = useDeliveryQuote({
@@ -182,7 +188,11 @@ function CheckoutForm() {
         </Step>
 
         <Step number={3} title="Payment">
-          <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
+          <PaymentMethodPicker
+            value={paymentMethod}
+            options={paymentOptions}
+            onChange={(method) => setPaymentMethodId(method.id)}
+          />
         </Step>
       </div>
 

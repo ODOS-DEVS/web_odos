@@ -1,79 +1,41 @@
 "use client";
 
-import { useMemo } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { Logo } from "@/components/checkout/logo-badge";
-import { useMounted } from "./use-mounted";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { accountService, type PaymentMethodInput } from "@/services/account.service";
+import { accountQueries, queryKeys } from "@/services/queries";
+import type { SavedPaymentMethod } from "@/types/account";
+import { useSession } from "./use-auth";
 
-export type SavedPaymentMethod = {
-  id: string;
-  kind: "momo" | "card";
-  label: string;
-  subtitle: string;
-  logo: Logo;
-  isDefault?: boolean;
-};
+export type { SavedPaymentMethod };
 
-const SEED: SavedPaymentMethod[] = [
-  {
-    id: "mtn",
-    kind: "momo",
-    label: "MTN MoMo",
-    subtitle: "MTN Mobile Money · 024 897 4005",
-    isDefault: true,
-    logo: { kind: "image", src: "/payment-logos/mtn-official.png", alt: "MTN" },
-  },
-  {
-    id: "telecel",
-    kind: "momo",
-    label: "Telecel Cash",
-    subtitle: "Telecel Cash · 020 123 4567",
-    logo: { kind: "image", src: "/payment-logos/telecel-icon.png", alt: "Telecel" },
-  },
-  {
-    id: "card",
-    kind: "card",
-    label: "**** 8451",
-    subtitle: "Mastercard Debit/Credit · 8451 · 01/33",
-    logo: { kind: "image", src: "/payment-logos/mastercard-official.svg", alt: "Mastercard" },
-  },
-];
+type Options = { onSuccess?: () => void; onError?: (error: unknown) => void };
 
-type PaymentMethodsState = {
-  methods: SavedPaymentMethod[];
-  add: (method: Omit<SavedPaymentMethod, "id">) => void;
-  remove: (id: string) => void;
-  setDefault: (id: string) => void;
-};
-
-const usePaymentMethodsStore = create<PaymentMethodsState>()(
-  persist(
-    (set) => ({
-      methods: SEED,
-      add: (method) =>
-        set((state) => ({
-          methods: [...state.methods, { ...method, id: crypto.randomUUID() }],
-        })),
-      remove: (id) => set((state) => ({ methods: state.methods.filter((m) => m.id !== id) })),
-      setDefault: (id) =>
-        set((state) => ({
-          methods: state.methods.map((m) => ({ ...m, isDefault: m.id === id })),
-        })),
-    }),
-    { name: "odos-payment-methods-v3" },
-  ),
-);
-
-/** The shopper's saved momo numbers and cards. `ready` is false until the client has mounted. */
+/**
+ * The shopper's saved momo wallets and cards, on the account rather than in this browser — the same
+ * list their phone shows. `ready` is false until it has arrived.
+ */
 export function usePaymentMethods() {
-  const ready = useMounted();
-  const stored = usePaymentMethodsStore((s) => s.methods);
-  const add = usePaymentMethodsStore((s) => s.add);
-  const remove = usePaymentMethodsStore((s) => s.remove);
-  const setDefault = usePaymentMethodsStore((s) => s.setDefault);
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const query = useQuery({ ...accountQueries.paymentMethods(), enabled: Boolean(session) });
 
-  const methods = useMemo(() => (ready ? stored : []), [ready, stored]);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.paymentMethods });
 
-  return { ready, methods, add, remove, setDefault };
+  const create = useMutation({ mutationFn: (input: PaymentMethodInput) => accountService.createPaymentMethod(input), onSuccess: invalidate });
+  const destroy = useMutation({ mutationFn: (id: string) => accountService.deletePaymentMethod(id), onSuccess: invalidate });
+  // Promoting one demotes the rest server-side, so the whole list is refetched.
+  const makeDefault = useMutation({ mutationFn: (id: string) => accountService.setDefaultPaymentMethod(id), onSuccess: invalidate });
+
+  return {
+    ready: Boolean(session) && query.isSuccess,
+    methods: query.data ?? [],
+    isPending: query.isPending,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+    isSaving: create.isPending,
+    add: (input: PaymentMethodInput, options?: Options) => create.mutate(input, options),
+    remove: (id: string, options?: Options) => destroy.mutate(id, options),
+    setDefault: (id: string, options?: Options) => makeDefault.mutate(id, options),
+  };
 }

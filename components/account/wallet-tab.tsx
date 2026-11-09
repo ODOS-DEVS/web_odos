@@ -6,14 +6,14 @@ import { ArrowDownLeft, ArrowUpRight, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
-import { usePaymentMethods } from "@/hooks/use-payment-methods";
+import { usePaymentOptions } from "@/hooks/use-payment-options";
 import { useTopUpWallet, useWallet } from "@/hooks/use-wallet";
 import { formatDateTime, formatMoney } from "@/libs/format";
 
 const QUICK_AMOUNTS = [50, 100, 200, 500];
 
 function TopUpForm() {
-  const { methods } = usePaymentMethods();
+  const methods = usePaymentOptions().filter((m) => m.kind !== "wallet");
   const topUpMutation = useTopUpWallet();
 
   const [amount, setAmount] = useState<number | "">(100);
