@@ -6,6 +6,8 @@ import { ButtonLink, Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/hooks/use-cart";
+import { forgetPendingPayment } from "@/libs/pending-payment";
+import { cn } from "@/libs/cn";
 import { formatMoney } from "@/libs/format";
 import { paymentQueries } from "@/services/queries";
 
@@ -23,6 +25,14 @@ export function CheckoutResult({ reference }: { reference?: string }) {
     if (!paid) return;
     clear();
   }, [paid, clear]);
+
+  // Settled one way or the other, so there is nothing left to come back to.
+  // Clearing this is what stops the resumer sending them here again.
+  const settled = verification.data ? !verification.data.pending : false;
+  useEffect(() => {
+    if (!settled) return;
+    forgetPendingPayment();
+  }, [settled]);
 
   let body;
   if (!reference) {
@@ -69,6 +79,17 @@ export function CheckoutResult({ reference }: { reference?: string }) {
         </p>
       </>
     );
+  } else if (verification.data.pending) {
+    body = (
+      <>
+        <Loader2 className="size-10 animate-spin text-muted" aria-hidden />
+        <h1 className="mt-6 text-3xl font-semibold sm:text-4xl">Waiting for your payment</h1>
+        <p className="mt-3 max-w-md text-muted">
+          Approve the prompt on your phone to finish paying. This page updates itself the moment it
+          comes through — you don’t need to do anything else here.
+        </p>
+      </>
+    );
   } else {
     body = (
       <>
@@ -80,10 +101,11 @@ export function CheckoutResult({ reference }: { reference?: string }) {
   }
 
   const ok = paid === true;
+  const waiting = verification.isPending || verification.data?.pending === true;
   return (
     <Container className="grid place-items-center py-24 text-center">
       {body}
-      <div className="mt-8 flex flex-wrap justify-center gap-3">
+      <div className={cn("mt-8 flex flex-wrap justify-center gap-3", waiting && "hidden")}>
         <ButtonLink href={ok && verification.data ? `/orders/${verification.data.order.id}` : "/orders"} size="lg">
           {ok ? "Track your order" : "View your orders"}
         </ButtonLink>

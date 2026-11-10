@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowDownLeft, ArrowUpRight, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,13 @@ import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
 import { usePaymentOptions } from "@/hooks/use-payment-options";
 import { useTopUpWallet, useWallet } from "@/hooks/use-wallet";
 import { formatDateTime, formatMoney } from "@/libs/format";
+import { rememberPendingPayment } from "@/libs/pending-payment";
+import { TopUpResult } from "./topup-result";
 
 const QUICK_AMOUNTS = [50, 100, 200, 500];
 
 function TopUpForm() {
+  const router = useRouter();
   const methods = usePaymentOptions().filter((m) => m.kind !== "wallet");
   const topUpMutation = useTopUpWallet();
 
@@ -23,18 +27,37 @@ function TopUpForm() {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!amount || amount <= 0 || !method) return;
+    // Opened inside the click, before the async call, or the browser treats the
+    // popup as unrequested and blocks it. Pointed at the provider once we have
+    // the URL. See the same pattern in checkout-view.
+    const payWindow = window.open("", "_blank");
+
     topUpMutation.mutate(
       {
         amount,
         payment_type: method.kind,
         payment_label: method.label,
+        // Honoured by Paystack; KutanaPay has no return-URL field, so the tab
+        // we keep here is what actually brings the shopper back.
         callback_url: `${window.location.origin}/account?tab=wallet`,
         cancel_url: `${window.location.origin}/account?tab=wallet`,
       },
       {
-        onSuccess: (session) => window.location.assign(session.authorizationUrl),
-        onError: (error) =>
-          toast.error(error instanceof Error ? error.message : "We couldn't start your top-up. Please try again."),
+        onSuccess: (session) => {
+          rememberPendingPayment(session.reference, "topup");
+          if (payWindow && !payWindow.closed) {
+            payWindow.location.replace(session.authorizationUrl);
+            // Stay on the wallet and confirm it here: verifying is what credits
+            // the balance, so this tab has to be the one that comes back to it.
+            router.replace(`/account?tab=wallet&topup=${encodeURIComponent(session.reference)}`);
+            return;
+          }
+          window.location.assign(session.authorizationUrl);
+        },
+        onError: (error) => {
+          payWindow?.close();
+          toast.error(error instanceof Error ? error.message : "We couldn't start your top-up. Please try again.");
+        },
       },
     );
   };
@@ -87,9 +110,14 @@ function TopUpForm() {
 
 export function WalletTab() {
   const { balance, transactions, isPending } = useWallet();
+  // Set when the shopper returns from a hosted top-up, by the redirect in
+  // TopUpForm or by PendingPaymentResumer picking up an unfinished one.
+  const reference = useSearchParams().get("topup");
 
   return (
     <div className="space-y-5">
+      {reference && <TopUpResult reference={reference} />}
+
       <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
         <div className="flex items-center gap-3 text-sm text-muted">
           <Wallet className="size-4" aria-hidden />

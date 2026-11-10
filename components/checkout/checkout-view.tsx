@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
 import { useSession } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
+import { rememberPendingPayment } from "@/libs/pending-payment";
 import { RegionCitySelect } from "@/components/ui/region-city-select";
 import { toOrderItems } from "@/libs/checkout";
 import { cn } from "@/libs/cn";
@@ -158,18 +159,44 @@ function CheckoutForm() {
       return;
     }
 
+    // Opened now, while we are still inside the click, because a popup asked for
+    // later -- once the checkout call comes back -- is blocked as unrequested.
+    // It starts blank and is pointed at the provider when we have the URL.
+    const payWindow = window.open("", "_blank");
+
     checkout.mutate(
       {
         ...order,
+        // Honoured by Paystack. KutanaPay has no return-URL field at all, which
+        // is why the shopper is kept on our own result page below rather than
+        // relying on the provider to send them back.
         callback_url: `${window.location.origin}/checkout/success`,
         cancel_url: `${window.location.origin}/checkout`,
       },
       {
         onSuccess: (session) => {
-          // The cart is cleared on the result page once the payment is confirmed, not before.
+          // Noted before either navigation, so an outstanding payment can be
+          // picked back up even if this tab goes away.
+          rememberPendingPayment(session.reference, "order");
+          const result = `/checkout/success?reference=${encodeURIComponent(session.reference)}`;
+
+          if (payWindow && !payWindow.closed) {
+            // They pay next door; this tab waits on the result page and settles
+            // itself the moment the charge lands. Nobody has to find their way
+            // back to the site, which with KutanaPay they otherwise could not.
+            payWindow.location.replace(session.authorization_url);
+            router.push(result);
+            return;
+          }
+
+          // Popup blocked. Hand the whole tab over, and let the stash bring
+          // them to the result page whenever they next open the site.
           window.location.assign(session.authorization_url);
         },
-        onError: failed,
+        onError: (error) => {
+          payWindow?.close();
+          failed(error);
+        },
       },
     );
   };

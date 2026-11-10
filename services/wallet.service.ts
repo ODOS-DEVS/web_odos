@@ -102,10 +102,43 @@ export const walletService = {
     return { order: toOrder(result.order), balanceAfter: result.wallet_balance_after, message: result.message };
   },
 
-  /** Confirms a top-up when the shopper comes back from the provider. */
-  verifyTopUp: (reference: string) =>
-    apiFetch<{ reference: string; status: string; message: string; amount: number }>(
-      WALLET_ENDPOINTS.topupVerify(reference),
-      { method: "POST" },
-    ),
+  /**
+   * Confirms a top-up when the shopper comes back from the provider.
+   *
+   * This call is what credits the balance -- the API reconciles the top-up
+   * against the gateway here, and no webhook does it for us. A paid top-up
+   * that is never verified is money taken and no balance to show for it, so
+   * every path that leaves for a hosted checkout has to come back through
+   * this one.
+   */
+  async verifyTopUp(reference: string): Promise<TopUpVerification> {
+    const result = await apiFetch<{
+      reference: string;
+      status: string;
+      message: string;
+      amount: number;
+    }>(WALLET_ENDPOINTS.topupVerify(reference), { method: "POST" });
+    const status = (result.status || "").toLowerCase();
+    return {
+      reference: result.reference,
+      paid: status === "paid",
+      // Same reasoning as an order payment: mobile money is approved on the
+      // handset after the shopper is already back, so anything not yet paid
+      // and not explicitly dead is still in flight.
+      pending: !["paid", "failed", "cancelled"].includes(status),
+      status,
+      message: result.message,
+      amount: result.amount,
+    };
+  },
+};
+
+export type TopUpVerification = {
+  reference: string;
+  paid: boolean;
+  /** Still in flight: worth asking again rather than reporting a failure. */
+  pending: boolean;
+  status: string;
+  message: string;
+  amount: number;
 };

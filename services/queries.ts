@@ -63,6 +63,7 @@ export const queryKeys = {
   verifiedPhones: ["auth", "verified-phones"] as const,
   orders: ["orders"] as const,
   paymentVerification: (reference: string) => ["payments", "verify", reference] as const,
+  walletTopUpVerification: (reference: string) => ["wallet", "topup-verify", reference] as const,
   order: (id: string) => ["orders", id] as const,
 };
 
@@ -325,6 +326,29 @@ export const paymentQueries = {
       staleTime: 0,
       gcTime: 0,
       retry: 2,
+      // Keep asking while the payment is in flight. A mobile money charge is
+      // approved on the shopper's handset seconds to minutes after they leave
+      // the provider's page, so the first answer is usually "pending" -- and a
+      // single look would report a successful payment as a failed one.
+      refetchInterval: (query) => (query.state.data?.pending ? 4_000 : false),
+      refetchIntervalInBackground: true,
+    }),
+};
+
+export const walletTopUpQueries = {
+  /**
+   * Confirming a top-up is also what credits it, so this keeps asking until the
+   * gateway has made its mind up -- see walletService.verifyTopUp.
+   */
+  verify: (reference: string) =>
+    queryOptions({
+      queryKey: queryKeys.walletTopUpVerification(reference),
+      queryFn: () => walletService.verifyTopUp(reference),
+      staleTime: 0,
+      gcTime: 0,
+      retry: 2,
+      refetchInterval: (query) => (query.state.data?.pending ? 4_000 : false),
+      refetchIntervalInBackground: true,
     }),
 };
 

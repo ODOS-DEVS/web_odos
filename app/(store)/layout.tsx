@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { ChatDock } from "@/components/chat/chat-dock";
+import { PendingPaymentResumer } from "@/components/checkout/pending-payment-resumer";
 
 // Each page warms its own slice of the query cache (see the `HydrationBoundary` in the pages below),
 // so the layout stays a plain shell.
@@ -21,6 +22,8 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
       <SiteFooter />
       {/* Pinned to the viewport, so it rides along on every storefront page. */}
       <ChatDock />
+      {/* Renders nothing; watches for a payment the shopper left unfinished. */}
+      <PendingPaymentResumer />
     </>
   );
 }
