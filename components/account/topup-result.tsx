@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 import { forgetPendingPayment } from "@/libs/pending-payment";
 import { formatMoney } from "@/libs/format";
 import { queryKeys, walletTopUpQueries } from "@/services/queries";
@@ -15,7 +15,7 @@ import { queryKeys, walletTopUpQueries } from "@/services/queries";
  * credits the top-up -- see walletService.verifyTopUp -- so this has to run,
  * not merely report.
  */
-export function TopUpResult({ reference }: { reference: string }) {
+export function TopUpResult({ reference, onDismiss }: { reference: string; onDismiss: () => void }) {
   const queryClient = useQueryClient();
   const verification = useQuery({ ...walletTopUpQueries.verify(reference), enabled: Boolean(reference) });
 
@@ -36,10 +36,25 @@ export function TopUpResult({ reference }: { reference: string }) {
     return (
       <Banner tone="muted">
         <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-        <span>
+        <span className="flex-1">
           Waiting for your top-up to come through. Approve the prompt on your phone — your balance
           updates here by itself.
         </span>
+        {/* Nothing is held open by this, so walking away from it is free: the
+            top-up still credits if the charge lands, whether or not this is on
+            screen. Without a way out it would sit here for as long as the
+            gateway says "pending", which is the rest of the session. */}
+        <button
+          type="button"
+          onClick={() => {
+            forgetPendingPayment();
+            onDismiss();
+          }}
+          aria-label="Stop waiting for this top-up"
+          className="press shrink-0 text-muted hover:text-foreground"
+        >
+          <X className="size-4" aria-hidden />
+        </button>
       </Banner>
     );
   }

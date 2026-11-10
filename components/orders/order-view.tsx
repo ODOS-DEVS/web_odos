@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CreditCard, Info, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -15,11 +16,14 @@ import { useCancelOrder, useOrder } from "@/hooks/use-orders";
 import { ApiError } from "@/services/http";
 import { DeliveryActions } from "./delivery-actions";
 import { PackageCard } from "./package-card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { cancelAbility } from "@/libs/order-cancel";
 import { StatusBadge } from "./status-badge";
 
 function OrderDetail({ id }: { id: string }) {
   const order = useOrder(id);
   const cancel = useCancelOrder();
+  const [confirming, setConfirming] = useState(false);
   const { map: stores } = useStoreMap();
 
   if (order.isPending) return <div className="mt-8 h-96 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;
@@ -33,7 +37,10 @@ function OrderDetail({ id }: { id: string }) {
   const o = order.data;
   const mixed = new Set(o.packages.map((p) => p.status)).size > 1;
   const laggard = o.packages.filter((p) => p.status === o.status).length;
-  const cancellable = o.status === "pending" || o.status === "confirmed";
+  // Decided from the order's own lifecycle, not the package rollup -- see
+  // libs/order-cancel. The old test offered the button on `confirmed` orders,
+  // which the API always refuses, and hid it on orders waiting to be paid.
+  const ability = cancelAbility(o);
 
   return (
     <>
@@ -45,24 +52,46 @@ function OrderDetail({ id }: { id: string }) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {cancellable && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={cancel.isPending}
-              onClick={() =>
-                cancel.mutate(o.id, {
-                  onSuccess: () => toast.success("Order cancelled"),
-                  onError: (e) => toast.error(e instanceof ApiError ? e.message : "We couldn’t cancel this order."),
-                })
-              }
-            >
+          {ability.can && (
+            <Button variant="outline" size="sm" disabled={cancel.isPending} onClick={() => setConfirming(true)}>
               {cancel.isPending ? "Cancelling…" : "Cancel order"}
             </Button>
           )}
           <StatusBadge status={o.status} className="px-3.5 py-2 text-sm" />
         </div>
       </header>
+
+      <ConfirmDialog
+        open={confirming}
+        title={`Cancel order ${o.number}?`}
+        description="This can't be undone, and the items go back on sale. You haven't been charged, so there's nothing to refund."
+        confirmLabel={cancel.isPending ? "Cancelling…" : "Cancel order"}
+        cancelLabel="Keep my order"
+        pending={cancel.isPending}
+        onCancel={() => setConfirming(false)}
+        onConfirm={() =>
+          cancel.mutate(o.id, {
+            onSuccess: () => {
+              setConfirming(false);
+              toast.success("Order cancelled");
+            },
+            onError: (e) => {
+              setConfirming(false);
+              toast.error(e instanceof ApiError ? e.message : "We couldn’t cancel this order.");
+              // Usually it was paid or picked up between this page loading and
+              // the click, so the order on screen is already out of date.
+              order.refetch();
+            },
+          })
+        }
+      />
+
+      {!ability.can && ability.reason && (
+        <p className="mb-8 flex gap-3 rounded-2xl bg-surface-muted p-4 text-sm" role="note">
+          <Info className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
+          <span>{ability.reason}</span>
+        </p>
+      )}
 
       {mixed && (
         <p className="mb-8 flex gap-3 rounded-2xl bg-surface-muted p-4 text-sm" role="note">

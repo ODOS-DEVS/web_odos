@@ -112,11 +112,14 @@ export function WalletTab() {
   const { balance, transactions, isPending } = useWallet();
   // Set when the shopper returns from a hosted top-up, by the redirect in
   // TopUpForm or by PendingPaymentResumer picking up an unfinished one.
-  const reference = useSearchParams().get("topup");
+  const searchParams = useSearchParams();
+  // Cleared by the dismiss below so the banner does not come back on every render.
+  const [dismissed, setDismissed] = useState(false);
+  const reference = dismissed ? null : searchParams.get("topup");
 
   return (
     <div className="space-y-5">
-      {reference && <TopUpResult reference={reference} />}
+      {reference && <TopUpResult reference={reference} onDismiss={() => setDismissed(true)} />}
 
       <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
         <div className="flex items-center gap-3 text-sm text-muted">

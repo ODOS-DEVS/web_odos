@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { clearSession, getSession, setSession, subscribeSession, updateSessionUser } from "@/libs/auth-session";
 import { authService } from "@/services/auth.service";
 import { queryKeys } from "@/services/queries";
+import { forgetPendingPayment } from "@/libs/pending-payment";
 import type { UserCreate, UserUpdate } from "@/types/api";
 
 /**
@@ -74,6 +75,9 @@ export function useLogout() {
     },
     onSettled: () => {
       clearSession();
+      // Belongs to the person signing out, and the next user of this browser
+      // cannot settle it -- verifying is scoped to whoever owns the payment.
+      forgetPendingPayment();
       // Drop every cached private resource (orders, wallet, …) belonging to the previous user.
       queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== "catalog" });
     },

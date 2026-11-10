@@ -20,7 +20,7 @@ export const FAQS = [
   },
   {
     q: "Can I cancel an order?",
-    a: "You can cancel from the order details page while it’s still being prepared. Once a vendor has handed a package to a rider, contact support instead.",
+    a: "You can cancel from the order details page any time before you pay. Once the payment lands the vendors start setting your order up, so message them to stop it and they’ll arrange a refund — and anything already delivered goes through a return instead.",
   },
   {
     q: "What delivery options does ODOS offer?",

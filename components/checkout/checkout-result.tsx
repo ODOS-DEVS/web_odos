@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { ButtonLink, Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Container } from "@/components/ui/container";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/hooks/use-cart";
+import { useCancelOrder } from "@/hooks/use-orders";
 import { forgetPendingPayment } from "@/libs/pending-payment";
-import { cn } from "@/libs/cn";
 import { formatMoney } from "@/libs/format";
 import { paymentQueries } from "@/services/queries";
 
@@ -17,6 +20,9 @@ import { paymentQueries } from "@/services/queries";
  */
 export function CheckoutResult({ reference }: { reference?: string }) {
   const { clear } = useCart();
+  const router = useRouter();
+  const cancelOrder = useCancelOrder();
+  const [abandoning, setAbandoning] = useState(false);
 
   const verification = useQuery({ ...paymentQueries.verify(reference ?? ""), enabled: Boolean(reference) });
 
@@ -101,18 +107,60 @@ export function CheckoutResult({ reference }: { reference?: string }) {
   }
 
   const ok = paid === true;
-  const waiting = verification.isPending || verification.data?.pending === true;
+  const waiting = verification.data?.pending === true;
+  const orderId = verification.data?.order.id;
+
   return (
     <Container className="grid place-items-center py-24 text-center">
       {body}
-      <div className={cn("mt-8 flex flex-wrap justify-center gap-3", waiting && "hidden")}>
-        <ButtonLink href={ok && verification.data ? `/orders/${verification.data.order.id}` : "/orders"} size="lg">
+
+      {/* Always a way out of here. Waiting on a charge is not a reason to strand
+          someone on a page -- the payment settles server-side whether or not
+          this tab is open, and the result is in their orders either way. */}
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <ButtonLink href={ok && orderId ? `/orders/${orderId}` : "/orders"} size="lg">
           {ok ? "Track your order" : "View your orders"}
         </ButtonLink>
         <ButtonLink href={ok ? "/products" : "/cart"} size="lg" variant="outline">
           {ok ? "Keep shopping" : "Back to cart"}
         </ButtonLink>
       </div>
+
+      {waiting && orderId && (
+        <>
+          <button
+            type="button"
+            onClick={() => setAbandoning(true)}
+            className="press mt-6 text-sm text-muted underline underline-offset-4 hover:text-foreground"
+          >
+            I’m not paying for this
+          </button>
+          <ConfirmDialog
+            open={abandoning}
+            title="Give up on this payment?"
+            description="We’ll cancel the order so nothing is held for it. If your payment has already gone through, it will still be honoured and the order will reappear in your orders."
+            confirmLabel={cancelOrder.isPending ? "Cancelling…" : "Cancel the order"}
+            cancelLabel="Keep waiting"
+            pending={cancelOrder.isPending}
+            onCancel={() => setAbandoning(false)}
+            onConfirm={() =>
+              cancelOrder.mutate(orderId, {
+                onSuccess: () => {
+                  // Nothing left to come back to, so stop offering it.
+                  forgetPendingPayment();
+                  setAbandoning(false);
+                  toast.success("Order cancelled");
+                  router.push("/orders");
+                },
+                onError: (error) => {
+                  setAbandoning(false);
+                  toast.error(error instanceof Error ? error.message : "We couldn’t cancel that order.");
+                },
+              })
+            }
+          />
+        </>
+      )}
     </Container>
   );
 }

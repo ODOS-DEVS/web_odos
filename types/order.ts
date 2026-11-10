@@ -59,6 +59,12 @@ export type Order = {
   number: string;
   placedAt: string;
   status: FulfilmentStatus;
+  /**
+   * The API's own order-level status -- `pending_payment`, `processing` or
+   * `cancelled` -- kept raw and separate from `status`, which is a rollup of
+   * the packages and says nothing about whether the order may be cancelled.
+   */
+  lifecycle: string;
   paymentStatus: string;
   paymentLabel: string;
   deliveryMethod: string;

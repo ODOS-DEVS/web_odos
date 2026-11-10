@@ -264,6 +264,7 @@ export function toOrder(o: OrderRead): Order {
     number: o.order_number,
     placedAt: o.placed_at,
     status: packages.length ? rollupStatus(packages) : (normaliseStatus(o.delivery_status, o.vendor_status, o.status) ?? "pending"),
+    lifecycle: o.status,
     paymentStatus: o.payment_status,
     paymentLabel: o.payment_label,
     deliveryMethod: o.delivery_method,
