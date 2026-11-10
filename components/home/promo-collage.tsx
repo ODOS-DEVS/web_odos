@@ -1,12 +1,45 @@
+"use client";
+
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { buttonStyles } from "@/components/ui/button";
+import { useDealProducts } from "@/hooks/use-catalog";
 import { cn } from "@/libs/cn";
-import { TILES, type Tile } from "@/libs/home-editorial";
+import { discountPercent, formatMoney } from "@/libs/format";
+import { TILE_BACKGROUNDS, type Tile } from "@/libs/home-editorial";
+import type { Product } from "@/types/catalog";
 
+/** Up to three discounted products: one hero plus two rows. */
+const TILE_COUNT = 3;
+
+function toTile(product: Product, index: number): Tile {
+  const off = discountPercent(product.price, product.compareAtPrice);
+  return {
+    id: product.id,
+    href: `/products/${product.id}`,
+    eyebrow: off ? `${off}% OFF` : "TODAY'S BEST DEAL",
+    title: product.name,
+    price: formatMoney(product.price),
+    originalPrice: product.compareAtPrice ? formatMoney(product.compareAtPrice) : "",
+    imageSrc: product.images[0] ?? "",
+    bgClass: TILE_BACKGROUNDS[index % TILE_BACKGROUNDS.length],
+    layout: index === 0 ? "hero" : "row",
+  };
+}
+
+/**
+ * The collage used to be three hand-written tiles pointing at mock product ids
+ * (`/products/prod-chinos`), every one of which 404s against the real catalogue. It is built from
+ * actual discounted products now, and hides itself when there are none.
+ */
 export function PromoCollage() {
-  const [hero, ...rest] = TILES;
+  const { data } = useDealProducts();
+  const tiles = (data ?? []).slice(0, TILE_COUNT).map(toTile);
+
+  if (tiles.length === 0) return null;
+
+  const [hero, ...rest] = tiles;
   return (
     <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
       <PromoTileCard tile={hero} className="lg:min-h-115" />

@@ -25,6 +25,8 @@ export const queryKeys = {
   categories: ["catalog", "categories"] as const,
   markets: ["catalog", "markets"] as const,
   promoBanners: ["catalog", "promo-banners"] as const,
+  campaigns: ["catalog", "campaigns"] as const,
+  campaign: (slug: string) => ["catalog", "campaign", slug] as const,
   stores: (params: StoreListParams = {}) =>
     ["catalog", "stores", params] as const,
   storeSections: (storeId: string) =>
@@ -32,6 +34,7 @@ export const queryKeys = {
   products: (params: ProductListParams = {}) =>
     ["catalog", "products", params] as const,
   product: (id: string) => ["catalog", "product", id] as const,
+  productSearch: (query: string) => ["catalog", "search", query] as const,
   deals: ["catalog", "deals"] as const,
   reviews: (productId: string) => ["reviews", productId] as const,
   myReviews: ["reviews", "me"] as const,
@@ -74,6 +77,18 @@ export const catalogQueries = {
       queryFn: () => catalogService.categories(),
       staleTime: 10 * MINUTE,
     }),
+  campaigns: () =>
+    queryOptions({
+      queryKey: queryKeys.campaigns,
+      queryFn: () => catalogService.campaigns(),
+      staleTime: 10 * MINUTE,
+    }),
+  campaign: (slug: string) =>
+    queryOptions({
+      queryKey: queryKeys.campaign(slug),
+      queryFn: () => catalogService.campaign(slug),
+      staleTime: 5 * MINUTE,
+    }),
   promoBanners: () =>
     queryOptions({
       queryKey: queryKeys.promoBanners,
@@ -102,6 +117,12 @@ export const catalogQueries = {
     queryOptions({
       queryKey: queryKeys.products(params),
       queryFn: () => catalogService.products(params),
+      staleTime: MINUTE,
+    }),
+  search: (query: string) =>
+    queryOptions({
+      queryKey: queryKeys.productSearch(query),
+      queryFn: () => catalogService.search(query),
       staleTime: MINUTE,
     }),
   product: (id: string) =>

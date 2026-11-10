@@ -539,3 +539,16 @@ export type PromoBannerRead = {
   sort_order: number;
   campaign_tag?: string | null;
 };
+
+/** A merchandising campaign from `GET /catalog/campaigns`. */
+export type MerchandisingCampaignRead = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  banner_image_url?: string | null;
+  is_featured?: boolean;
+  display_priority?: number;
+  product_count?: number;
+};

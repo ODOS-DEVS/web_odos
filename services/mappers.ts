@@ -1,5 +1,5 @@
-import type { CategoryRead, MarketRead, ProductRead, ProductReviewRead, PromoBannerRead, StoreRead, StoreVoucherRead } from "@/types/api";
-import type { Category, Market, Product, ProductTag, PromoBanner, Review, Store, Voucher } from "@/types/catalog";
+import type { CategoryRead, MarketRead, MerchandisingCampaignRead, ProductRead, ProductReviewRead, PromoBannerRead, StoreRead, StoreVoucherRead } from "@/types/api";
+import type { Campaign, Category, Market, Product, ProductTag, PromoBanner, Review, Store, Voucher } from "@/types/catalog";
 import type { OrderItemRead, OrderPackageRead, OrderRead, ReturnRequestRead } from "@/types/api";
 import type { FulfilmentStatus, Order, OrderItem, OrderPackage } from "@/types/order";
 import type { ReturnRequest, ReturnRequestType } from "@/types/returns";
@@ -47,6 +47,20 @@ export function toPromoBanner(b: PromoBannerRead): PromoBanner {
     imageUrl: b.image_url ?? null,
     accent: b.accent ?? null,
     sortOrder: b.sort_order,
+  };
+}
+
+export function toCampaign(c: MerchandisingCampaignRead): Campaign {
+  return {
+    id: c.id,
+    slug: c.slug,
+    title: c.title,
+    subtitle: c.subtitle ?? null,
+    description: c.description ?? null,
+    bannerImageUrl: c.banner_image_url ?? null,
+    isFeatured: Boolean(c.is_featured),
+    displayPriority: c.display_priority ?? 0,
+    productCount: c.product_count ?? 0,
   };
 }
 

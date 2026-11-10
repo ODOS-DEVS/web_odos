@@ -316,9 +316,9 @@ function ProfileTabs() {
     if ("shopperOnly" in t && t.shopperOnly) return !isVendor;
     return true;
   });
-  // A direct link (or a stale bookmark) must not render the workspace for a non-vendor either.
-  const allowed = isVendor || !TABS.some((t) => t.id === tab && "vendorOnly" in t && t.vendorOnly);
-  const activeTab = allowed ? tab : "profile";
+  // A tab the current account cannot see must never render, whichever direction it is wrong in:
+  // the workspace for a non-vendor, or the become-a-vendor form for someone already approved.
+  const activeTab = visibleTabs.some((t) => t.id === tab) ? tab : "profile";
 
   return (
     <div className="space-y-6">

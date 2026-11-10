@@ -63,7 +63,7 @@ export const ACCOUNT_ENDPOINTS = {
  * - a store is fetched by its **id**, never its slug (`/catalog/stores/{slug}` is a 404), so slug routes
  *   resolve the id from the cached store list first;
  * - a product has no slug at all — product pages are addressed by id.
- * `products` accepts `limit` up to 100. `search` and `dealsHub` require a login.
+ * `products` accepts `limit` up to 100. `dealsHub` requires a login; `search` does not.
  */
 export const CATALOG_ENDPOINTS = {
   categories: "/catalog/categories",

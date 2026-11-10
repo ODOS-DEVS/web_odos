@@ -9,12 +9,14 @@ import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useLogout, useSession } from "@/hooks/use-auth";
+import { useVendorStatus } from "@/hooks/use-vendor";
 import { useDetailsDismiss } from "@/hooks/use-details-dismiss";
 
 /** Logged out: Log in / Sign up. Logged in: an avatar menu with orders and log out. */
 export function AccountMenu() {
   const session = useSession();
   const logout = useLogout();
+  const { isVendor } = useVendorStatus();
   const router = useRouter();
   const menu = useRef<HTMLDetailsElement>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -41,6 +43,10 @@ export function AccountMenu() {
   }
 
   const { full_name: name, email, avatar_url: avatarUrl, role } = session.user;
+  // "Vendor Account" pointed at the application form for everyone — including vendors who had
+  // already been approved, for whom that tab no longer exists.
+  const vendorHref = isVendor ? "/account?tab=dashboard" : "/account?tab=vendor";
+  const vendorLabel = isVendor ? "Seller Centre" : "Become a Vendor";
   const roleLabel = `${role.charAt(0).toUpperCase()}${role.slice(1)}`;
   const close = () => menu.current?.removeAttribute("open");
 
@@ -84,12 +90,12 @@ export function AccountMenu() {
               Personal Account
             </Link>
             <Link
-              href="/account?tab=vendor"
+              href={vendorHref}
               onClick={close}
               className="press flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm hover:bg-surface-muted sm:text-base"
             >
               <Store className="size-5 shrink-0 text-muted" aria-hidden />
-              Vendor Account
+              {vendorLabel}
             </Link>
             <Link
               href="/orders"

@@ -60,6 +60,25 @@ export type PromoBanner = {
   sortOrder: number;
 };
 
+/** A merchandising campaign — the real source for the home page's deal banner. */
+export type Campaign = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  bannerImageUrl: string | null;
+  isFeatured: boolean;
+  displayPriority: number;
+  productCount: number;
+};
+
+/** A campaign plus the products in it, from `GET /catalog/campaigns/{slug}`. */
+export type CampaignDetail = Campaign & {
+  products: Product[];
+  hasMore: boolean;
+};
+
 export type ProductTag = "new" | "popular" | "flash";
 
 export type FlashSale = {

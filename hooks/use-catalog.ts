@@ -10,6 +10,10 @@ export const useCategories = () => useQuery(catalogQueries.categories());
 
 export const useMarkets = () => useQuery(catalogQueries.markets());
 
+export const useCampaigns = () => useQuery(catalogQueries.campaigns());
+
+export const useCampaign = (slug: string) => useQuery(catalogQueries.campaign(slug));
+
 export const usePromoBanners = () => useQuery(catalogQueries.promoBanners());
 
 export const useStores = (params: StoreListParams = {}) => useQuery(catalogQueries.stores(params));
@@ -20,6 +24,10 @@ export const useStoreSections = (storeId: string | undefined) =>
 export const useProducts = (params: ProductListParams = {}) => useQuery(catalogQueries.products(params));
 
 export const useProduct = (id: string) => useQuery(catalogQueries.product(id));
+
+/** Server-side catalogue search. Idle until there is something to search for. */
+export const useProductSearch = (query: string | undefined) =>
+  useQuery({ ...catalogQueries.search(query ?? ""), enabled: Boolean(query?.trim()) });
 
 export const useDealProducts = () => useQuery(catalogQueries.deals());
 

@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
 import { filterProducts, type ProductSort } from "@/libs/catalog";
 import { buildHref } from "@/libs/url";
-import { useCategories, useProducts, useStores } from "@/hooks/use-catalog";
+import { useCategories, useProducts, useProductSearch, useStores } from "@/hooks/use-catalog";
 import type { ProductTag } from "@/types/catalog";
 
 export const SORTS: { value: ProductSort; label: string }[] = [
@@ -27,13 +27,18 @@ export function ProductsView({ filters }: { filters: ActiveFilters }) {
   const products = useProducts();
   const stores = useStores();
   const categories = useCategories();
+  // A query goes to the search endpoint rather than filtering the loaded page: the list is capped
+  // at 100 products, so substring-matching it would quietly miss anything past that.
+  const search = useProductSearch(filters.q);
+  const source = filters.q ? search : products;
 
   const sort = SORTS.some((s) => s.value === filters.sort) ? (filters.sort as ProductSort) : "featured";
   const tag = TAGS.includes(filters.tag as ProductTag) ? (filters.tag as ProductTag) : undefined;
 
   const storeList = stores.data ?? [];
-  const results = filterProducts(products.data ?? [], storeList, {
-    q: filters.q,
+  // `q` is already applied server-side; the rest still narrow the result set here.
+  const results = filterProducts(source.data ?? [], storeList, {
+    q: filters.q && source === products ? filters.q : undefined,
     category: filters.category,
     store: filters.store,
     tag,
@@ -55,7 +60,7 @@ export function ProductsView({ filters }: { filters: ActiveFilters }) {
       <header className="mb-8">
         <h1 className="text-3xl font-semibold sm:text-4xl">{title}</h1>
         <p className="mt-2 text-muted" aria-live="polite">
-          {products.isPending ? "Loading…" : `${results.length} ${results.length === 1 ? "product" : "products"}`}
+          {source.isPending ? "Loading…" : `${results.length} ${results.length === 1 ? "product" : "products"}`}
         </p>
       </header>
 
@@ -74,10 +79,14 @@ export function ProductsView({ filters }: { filters: ActiveFilters }) {
             ))}
           </div>
 
-          {products.isPending ? (
+          {source.isPending ? (
             <ProductGridSkeleton className="lg:grid-cols-3" scrollOnMobile={false} />
-          ) : products.isError ? (
-            <QueryError error={products.error} onRetry={() => products.refetch()} title="We couldn’t load products" />
+          ) : source.isError ? (
+            <QueryError
+              error={source.error}
+              onRetry={() => source.refetch()}
+              title={filters.q ? "We couldn’t run that search" : "We couldn’t load products"}
+            />
           ) : results.length > 0 ? (
             <ProductGrid products={results} stores={storeMap} columns={3} scrollOnMobile={false} />
           ) : (

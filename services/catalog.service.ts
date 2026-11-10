@@ -1,8 +1,8 @@
 import { CATALOG_ENDPOINTS } from "@/libs/api-endpoint";
-import type { CategoryRead, MarketRead, ProductRead, PromoBannerRead, StoreRead, StoreSectionRead } from "@/types/api";
-import type { Category, Market, Product, PromoBanner, Store } from "@/types/catalog";
+import type { CategoryRead, MarketRead, MerchandisingCampaignRead, ProductRead, PromoBannerRead, StoreRead, StoreSectionRead } from "@/types/api";
+import type { Campaign, CampaignDetail, Category, Market, Product, PromoBanner, Store } from "@/types/catalog";
 import { apiFetch } from "./http";
-import { toCategory, toMarket, toProduct, toPromoBanner, toStore } from "./mappers";
+import { toCampaign, toCategory, toMarket, toProduct, toPromoBanner, toStore } from "./mappers";
 
 /** Query params accepted by GET /catalog/products (the API caps `limit` at 100). */
 export type ProductListParams = {
@@ -52,6 +52,17 @@ export const catalogService = {
     return rows.map(toProduct);
   },
 
+  /**
+   * Full-text search across the catalogue. Public, and not capped at the 100-product page the
+   * list endpoint returns — which is why searching cannot just filter the loaded list.
+   */
+  async search(query: string, limit = 50): Promise<Product[]> {
+    const result = await apiFetch<{ results?: { product: ProductRead }[] }>(CATALOG_ENDPOINTS.search, {
+      query: { q: query, limit },
+    });
+    return (result.results ?? []).map((row) => toProduct(row.product));
+  },
+
   async product(id: string): Promise<Product> {
     return toProduct(await apiFetch<ProductRead>(CATALOG_ENDPOINTS.product(id)));
   },
@@ -59,6 +70,26 @@ export const catalogService = {
   async dealProducts(params: { min_discount_percent?: number; campaign_tag?: string; limit?: number; offset?: number } = {}) {
     const rows = await apiFetch<ProductRead[]>(CATALOG_ENDPOINTS.dealProducts, { query: params });
     return rows.map(toProduct);
+  },
+
+  /** Featured first, then by the priority marketing set. Empty until a campaign is published. */
+  async campaigns(): Promise<Campaign[]> {
+    const rows = await apiFetch<MerchandisingCampaignRead[]>(CATALOG_ENDPOINTS.campaigns);
+    return rows
+      .map(toCampaign)
+      .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured) || b.displayPriority - a.displayPriority);
+  },
+
+  /** One campaign and its products. Throws `ApiError` 404 when the slug is unknown. */
+  async campaign(slug: string): Promise<CampaignDetail> {
+    const row = await apiFetch<MerchandisingCampaignRead & { products?: ProductRead[]; has_more?: boolean }>(
+      CATALOG_ENDPOINTS.campaign(slug),
+    );
+    return {
+      ...toCampaign(row),
+      products: (row.products ?? []).map(toProduct),
+      hasMore: Boolean(row.has_more),
+    };
   },
 
   async promoBanners(): Promise<PromoBanner[]> {

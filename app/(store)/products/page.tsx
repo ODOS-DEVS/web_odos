@@ -36,7 +36,14 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
   const filters = parseFilters(await searchParams);
 
   const queryClient = getServerQueryClient();
-  await prefetchAll(queryClient, catalogQueries.products(), catalogQueries.stores(), catalogQueries.categories());
+  await prefetchAll(
+    queryClient,
+    catalogQueries.products(),
+    catalogQueries.stores(),
+    catalogQueries.categories(),
+    // A search lands in the first paint too, rather than flashing a skeleton after hydration.
+    ...(filters.q ? [catalogQueries.search(filters.q)] : []),
+  );
 
   return (
     <HydrationBoundary state={dehydrated(queryClient)}>
