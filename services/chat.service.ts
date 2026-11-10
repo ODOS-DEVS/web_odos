@@ -80,9 +80,11 @@ export const chatService = {
   },
 
   /** The endpoint takes multipart (it also accepts attachments), so the body goes as `FormData`. */
-  async send(threadId: string, text: string): Promise<ChatMessage> {
+  /** `attachment` rides along in the same multipart body the endpoint already expects. */
+  async send(threadId: string, text: string, attachment?: File | null): Promise<ChatMessage> {
     const form = new FormData();
     form.append("body", text);
+    if (attachment) form.append("attachment", attachment);
     return toMessage(
       await apiFetch<ChatMessageRead>(CHAT_ENDPOINTS.messages(threadId), { method: "POST", body: form, revalidate: false }),
     );

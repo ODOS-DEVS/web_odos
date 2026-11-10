@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent, useRef } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, Mic, Paperclip, Send } from "lucide-react";
+import { ChevronLeft, Mic, Paperclip, Send, X } from "lucide-react";
 import type { Store } from "@/types/catalog";
 import type { ChatMessage } from "@/types/chat";
 import { RequireLogin } from "@/components/auth/require-login";
@@ -66,21 +66,31 @@ export function ChatConversation({
   const messages = useChatMessages(threadId);
   const send = useSendMessage(threadId);
   const [draft, setDraft] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const items = useMemo(() => withDayDividers(messages.data ?? []), [messages.data]);
   const peerName = formatPeerName(peer.name);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = draft.trim();
-    if (!text || send.isPending) return;
+    // A photo on its own is a valid message, so only an empty box *and* no file is a no-op.
+    if ((!text && !attachment) || send.isPending) return;
+
+    const sent = attachment;
     // Cleared up front so the box feels instant, and put back if the send fails.
     setDraft("");
-    send.mutate(text, {
-      onError: (error) => {
-        setDraft(text);
-        toast.error(error instanceof Error ? error.message : "Your message didn’t send");
+    setAttachment(null);
+    send.mutate(
+      { text, attachment: sent },
+      {
+        onError: (error) => {
+          setDraft(text);
+          setAttachment(sent);
+          toast.error(error instanceof Error ? error.message : "Your message didn’t send");
+        },
       },
-    });
+    );
   };
 
   const loading = isOpening || messages.isPending;
@@ -145,12 +155,44 @@ export function ChatConversation({
         })}
       </ul>
 
-      <form onSubmit={onSubmit} className="flex min-w-0 items-center gap-2 border-t border-line p-4">
+      {attachment && (
+        <div className="flex items-center gap-2 border-t border-line px-4 pt-3">
+          <span className="flex min-w-0 items-center gap-2 rounded-full bg-surface-muted px-3 py-1.5 text-xs">
+            <Paperclip className="size-3.5 shrink-0 text-muted" aria-hidden />
+            <span className="truncate">{attachment.name}</span>
+            <button
+              type="button"
+              onClick={() => setAttachment(null)}
+              aria-label={`Remove ${attachment.name}`}
+              className="press shrink-0 text-muted hover:text-foreground"
+            >
+              <X className="size-3.5" aria-hidden />
+            </button>
+          </span>
+        </div>
+      )}
+
+      <form onSubmit={onSubmit} className={cn("flex min-w-0 items-center gap-2 p-4", !attachment && "border-t border-line")}>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*,application/pdf"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0] ?? null;
+            setAttachment(file);
+            // Reset so picking the same file twice in a row still fires onChange.
+            e.target.value = "";
+          }}
+        />
         <button
           type="button"
-          onClick={() => toast("Attachments aren’t available yet")}
+          onClick={() => fileInput.current?.click()}
           aria-label="Attach a file"
-          className="press grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-muted"
+          className={cn(
+            "press grid size-11 shrink-0 place-items-center rounded-full hover:bg-surface-muted",
+            attachment ? "text-accent" : "text-muted",
+          )}
         >
           <Paperclip className="size-4.5" aria-hidden />
         </button>
@@ -161,7 +203,7 @@ export function ChatConversation({
           placeholder={`Message ${peerName}…`}
           className="h-11 min-w-0 flex-1 rounded-full border border-line bg-surface px-4 text-sm outline-none focus-visible:outline-none focus:border-foreground"
         />
-        {draft.trim() ? (
+        {draft.trim() || attachment ? (
           <button
             type="submit"
             aria-label="Send message"
@@ -171,14 +213,14 @@ export function ChatConversation({
             <Send className="size-4.5" aria-hidden />
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={() => toast("Voice messages aren’t available yet")}
+          <span
+            aria-disabled="true"
             aria-label="Record a voice message"
-            className="press grid size-11 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground"
+            title="Voice messages are only in the ODOS app for now"
+            className="grid size-11 shrink-0 cursor-not-allowed place-items-center rounded-full bg-accent text-accent-foreground opacity-50"
           >
             <Mic className="size-4.5" aria-hidden />
-          </button>
+          </span>
         )}
       </form>
     </div>

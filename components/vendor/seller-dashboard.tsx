@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { toast } from "sonner";
 import {
   BarChart3,
   CreditCard,
@@ -76,35 +75,62 @@ function QuickActionTile({ label, href }: { label: string; href?: string }) {
     );
   }
   return (
-    <button type="button" onClick={() => toast(`${label} is coming soon`)} className={tileClass}>
+    <span
+      aria-disabled="true"
+      title={`${label} is only in the ODOS app for now`}
+      className={cn(tileClass, "cursor-not-allowed opacity-50")}
+    >
       {content}
-    </button>
+    </span>
   );
 }
 
-function ManageRow({ label, icon: Icon, className }: { label: string; icon: LucideIcon; className?: string }) {
-  return (
-    <button type="button" onClick={() => toast(`${label} is coming soon`)} className={cn(manageRowClass, className)}>
+/**
+ * A row in the manage menu. Entries the website actually has navigate; the rest are shown as
+ * plainly unavailable rather than looking clickable and answering with a toast.
+ */
+function ManageRow({ label, icon: Icon, href, className }: { label: string; icon: LucideIcon; href?: string; className?: string }) {
+  const content = (
+    <>
       <Icon className="size-4 shrink-0 text-muted" aria-hidden />
       <span className="text-sm font-medium">{label}</span>
-    </button>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={cn(manageRowClass, className)}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <span
+      aria-disabled="true"
+      title={`${label} is only in the ODOS app for now`}
+      className={cn(manageRowClass, "cursor-not-allowed opacity-50", className)}
+    >
+      {content}
+    </span>
   );
 }
 
 const QUICK_ACTIONS: { label: string; href?: string }[] = [
-  { label: "Add" },
+  // Adding a product and adjusting stock both live in the Products tab.
+  { label: "Add", href: "/account?tab=products" },
   { label: "Orders", href: "/account?tab=orders" },
   { label: "Products", href: "/account?tab=products" },
-  { label: "Stock" },
+  { label: "Stock", href: "/account?tab=products" },
   { label: "Chats", href: "/account?tab=chats" },
   { label: "Wallet", href: "/account?tab=wallet" },
 ];
 
-const MANAGE_ITEMS: { label: string; icon: LucideIcon }[] = [
+const MANAGE_ITEMS: { label: string; icon: LucideIcon; href?: string }[] = [
   { label: "Analytics", icon: BarChart3 },
   { label: "Sections", icon: LayoutGrid },
   { label: "Reviews", icon: Star },
-  { label: "Customer", icon: Users },
+  { label: "Customer", icon: Users, href: "/account?tab=customers" },
   { label: "Vouchers", icon: Ticket },
   { label: "Campaigns", icon: Megaphone },
   { label: "Flash sales", icon: Zap },
@@ -139,14 +165,14 @@ export function SellerCenter() {
       <div className="rounded-2xl border border-line bg-surface p-5">
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs text-muted">{greeting()} · Seller Center</p>
-          <button
-            type="button"
-            onClick={() => toast("Store settings are coming soon")}
+          <span
+            aria-disabled="true"
             aria-label="Store settings"
-            className="press grid size-9 shrink-0 place-items-center rounded-full border border-accent/40 bg-accent-soft text-accent"
+            title="Store settings are only in the ODOS app for now"
+            className="grid size-9 shrink-0 cursor-not-allowed place-items-center rounded-full border border-accent/40 bg-accent-soft text-accent opacity-50"
           >
             <Settings className="size-4" aria-hidden />
-          </button>
+          </span>
         </div>
         <p className="mt-1 text-2xl font-bold">{stats.storeName}</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -184,8 +210,8 @@ export function SellerCenter() {
       <section>
         <h2 className="mb-3 text-base font-semibold">Manage</h2>
         <div className="grid grid-cols-2 gap-3">
-          {MANAGE_ITEMS.map(({ label, icon }) => (
-            <ManageRow key={label} label={label} icon={icon} />
+          {MANAGE_ITEMS.map(({ label, icon, href }) => (
+            <ManageRow key={label} label={label} icon={icon} href={href} />
           ))}
         </div>
         <ManageRow label="Settings" icon={Settings} className="mt-3 w-full" />

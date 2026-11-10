@@ -47,12 +47,14 @@ export function useChatMessages(threadId: string | undefined) {
   });
 }
 
+export type SendMessageInput = { text: string; attachment?: File | null };
+
 export function useSendMessage(threadId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (text: string) => {
+    mutationFn: ({ text, attachment }: SendMessageInput) => {
       if (!threadId) throw new Error("The conversation is still opening. Please try again.");
-      return chatService.send(threadId, text);
+      return chatService.send(threadId, text, attachment);
     },
     onSuccess: () => {
       if (threadId) queryClient.invalidateQueries({ queryKey: queryKeys.chatMessages(threadId) });

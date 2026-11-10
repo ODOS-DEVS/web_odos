@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { toast } from "sonner";
 import { Boxes, Mail, MapPin, PackageSearch, Phone, Star, Ticket } from "lucide-react";
 import { ChatsTab } from "@/components/account/chats-tab";
 import { WalletTab } from "@/components/account/wallet-tab";
@@ -16,7 +15,9 @@ import { VendorProductsTab } from "@/components/vendor/vendor-products-tab";
 import { useSession } from "@/hooks/use-auth";
 import { useQueryParam } from "@/hooks/use-query-param";
 import { cn } from "@/libs/cn";
-import { useVendorStore } from "@/hooks/use-vendor";
+import { useVendorStore, useVendorStatus } from "@/hooks/use-vendor";
+import { ButtonLink } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 /** ODOS's own support address, not something the store sets. */
 const SUPPORT_EMAIL = "info@odos.market";
@@ -44,8 +45,6 @@ function isTabId(value: string | null): value is TabId {
 function StoreHeaderCard() {
   const user = useSession()?.user;
   const { data: profile, isPending } = useVendorStore();
-  const initial = user?.full_name.trim().charAt(0).toUpperCase() || "?";
-
   if (isPending || !profile) return <div className="h-32 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;
 
   const address = [profile.address, profile.city, profile.region].filter(Boolean).join(", ");
@@ -53,7 +52,7 @@ function StoreHeaderCard() {
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
       <div className="flex items-start gap-3">
-        <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent-soft text-lg font-semibold text-accent">{initial}</span>
+        <UserAvatar name={user?.full_name ?? "Vendor"} avatarUrl={user?.avatar_url} sizes="48px" className="size-12 text-lg" />
         <div className="min-w-0">
           <p className="font-semibold">{profile.storeName}</p>
           <p className="mt-0.5 truncate text-sm text-muted">{user?.email}</p>
@@ -104,7 +103,7 @@ function VendorProfileTab() {
           ))}
         </dl>
       </div>
-      <Button type="button" variant="outline" onClick={() => toast("Editing your business profile is coming soon")}>
+      <Button type="button" variant="outline" disabled title="Editing your business profile is only in the ODOS app for now">
         Edit profile
       </Button>
     </div>
@@ -116,8 +115,8 @@ function ComingSoonTab({ icon, label }: { icon: ReactNode; label: string }) {
     <EmptyState
       icon={icon}
       iconBadge
-      title={`${label} is coming soon`}
-      description={`We're still building out ${label.toLowerCase()} management for your store. Check back soon.`}
+      title={`${label} isn’t on the website yet`}
+      description={`Manage ${label.toLowerCase()} for your store in the ODOS app — it’s coming to the website.`}
     />
   );
 }
@@ -166,12 +165,36 @@ function VendorAccountTabs() {
   );
 }
 
+/** Everything below the login wall still needs an approved vendor behind it. */
+function VendorOnly() {
+  const { isVendor, status } = useVendorStatus();
+
+  if (!isVendor) {
+    const pending = status === "pending" || status === "under_review";
+    return (
+      <EmptyState
+        icon={<PackageSearch className="size-6 text-muted" aria-hidden />}
+        iconBadge
+        title={pending ? "Your vendor application is being reviewed" : "This is for ODOS vendors"}
+        description={
+          pending
+            ? "We’ll email you as soon as it’s approved, and your Seller Center will open up here."
+            : "Apply to sell on ODOS and your Seller Center will appear here once you’re approved."
+        }
+        action={<ButtonLink href="/account?tab=vendor">{pending ? "View application" : "Become a vendor"}</ButtonLink>}
+      />
+    );
+  }
+
+  return <VendorAccountTabs />;
+}
+
 export function VendorAccountView() {
   return (
     <Container className="max-w-4xl py-8 sm:py-12">
       <h1 className="mb-8 text-3xl font-semibold sm:text-4xl">Vendor Account</h1>
       <RequireLogin next="/seller" message="Log in to view your Seller Center.">
-        <VendorAccountTabs />
+        <VendorOnly />
       </RequireLogin>
     </Container>
   );
