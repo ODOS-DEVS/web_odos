@@ -1,5 +1,6 @@
 import { CHAT_ENDPOINTS } from "@/libs/api-endpoint";
 import type { ChatMessage, ChatThread } from "@/types/chat";
+import { titleFromSlugLike } from "@/libs/format";
 import { apiFetch } from "./http";
 
 type ChatStoreSummaryRead = { id: string; title: string; image_url?: string | null };
@@ -27,18 +28,9 @@ type ChatMessageRead = {
   created_at: string;
 };
 
-function formatChatName(name: string) {
-  return name.includes("_")
-    ? name
-        .replace(/_+/g, " ")
-        .replace(/\b\w/g, (character) => character.toUpperCase())
-        .trim()
-    : name;
-}
-
 function toThread(t: ChatThreadRead): ChatThread {
-  const storeName = t.store ? formatChatName(t.store.title) : null;
-  const counterpartName = t.counterpart?.name ? formatChatName(t.counterpart.name) : storeName;
+  const storeName = t.store ? titleFromSlugLike(t.store.title) : null;
+  const counterpartName = t.counterpart?.name ? titleFromSlugLike(t.counterpart.name) : storeName;
 
   return {
     id: t.id,

@@ -4,6 +4,7 @@ import type { OrderItemRead, OrderPackageRead, OrderRead, ReturnRequestRead } fr
 import type { FulfilmentStatus, Order, OrderItem, OrderPackage } from "@/types/order";
 import type { ReturnRequest, ReturnRequestType } from "@/types/returns";
 import { rollupStatus } from "@/libs/orders";
+import { titleFromSlugLike } from "@/libs/format";
 
 const NEW_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -50,17 +51,10 @@ export function toPromoBanner(b: PromoBannerRead): PromoBanner {
 }
 
 export function toStore(s: StoreRead): Store {
-  const displayName = s.title.includes("_")
-    ? s.title
-        .replace(/_+/g, " ")
-        .replace(/\b\w/g, (character) => character.toUpperCase())
-        .trim()
-    : s.title;
-
   return {
     id: s.id,
     slug: s.slug,
-    name: displayName,
+    name: titleFromSlugLike(s.title),
     category: s.category ?? "",
     description: s.description ?? "",
     logoUrl: s.image_url ?? null,

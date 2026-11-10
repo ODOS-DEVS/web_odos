@@ -9,6 +9,7 @@ import {
 import { chatService } from "./chat.service";
 import { deliveryService, type DeliveryQuoteInput } from "./delivery.service";
 import { loyaltyService } from "./loyalty.service";
+import { notificationsService } from "./notifications.service";
 import { ordersService } from "./orders.service";
 import { paymentsService } from "./payments.service";
 import { reviewsService } from "./reviews.service";
@@ -47,6 +48,7 @@ export const queryKeys = {
   vendorOrders: ["vendor", "orders"] as const,
   vendorCustomers: ["vendor", "customers"] as const,
   vendorAnalytics: ["vendor", "analytics"] as const,
+  notifications: ["notifications"] as const,
   wallet: ["wallet"] as const,
   loyalty: ["loyalty", "account"] as const,
   loyaltyHistory: ["loyalty", "history"] as const,
@@ -259,6 +261,15 @@ export const loyaltyQueries = {
     queryOptions({
       queryKey: queryKeys.loyaltyHistory,
       queryFn: () => loyaltyService.history(),
+      staleTime: 30_000,
+    }),
+};
+
+export const notificationQueries = {
+  list: () =>
+    queryOptions({
+      queryKey: queryKeys.notifications,
+      queryFn: () => notificationsService.list(),
       staleTime: 30_000,
     }),
 };

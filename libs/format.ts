@@ -89,3 +89,18 @@ export function discountPercent(price: number, compareAt?: number | null) {
   if (!compareAt || compareAt <= price) return 0;
   return Math.round(((compareAt - price) / compareAt) * 100);
 }
+
+/**
+ * Turns a snake_cased name into something presentable ("dimar_beauty_hub" → "Dimar Beauty Hub").
+ *
+ * Some store and chat-counterpart titles arrive underscored. This is a display-side patch over
+ * that data, not a fix: the stored title is what should change. Names without an underscore are
+ * passed through untouched, so a deliberately lowercased brand is left alone.
+ */
+export function titleFromSlugLike(value: string): string {
+  if (!value.includes("_")) return value;
+  return value
+    .replace(/_+/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+    .trim();
+}

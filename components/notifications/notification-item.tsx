@@ -1,16 +1,19 @@
 import { Bell } from "lucide-react";
 import { cn } from "@/libs/cn";
-import type { NotificationItem as NotificationItemData } from "./notification-data";
+import { formatChatListTime } from "@/libs/format";
+import type { AppNotification } from "@/types/notification";
 
 export function NotificationItem({
   notification,
   compact = false,
-  unread = true,
+  unread,
 }: {
-  notification: NotificationItemData;
+  notification: AppNotification;
   compact?: boolean;
+  /** Defaults to the notification's own read state; pass it only to override. */
   unread?: boolean;
 }) {
+  const isUnread = unread ?? !notification.read;
   return (
     <article
       className={
@@ -32,10 +35,13 @@ export function NotificationItem({
           <h2 className={cn("min-w-0 flex-1 font-bold tracking-normal", compact ? "text-sm" : "text-base sm:text-lg")}>
             {notification.title}
           </h2>
-          <time className={cn("shrink-0 text-muted", compact ? "text-[11px]" : "text-xs sm:text-sm")}>
-            {notification.date}
+          <time
+            dateTime={notification.createdAt}
+            className={cn("shrink-0 text-muted", compact ? "text-[11px]" : "text-xs sm:text-sm")}
+          >
+            {formatChatListTime(notification.createdAt)}
           </time>
-          {unread && (
+          {isUnread && (
             <span
               className={cn("shrink-0 rounded-full bg-accent", compact ? "mt-1 size-2" : "mt-1.5 size-2.5")}
               aria-label="Unread"
@@ -43,7 +49,7 @@ export function NotificationItem({
           )}
         </div>
         <p className={cn("mt-1 text-muted", compact ? "text-xs leading-5" : "text-sm leading-6 sm:text-base")}>
-          {notification.description}
+          {notification.body}
         </p>
       </div>
     </article>
