@@ -221,4 +221,21 @@ export const VENDOR_ENDPOINTS = {
   order: (orderId: string) => `/vendor/orders/${enc(orderId)}`,
   orderStatus: (orderId: string) => `/vendor/orders/${enc(orderId)}/status`,
   orderAcknowledge: (orderId: string) => `/vendor/orders/${enc(orderId)}/acknowledge`,
+  // Stock lives under /vendor/products/*, never /vendor/inventory/* — that
+  // second API anchors ownership on Store.vendor_id, breaks with multiple
+  // stores, and reports failure as {"success": false} under HTTP 200.
+  productsPerformance: (days: number) => `/vendor/products/performance?days=${days}`,
+  inventoryMovements: (limit: number) => `/vendor/inventory-movements?limit=${limit}`,
+  returns: "/vendor/returns",
+  return: (returnId: string) => `/vendor/returns/${enc(returnId)}`,
+  reviews: "/vendor/reviews",
+  reviewReply: (reviewId: string) => `/vendor/reviews/${enc(reviewId)}/reply`,
+  vouchers: "/vendor/vouchers",
+  voucher: (voucherId: string) => `/vendor/vouchers/${enc(voucherId)}`,
+  voucherGift: (voucherId: string) => `/vendor/vouchers/${enc(voucherId)}/gift`,
+  wallet: "/vendor/wallet",
+  walletInstitutions: (methodType: string) =>
+    `/vendor/wallet/payout-institutions?payout_method_type=${encodeURIComponent(methodType)}`,
+  walletPayoutDetails: "/vendor/wallet/payout-details",
+  walletWithdrawals: "/vendor/wallet/withdrawals",
 } as const;

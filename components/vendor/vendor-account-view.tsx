@@ -1,9 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Boxes, Mail, MapPin, PackageSearch, Phone, Star, Ticket } from "lucide-react";
+import { Mail, MapPin, PackageSearch, Phone } from "lucide-react";
 import { ChatsTab } from "@/components/account/chats-tab";
-import { WalletTab } from "@/components/account/wallet-tab";
 import { RequireLogin } from "@/components/auth/require-login";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -12,6 +10,11 @@ import { SellerCenter } from "@/components/vendor/seller-dashboard";
 import { VendorCustomersTab } from "@/components/vendor/vendor-customers-tab";
 import { VendorOrdersTab } from "@/components/vendor/vendor-orders-tab";
 import { VendorProductsTab } from "@/components/vendor/vendor-products-tab";
+import { VendorStockTab } from "@/components/vendor/vendor-stock-tab";
+import { VendorReturnsTab } from "@/components/vendor/vendor-returns-tab";
+import { VendorReviewsTab } from "@/components/vendor/vendor-reviews-tab";
+import { VendorVouchersTab } from "@/components/vendor/vendor-vouchers-tab";
+import { VendorWalletTab } from "@/components/vendor/vendor-wallet-tab";
 import { useSession } from "@/hooks/use-auth";
 import { useQueryParam } from "@/hooks/use-query-param";
 import { cn } from "@/libs/cn";
@@ -110,17 +113,6 @@ function VendorProfileTab() {
   );
 }
 
-function ComingSoonTab({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <EmptyState
-      icon={icon}
-      iconBadge
-      title={`${label} isn’t on the website yet`}
-      description={`Manage ${label.toLowerCase()} for your store in the ODOS app — it’s coming to the website.`}
-    />
-  );
-}
-
 function VendorAccountTabs() {
   const [tabParam, setTabParam] = useQueryParam("tab");
   const tab: TabId = isTabId(tabParam) ? tabParam : "dashboard";
@@ -153,13 +145,13 @@ function VendorAccountTabs() {
         {tab === "dashboard" && <SellerCenter />}
         {tab === "orders" && <VendorOrdersTab />}
         {tab === "products" && <VendorProductsTab />}
-        {tab === "stock" && <ComingSoonTab icon={<Boxes className="size-6 text-muted" aria-hidden />} label="Stock" />}
+        {tab === "stock" && <VendorStockTab />}
         {tab === "customers" && <VendorCustomersTab />}
-        {tab === "returns" && <ComingSoonTab icon={<PackageSearch className="size-6 text-muted" aria-hidden />} label="Returns" />}
-        {tab === "reviews" && <ComingSoonTab icon={<Star className="size-6 text-muted" aria-hidden />} label="Reviews" />}
+        {tab === "returns" && <VendorReturnsTab />}
+        {tab === "reviews" && <VendorReviewsTab />}
         {tab === "chats" && <ChatsTab />}
-        {tab === "vouchers" && <ComingSoonTab icon={<Ticket className="size-6 text-muted" aria-hidden />} label="Vouchers" />}
-        {tab === "wallet" && <WalletTab />}
+        {tab === "vouchers" && <VendorVouchersTab />}
+        {tab === "wallet" && <VendorWalletTab />}
       </div>
     </div>
   );

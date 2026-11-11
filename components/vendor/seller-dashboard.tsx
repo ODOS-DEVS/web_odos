@@ -116,25 +116,27 @@ function ManageRow({ label, icon: Icon, href, className }: { label: string; icon
   );
 }
 
+// Everything here stays inside the Seller Center at /seller — /account is the
+// shopper's page, and sending a vendor's "Orders" click to their own shopping
+// history is how these links were originally broken.
 const QUICK_ACTIONS: { label: string; href?: string }[] = [
-  // Adding a product and adjusting stock both live in the Products tab.
-  { label: "Add", href: "/account?tab=products" },
-  { label: "Orders", href: "/account?tab=orders" },
-  { label: "Products", href: "/account?tab=products" },
-  { label: "Stock", href: "/account?tab=products" },
-  { label: "Chats", href: "/account?tab=chats" },
-  { label: "Wallet", href: "/account?tab=wallet" },
+  { label: "Add", href: "/seller?tab=products" },
+  { label: "Orders", href: "/seller?tab=orders" },
+  { label: "Products", href: "/seller?tab=products" },
+  { label: "Stock", href: "/seller?tab=stock" },
+  { label: "Chats", href: "/seller?tab=chats" },
+  { label: "Wallet", href: "/seller?tab=wallet" },
 ];
 
 const MANAGE_ITEMS: { label: string; icon: LucideIcon; href?: string }[] = [
   { label: "Analytics", icon: BarChart3 },
   { label: "Sections", icon: LayoutGrid },
-  { label: "Reviews", icon: Star },
-  { label: "Customer", icon: Users, href: "/account?tab=customers" },
-  { label: "Vouchers", icon: Ticket },
+  { label: "Reviews", icon: Star, href: "/seller?tab=reviews" },
+  { label: "Customer", icon: Users, href: "/seller?tab=customers" },
+  { label: "Vouchers", icon: Ticket, href: "/seller?tab=vouchers" },
   { label: "Campaigns", icon: Megaphone },
   { label: "Flash sales", icon: Zap },
-  { label: "Returns", icon: Package },
+  { label: "Returns", icon: Package, href: "/seller?tab=returns" },
   { label: "Store", icon: Store },
   { label: "Ops desk", icon: Headset },
 ];

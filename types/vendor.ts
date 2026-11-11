@@ -109,3 +109,162 @@ export type VendorCustomer = {
   totalSpent: number;
   lastOrderAt: string | null;
 };
+
+/* ---------- Returns, reviews, vouchers, wallet (the seller-ops surface) ---------- */
+
+export type VendorReturn = {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  productId: string;
+  productTitle: string;
+  productImageUrl: string | null;
+  customerName: string;
+  /** "refund" | "exchange" | anything the API grows later. */
+  requestType: string;
+  status: string;
+  quantity: number;
+  reason: string;
+  details: string | null;
+  evidenceImageUrls: string[];
+  adminNote: string | null;
+  refundAmount: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type VendorReview = {
+  id: string;
+  productId: string;
+  productTitle: string;
+  productImageUrl: string | null;
+  rating: number;
+  comment: string;
+  customerName: string;
+  isHidden: boolean;
+  vendorReply: string | null;
+  vendorRepliedAt: string | null;
+  createdAt: string;
+};
+
+export type VendorVoucher = {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  issuerName: string | null;
+  /** "auto" | "claim" | "assigned" */
+  availability: string;
+  rewardText: string;
+  /** "percent" | "fixed" */
+  discountType: string;
+  discountValue: number;
+  minSubtotal: number;
+  maxDiscount: number | null;
+  usageLimit: number | null;
+  perUserLimit: number | null;
+  isActive: boolean;
+  status: string;
+  redemptionCount: number;
+  uniqueUserCount: number;
+  totalDiscountAmount: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  /** "approved" | "pending" | "rejected" — ODOS reviews vendor promotions. */
+  approvalStatus: string;
+  reviewNotes: string | null;
+  createdAt: string;
+};
+
+/** The full upsert payload. The PATCH is a whole-record write, so edits must send every field. */
+export type VendorVoucherInput = {
+  code: string;
+  title: string;
+  description: string | null;
+  availability: string;
+  discountType: string;
+  discountValue: number;
+  minSubtotal: number;
+  maxDiscount: number | null;
+  usageLimit: number | null;
+  perUserLimit: number | null;
+  isActive: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+};
+
+export type VendorWalletTransaction = {
+  id: string;
+  kind: string;
+  title: string;
+  amount: number;
+  grossAmount: number | null;
+  commissionAmount: number | null;
+  balanceAfter: number;
+  createdAt: string;
+};
+
+export type VendorWithdrawal = {
+  id: string;
+  status: string;
+  amount: number;
+  note: string | null;
+  adminNote: string | null;
+  payoutMethodType: string;
+  payoutAccountName: string;
+  payoutAccountNumberMasked: string;
+  payoutProvider: string | null;
+  transferFailureReason: string | null;
+  createdAt: string;
+};
+
+export type VendorWallet = {
+  currency: string;
+  availableBalance: number;
+  pendingWithdrawalBalance: number;
+  lifetimeEarnings: number;
+  totalWithdrawn: number;
+  totalCommission: number;
+  commissionRate: number;
+  payoutMethodType: string | null;
+  payoutAccountName: string | null;
+  payoutAccountNumberMasked: string | null;
+  payoutProvider: string | null;
+  recentTransactions: VendorWalletTransaction[];
+  withdrawalRequests: VendorWithdrawal[];
+};
+
+export type VendorPayoutInstitution = {
+  code: string;
+  name: string;
+  payoutMethodType: string;
+  currency: string;
+};
+
+export type VendorPayoutDetailsInput = {
+  payoutMethodType: "mobile_money" | "bank_transfer";
+  payoutAccountName: string;
+  payoutAccountNumber: string;
+  payoutProvider: string;
+};
+
+/** Sales over a window for one SKU; a product absent from the response simply sold nothing. */
+export type VendorProductPerformance = {
+  productId: string;
+  unitsSold: number;
+  grossSales: number;
+  orderCount: number;
+  lastSoldAt: string | null;
+};
+
+export type VendorInventoryMovement = {
+  id: string;
+  productId: string;
+  productTitle: string;
+  /** Signed stock change: sales negative, restocks positive. */
+  delta: number;
+  stockAfter: number;
+  reason: string;
+  note: string | null;
+  createdAt: string;
+};
