@@ -21,20 +21,6 @@ function formatVoucherDate(iso: string) {
   }
 }
 
-/** Parses fallback discount if backend preview endpoint is unreachable. */
-function calculateFallbackDiscount(rewardText: string, subtotal: number): number {
-  const percentMatch = rewardText.match(/(\d+(?:\.\d+)?)\s*%/);
-  if (percentMatch) {
-    const percent = parseFloat(percentMatch[1]);
-    return Math.round((subtotal * percent) / 100);
-  }
-  const amountMatch = rewardText.match(/(?:GH[¢c]|GHS|\$)?\s*(\d+(?:\.\d+)?)/i);
-  if (amountMatch) {
-    return Math.min(subtotal, parseFloat(amountMatch[1]));
-  }
-  return 0;
-}
-
 export function VoucherCard({
   lines,
   subtotal,
@@ -75,35 +61,12 @@ export function VoucherCard({
       setCode("");
       setWalletOpen(false);
     } catch (err) {
-      // Fallback: check if the code matches a claimed voucher in the user's wallet
-      const walletMatch = savedVouchers.find((v) => v.code.toUpperCase() === trimmed);
-      if (walletMatch) {
-        if (walletMatch.minSpend > 0 && subtotal < walletMatch.minSpend) {
-          toast.error(`Minimum spend of ${formatMoney(walletMatch.minSpend)} required for this voucher.`);
-          setIsApplying(false);
-          return;
-        }
-
-        const discountAmount = calculateFallbackDiscount(walletMatch.rewardText, subtotal);
-        const fallbackPreview: VoucherPreview = {
-          voucher_id: walletMatch.id,
-          code: walletMatch.code,
-          title: walletMatch.label,
-          reward_text: walletMatch.rewardText,
-          discount_amount: discountAmount,
-          subtotal_amount: subtotal,
-          shipping_amount: shipping ?? 0,
-          total_amount: Math.max(0, subtotal + (shipping ?? 0) - discountAmount),
-        };
-        onApplyVoucher(fallbackPreview);
-        toast.success(`Voucher "${walletMatch.code}" applied!`);
-        setCode("");
-        setWalletOpen(false);
-        setIsApplying(false);
-        return;
-      }
-
-      toast.error(err instanceof ApiError ? err.message : "That voucher code isn't valid or has expired.");
+      // The server's refusal is the answer — its message names the actual
+      // reason (expired, limit reached, items not eligible). An earlier
+      // version "recovered" here by regex-guessing a discount from the reward
+      // text and applying it anyway, which the order endpoint then rejected
+      // at the final step — a checkout dead end instead of an honest no.
+      toast.error(err instanceof ApiError ? err.message : "We couldn’t check that code. Please try again.");
     } finally {
       setIsApplying(false);
     }

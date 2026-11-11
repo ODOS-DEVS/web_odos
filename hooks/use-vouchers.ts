@@ -21,6 +21,8 @@ export function useClaimVoucher() {
       queryClient.invalidateQueries({ queryKey: queryKeys.myVouchers });
       // A claimed offer comes back with `claimed: true`, so the store/board views need refreshing.
       queryClient.invalidateQueries({ queryKey: ["vouchers"] });
+      // The deals hub carries the same claimed flags on its promotions.
+      queryClient.invalidateQueries({ queryKey: queryKeys.dealsHub });
     },
   });
 }

@@ -7,7 +7,7 @@ const linkClass =
 
 const primaryLinks = [
   { href: "/products", label: "All products" },
-  { href: "/products?tag=flash", label: "Deals" },
+  { href: "/deals", label: "Deals" },
   { href: "/stores", label: "Stores" },
   { href: "/market", label: "Market" },
   { href: "/orders", label: "Orders" },

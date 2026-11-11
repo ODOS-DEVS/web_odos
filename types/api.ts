@@ -552,3 +552,20 @@ export type MerchandisingCampaignRead = {
   display_priority?: number;
   product_count?: number;
 };
+
+/** `GET /catalog/deals-hub` — only the fields the web consumes are typed. */
+export type DealsHubRead = {
+  sections?: { key: string; title: string; subtitle?: string | null; kind: string; count?: number | null }[] | null;
+  flash_events?: {
+    id: string;
+    slug: string;
+    title: string;
+    subtitle?: string | null;
+    image_url?: string | null;
+    ends_at: string;
+    product_count?: number;
+  }[] | null;
+  promotions?: StoreVoucherRead[] | null;
+  deal_products?: ProductRead[] | null;
+  campaigns?: MerchandisingCampaignRead[] | null;
+};

@@ -26,6 +26,7 @@ export const queryKeys = {
   markets: ["catalog", "markets"] as const,
   promoBanners: ["catalog", "promo-banners"] as const,
   campaigns: ["catalog", "campaigns"] as const,
+  dealsHub: ["catalog", "deals-hub"] as const,
   campaign: (slug: string) => ["catalog", "campaign", slug] as const,
   stores: (params: StoreListParams = {}) =>
     ["catalog", "stores", params] as const,
@@ -85,6 +86,14 @@ export const catalogQueries = {
       queryFn: () => catalogService.categories(),
       staleTime: 10 * MINUTE,
     }),
+  dealsHub: () =>
+    queryOptions({
+      queryKey: queryKeys.dealsHub,
+      queryFn: () => catalogService.dealsHub(),
+      // Flash countdowns and claim states go stale fast.
+      staleTime: 60 * 1000,
+    }),
+
   campaigns: () =>
     queryOptions({
       queryKey: queryKeys.campaigns,

@@ -137,3 +137,32 @@ export type Review = {
   body: string;
   vendorReply: string | null;
 };
+
+/** One section the deals hub says has content — the page renders only these. */
+export type DealsHubSection = {
+  key: string;
+  title: string;
+  subtitle: string | null;
+  kind: string;
+  count: number | null;
+};
+
+export type FlashEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string | null;
+  /** Authoritative end time from the server — countdowns anchor on this, never a client clock baseline. */
+  endsAt: string;
+  productCount: number;
+};
+
+/** `GET /catalog/deals-hub`: everything the deals destination shows, in one payload. */
+export type DealsHub = {
+  sections: DealsHubSection[];
+  flashEvents: FlashEvent[];
+  promotions: Voucher[];
+  dealProducts: Product[];
+  campaigns: Campaign[];
+};

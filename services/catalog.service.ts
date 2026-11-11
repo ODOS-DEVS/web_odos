@@ -1,8 +1,8 @@
 import { CATALOG_ENDPOINTS } from "@/libs/api-endpoint";
-import type { CategoryRead, MarketRead, MerchandisingCampaignRead, ProductRead, PromoBannerRead, StoreRead, StoreSectionRead } from "@/types/api";
-import type { Campaign, CampaignDetail, Category, Market, Product, PromoBanner, Store } from "@/types/catalog";
+import type { CategoryRead, MarketRead, MerchandisingCampaignRead, ProductRead, PromoBannerRead, StoreRead, StoreSectionRead, DealsHubRead } from "@/types/api";
+import type { Campaign, CampaignDetail, Category, Market, Product, PromoBanner, Store, DealsHub } from "@/types/catalog";
 import { apiFetch } from "./http";
-import { toCampaign, toCategory, toMarket, toProduct, toPromoBanner, toStore } from "./mappers";
+import { toCampaign, toCategory, toMarket, toProduct, toPromoBanner, toStore, toVoucher } from "./mappers";
 
 /** Query params accepted by GET /catalog/products (the API caps `limit` at 100). */
 export type ProductListParams = {
@@ -73,6 +73,32 @@ export const catalogService = {
   },
 
   /** Featured first, then by the priority marketing set. Empty until a campaign is published. */
+  /** The deals destination in one call. Anonymous-friendly; `claimed` flags light up when logged in. */
+  async dealsHub(): Promise<DealsHub> {
+    const hub = await apiFetch<DealsHubRead>(CATALOG_ENDPOINTS.dealsHub);
+    return {
+      sections: (hub.sections ?? []).map((s) => ({
+        key: s.key,
+        title: s.title,
+        subtitle: s.subtitle ?? null,
+        kind: s.kind,
+        count: s.count ?? null,
+      })),
+      flashEvents: (hub.flash_events ?? []).map((e) => ({
+        id: e.id,
+        slug: e.slug,
+        title: e.title,
+        subtitle: e.subtitle ?? null,
+        imageUrl: e.image_url ?? null,
+        endsAt: e.ends_at,
+        productCount: e.product_count ?? 0,
+      })),
+      promotions: (hub.promotions ?? []).map(toVoucher),
+      dealProducts: (hub.deal_products ?? []).map(toProduct),
+      campaigns: (hub.campaigns ?? []).map(toCampaign),
+    };
+  },
+
   async campaigns(): Promise<Campaign[]> {
     const rows = await apiFetch<MerchandisingCampaignRead[]>(CATALOG_ENDPOINTS.campaigns);
     return rows
