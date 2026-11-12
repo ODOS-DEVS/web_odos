@@ -27,6 +27,8 @@ export const queryKeys = {
   promoBanners: ["catalog", "promo-banners"] as const,
   campaigns: ["catalog", "campaigns"] as const,
   dealsHub: ["catalog", "deals-hub"] as const,
+  upcomingFlash: ["catalog", "flash", "upcoming"] as const,
+  myFlashReminders: ["catalog", "flash", "reminders"] as const,
   campaign: (slug: string) => ["catalog", "campaign", slug] as const,
   stores: (params: StoreListParams = {}) =>
     ["catalog", "stores", params] as const,
@@ -91,6 +93,13 @@ export const catalogQueries = {
       queryKey: queryKeys.dealsHub,
       queryFn: () => catalogService.dealsHub(),
       // Flash countdowns and claim states go stale fast.
+      staleTime: 60 * 1000,
+    }),
+
+  upcomingFlash: () =>
+    queryOptions({
+      queryKey: queryKeys.upcomingFlash,
+      queryFn: () => catalogService.upcomingFlashEvents(),
       staleTime: 60 * 1000,
     }),
 

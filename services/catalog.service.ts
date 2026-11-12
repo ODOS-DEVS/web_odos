@@ -1,6 +1,6 @@
 import { CATALOG_ENDPOINTS } from "@/libs/api-endpoint";
 import type { CategoryRead, MarketRead, MerchandisingCampaignRead, ProductRead, PromoBannerRead, StoreRead, StoreSectionRead, DealsHubRead } from "@/types/api";
-import type { Campaign, CampaignDetail, Category, Market, Product, PromoBanner, Store, DealsHub } from "@/types/catalog";
+import type { Campaign, CampaignDetail, Category, Market, Product, PromoBanner, Store, DealsHub, FlashEvent } from "@/types/catalog";
 import { apiFetch } from "./http";
 import { toCampaign, toCategory, toMarket, toProduct, toPromoBanner, toStore, toVoucher } from "./mappers";
 
@@ -91,12 +91,41 @@ export const catalogService = {
         subtitle: e.subtitle ?? null,
         imageUrl: e.image_url ?? null,
         endsAt: e.ends_at,
+        startsAt: e.starts_at ?? null,
         productCount: e.product_count ?? 0,
       })),
       promotions: (hub.promotions ?? []).map(toVoucher),
       dealProducts: (hub.deal_products ?? []).map(toProduct),
       campaigns: (hub.campaigns ?? []).map(toCampaign),
     };
+  },
+
+  /** Scheduled-but-unstarted flash sales, soonest first. */
+  async upcomingFlashEvents(): Promise<FlashEvent[]> {
+    const rows = await apiFetch<NonNullable<DealsHubRead["flash_events"]>>(CATALOG_ENDPOINTS.upcomingFlashEvents);
+    return (rows ?? []).map((e) => ({
+      id: e.id,
+      slug: e.slug,
+      title: e.title,
+      subtitle: e.subtitle ?? null,
+      imageUrl: e.image_url ?? null,
+      endsAt: e.ends_at,
+      startsAt: e.starts_at ?? null,
+      productCount: e.product_count ?? 0,
+    }));
+  },
+
+  /** Event ids the signed-in shopper asked to be reminded about. */
+  myFlashReminders(): Promise<string[]> {
+    return apiFetch<string[]>(CATALOG_ENDPOINTS.myFlashReminders, { revalidate: false });
+  },
+
+  setFlashReminder(eventId: string) {
+    return apiFetch<unknown>(CATALOG_ENDPOINTS.flashReminder(eventId), { method: "POST", revalidate: false });
+  },
+
+  unsetFlashReminder(eventId: string) {
+    return apiFetch<unknown>(CATALOG_ENDPOINTS.flashReminder(eventId), { method: "DELETE", revalidate: false });
   },
 
   async campaigns(): Promise<Campaign[]> {

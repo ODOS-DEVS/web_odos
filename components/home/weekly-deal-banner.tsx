@@ -7,6 +7,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { useCampaigns } from "@/hooks/use-catalog";
 import { cn } from "@/libs/cn";
+import { trackPromoClick, trackPromoImpression } from "@/libs/promo-analytics";
 
 const SLIDE_MS = 5000;
 
@@ -29,10 +30,17 @@ export function WeeklyDealBanner() {
     return () => clearInterval(timer);
   }, [campaigns.length]);
 
-  if (campaigns.length === 0) return null;
-
   // A campaign removed while the carousel is mid-rotation must not leave it pointing past the end.
-  const activeIndex = Math.min(currentIndex, campaigns.length - 1);
+  const activeIndex = campaigns.length > 0 ? Math.min(currentIndex, campaigns.length - 1) : 0;
+
+  // Only the visible slide counts as seen — the strip renders every campaign,
+  // but an off-screen slide was never an impression.
+  const visibleId = campaigns[activeIndex]?.id;
+  useEffect(() => {
+    if (visibleId) trackPromoImpression("campaign", visibleId, "home-banner");
+  }, [visibleId]);
+
+  if (campaigns.length === 0) return null;
 
   return (
     <div className="relative isolate w-full overflow-hidden">
@@ -73,6 +81,7 @@ export function WeeklyDealBanner() {
                 )}
                 <ButtonLink
                   href={`/campaigns/${campaign.slug}`}
+                  onClick={() => trackPromoClick("campaign", campaign.id, "home-banner")}
                   size="sm"
                   className="w-fit gap-2 rounded-full border-none bg-black/10 px-5 font-semibold text-black transition-colors hover:bg-black/20"
                 >

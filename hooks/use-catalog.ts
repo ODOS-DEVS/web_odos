@@ -14,6 +14,8 @@ export const useCampaigns = () => useQuery(catalogQueries.campaigns());
 
 export const useDealsHub = () => useQuery(catalogQueries.dealsHub());
 
+export const useUpcomingFlashEvents = () => useQuery(catalogQueries.upcomingFlash());
+
 export const useCampaign = (slug: string) => useQuery(catalogQueries.campaign(slug));
 
 export const usePromoBanners = () => useQuery(catalogQueries.promoBanners());

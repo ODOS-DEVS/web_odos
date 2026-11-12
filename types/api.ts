@@ -562,6 +562,7 @@ export type DealsHubRead = {
     title: string;
     subtitle?: string | null;
     image_url?: string | null;
+    starts_at?: string | null;
     ends_at: string;
     product_count?: number;
   }[] | null;

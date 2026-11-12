@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-auth";
 import { useClaimVoucher } from "@/hooks/use-vouchers";
+import { trackPromoConversion, usePromoImpression } from "@/libs/promo-analytics";
 import { formatMoneyCompact } from "@/libs/format";
 import type { Voucher } from "@/types/catalog";
 
@@ -15,10 +16,16 @@ function formatVoucherDate(iso: string) {
 export function VoucherCard({ voucher }: { voucher: Voucher }) {
   const session = useSession();
   const claim = useClaimVoucher();
+  usePromoImpression("voucher", voucher.id);
 
   const onClaim = () =>
     claim.mutate(voucher.id, {
-      onSuccess: () => toast.success("Offer saved to your wallet"),
+      onSuccess: () => {
+        // Claiming is the voucher funnel's conversion; redemption money is
+        // recorded server-side at payment and reported separately.
+        trackPromoConversion("voucher", voucher.id);
+        toast.success("Offer saved to your wallet");
+      },
       onError: (error) => toast.error(error instanceof Error ? error.message : "We couldn't save that offer"),
     });
 

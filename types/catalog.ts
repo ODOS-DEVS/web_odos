@@ -155,6 +155,8 @@ export type FlashEvent = {
   imageUrl: string | null;
   /** Authoritative end time from the server — countdowns anchor on this, never a client clock baseline. */
   endsAt: string;
+  /** Set on scheduled events; null once live (or for live-on-activation events). */
+  startsAt: string | null;
   productCount: number;
 };
 
