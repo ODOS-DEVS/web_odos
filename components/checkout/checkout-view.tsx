@@ -171,10 +171,12 @@ function CheckoutForm() {
     checkout.mutate(
       {
         ...order,
-        // Honoured by Paystack. KutanaPay has no return-URL field at all, which
-        // is why the shopper is kept on our own result page below rather than
-        // relying on the provider to send them back.
-        callback_url: `${window.location.origin}/checkout/success`,
+        // The address the provider returns the shopper to. The backend appends
+        // this payment's reference before handing it to KutanaPay, so the
+        // landing page knows exactly what to confirm rather than inferring it
+        // from this browser's storage — which is what breaks when someone
+        // starts on a laptop and approves the charge on their phone.
+        callback_url: `${window.location.origin}/payment/return`,
         cancel_url: `${window.location.origin}/checkout`,
       },
       {

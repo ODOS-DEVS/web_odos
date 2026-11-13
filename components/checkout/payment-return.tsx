@@ -22,9 +22,12 @@ import {
 export function PaymentReturn({
   reference,
   cancelled,
+  kind,
 }: {
   reference?: string;
   cancelled?: boolean;
+  /** "order" or "topup", stated by the backend in the redirect it built. */
+  kind?: string;
 }) {
   const router = useRouter();
 
@@ -44,6 +47,11 @@ export function PaymentReturn({
     () => false,
   );
 
+  // The URL is authoritative when it says what this was; the stash is the
+  // fallback for a redirect that arrives bare (the dashboard-wide one, or a
+  // payment started before this shipped).
+  const resolvedKind = kind ?? pending?.kind;
+
   useEffect(() => {
     if (!hydrated) return;
 
@@ -54,9 +62,13 @@ export function PaymentReturn({
 
     // A top-up settles on the wallet, where the balance they are waiting to
     // see change actually lives.
-    if (pending?.kind === "topup") {
-      const topupRef = reference ?? pending.reference;
-      router.replace(`/account?tab=wallet&topup=${encodeURIComponent(topupRef)}`);
+    if (resolvedKind === "topup") {
+      const topupRef = reference ?? pending?.reference;
+      router.replace(
+        topupRef
+          ? `/account?tab=wallet&topup=${encodeURIComponent(topupRef)}`
+          : "/account?tab=wallet",
+      );
       return;
     }
 
@@ -64,7 +76,7 @@ export function PaymentReturn({
     // handles a missing reference honestly, and is the right place to land
     // if this browser has lost track of what was being paid for.
     router.replace(`/checkout/success${query ? `?${query}` : ""}`);
-  }, [cancelled, hydrated, pending, reference, router]);
+  }, [cancelled, hydrated, pending, reference, resolvedKind, router]);
 
   return (
     <Container className="grid place-items-center py-24 text-center">

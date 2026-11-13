@@ -18,5 +18,8 @@ export default async function PaymentReturnPage({ searchParams }: PageProps<"/pa
   // Passed through when present so the destination can skip the stash.
   const reference = first(raw.reference) ?? first(raw.trxref);
   const cancelled = first(raw.cancelled) === "1";
-  return <PaymentReturn reference={reference} cancelled={cancelled} />;
+  // Stated by the backend when it built the redirect, so this works even on a
+  // device that has no local record of the payment starting.
+  const kind = first(raw.kind);
+  return <PaymentReturn reference={reference} cancelled={cancelled} kind={kind} />;
 }

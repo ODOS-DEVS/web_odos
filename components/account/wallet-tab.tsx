@@ -44,9 +44,9 @@ function TopUpForm() {
         amount,
         payment_type: method.kind,
         payment_label: method.label,
-        // Honoured by Paystack; KutanaPay has no return-URL field, so the tab
-        // we keep here is what actually brings the shopper back.
-        callback_url: `${window.location.origin}/account?tab=wallet`,
+        // Same return address as checkout: the backend appends this top-up's
+        // reference, and /payment/return forwards to the wallet.
+        callback_url: `${window.location.origin}/payment/return`,
         cancel_url: `${window.location.origin}/account?tab=wallet`,
       },
       {
