@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowDownLeft, ArrowUpRight, Wallet } from "lucide-react";
@@ -10,7 +10,13 @@ import { LogoPill, TogglePill } from "@/components/ui/toggle-pill";
 import { usePaymentOptions } from "@/hooks/use-payment-options";
 import { useTopUpWallet, useWallet } from "@/hooks/use-wallet";
 import { formatDateTime, formatMoney } from "@/libs/format";
-import { rememberPendingPayment } from "@/libs/pending-payment";
+import {
+  pendingPaymentServerSnapshot,
+  pendingPaymentSnapshot,
+  rememberPendingPayment,
+  subscribePendingPayment,
+} from "@/libs/pending-payment";
+import { rememberPaymentWindow } from "@/libs/payment-window";
 import { TopUpResult } from "./topup-result";
 
 const QUICK_AMOUNTS = [50, 100, 200, 500];
@@ -31,6 +37,7 @@ function TopUpForm() {
     // popup as unrequested and blocks it. Pointed at the provider once we have
     // the URL. See the same pattern in checkout-view.
     const payWindow = window.open("", "_blank");
+    rememberPaymentWindow(payWindow);
 
     topUpMutation.mutate(
       {
@@ -56,6 +63,7 @@ function TopUpForm() {
         },
         onError: (error) => {
           payWindow?.close();
+          rememberPaymentWindow(null);
           toast.error(error instanceof Error ? error.message : "We couldn't start your top-up. Please try again.");
         },
       },
@@ -115,7 +123,18 @@ export function WalletTab() {
   const searchParams = useSearchParams();
   // Cleared by the dismiss below so the banner does not come back on every render.
   const [dismissed, setDismissed] = useState(false);
-  const reference = dismissed ? null : searchParams.get("topup");
+  // Same backfill as checkout: KutanaPay's dashboard redirect arrives with no
+  // reference on it, so the stash written when the top-up started is what
+  // names the payment to verify.
+  const stashed = useSyncExternalStore(
+    subscribePendingPayment,
+    pendingPaymentSnapshot,
+    pendingPaymentServerSnapshot,
+  );
+  const reference = dismissed
+    ? null
+    : searchParams.get("topup") ??
+      (stashed?.kind === "topup" ? stashed.reference : null);
 
   return (
     <div className="space-y-5">

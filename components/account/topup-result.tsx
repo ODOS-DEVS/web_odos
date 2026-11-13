@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 import { forgetPendingPayment } from "@/libs/pending-payment";
+import { closePaymentWindow } from "@/libs/payment-window";
 import { formatMoney } from "@/libs/format";
 import { queryKeys, walletTopUpQueries } from "@/services/queries";
 
@@ -29,8 +30,26 @@ export function TopUpResult({ reference, onDismiss }: { reference: string; onDis
   const settled = verification.data ? !verification.data.pending : false;
   useEffect(() => {
     if (!settled) return;
-    forgetPendingPayment();
+    // Same reason as checkout: the provider's tab is still in front of them,
+    // and closing it is what brings the wallet back into view.
+    closePaymentWindow();
   }, [settled]);
+
+  // Cleared on the way out rather than on settling — the stash may be the
+  // only thing naming this top-up, since the provider's redirect carries no
+  // reference. An unsettled one keeps its stash to be picked up later.
+  const settledRef = useRef(settled);
+  useEffect(() => {
+    settledRef.current = settled;
+  }, [settled]);
+  useEffect(
+    () => () => {
+      if (settledRef.current) {
+        forgetPendingPayment();
+      }
+    },
+    [],
+  );
 
   if (verification.isPending || verification.data?.pending) {
     return (

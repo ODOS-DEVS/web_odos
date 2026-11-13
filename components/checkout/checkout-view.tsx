@@ -14,6 +14,7 @@ import { Field } from "@/components/ui/field";
 import { useSession } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
 import { rememberPendingPayment } from "@/libs/pending-payment";
+import { rememberPaymentWindow } from "@/libs/payment-window";
 import { RegionCitySelect } from "@/components/ui/region-city-select";
 import { toOrderItems } from "@/libs/checkout";
 import { cn } from "@/libs/cn";
@@ -163,6 +164,9 @@ function CheckoutForm() {
     // later -- once the checkout call comes back -- is blocked as unrequested.
     // It starts blank and is pointed at the provider when we have the URL.
     const payWindow = window.open("", "_blank");
+    // Handed to the result screen so it can close this tab the moment the
+    // charge is confirmed, the way the app's payment sheet dismisses itself.
+    rememberPaymentWindow(payWindow);
 
     checkout.mutate(
       {
@@ -195,6 +199,7 @@ function CheckoutForm() {
         },
         onError: (error) => {
           payWindow?.close();
+          rememberPaymentWindow(null);
           failed(error);
         },
       },

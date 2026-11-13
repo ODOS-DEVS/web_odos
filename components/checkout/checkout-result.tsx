@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
@@ -10,7 +10,13 @@ import { Container } from "@/components/ui/container";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/hooks/use-cart";
 import { useCancelOrder } from "@/hooks/use-orders";
-import { forgetPendingPayment } from "@/libs/pending-payment";
+import {
+  forgetPendingPayment,
+  pendingPaymentServerSnapshot,
+  pendingPaymentSnapshot,
+  subscribePendingPayment,
+} from "@/libs/pending-payment";
+import { closePaymentWindow } from "@/libs/payment-window";
 import { formatMoney } from "@/libs/format";
 import { paymentQueries } from "@/services/queries";
 
@@ -18,11 +24,36 @@ import { paymentQueries } from "@/services/queries";
  * Where the hosted payment page sends the shopper back. It asks the API whether the payment really
  * went through (never trusting the redirect alone), and only then empties the cart.
  */
-export function CheckoutResult({ reference }: { reference?: string }) {
+export function CheckoutResult({ reference: referenceFromUrl }: { reference?: string }) {
   const { clear } = useCart();
   const router = useRouter();
   const cancelOrder = useCancelOrder();
   const [abandoning, setAbandoning] = useState(false);
+
+  // KutanaPay has no per-checkout return URL, so the only way back is a
+  // redirect configured once in its dashboard — and that arrives bare, with
+  // no reference on it. The stash written at checkout is what names the
+  // payment in that case. The app solves the same problem the same way,
+  // backfilling from the session it already holds.
+  const stashed = useSyncExternalStore(
+    subscribePendingPayment,
+    pendingPaymentSnapshot,
+    pendingPaymentServerSnapshot,
+  );
+
+  const reference =
+    referenceFromUrl ?? (stashed?.kind === "order" ? stashed.reference : undefined);
+
+  // The stash lives in localStorage, so the server cannot see it and the first
+  // paint of a bare redirect would otherwise read "No payment to confirm" —
+  // on the one screen where that is the most alarming thing we could say, to
+  // someone who has just paid. Until the client has looked, the honest state
+  // is "checking", not "nothing here".
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const verification = useQuery({ ...paymentQueries.verify(reference ?? ""), enabled: Boolean(reference) });
 
@@ -32,16 +63,46 @@ export function CheckoutResult({ reference }: { reference?: string }) {
     clear();
   }, [paid, clear]);
 
-  // Settled one way or the other, so there is nothing left to come back to.
-  // Clearing this is what stops the resumer sending them here again.
   const settled = verification.data ? !verification.data.pending : false;
+
   useEffect(() => {
     if (!settled) return;
-    forgetPendingPayment();
+    // The provider's tab is still in front of the shopper, showing its own
+    // receipt. Closing it is what actually brings them back to this page —
+    // KutanaPay cannot redirect, so nothing else will. It mirrors the app,
+    // where the payment sheet dismisses itself once the charge lands.
+    closePaymentWindow();
   }, [settled]);
 
+  // The stash is cleared when this screen goes away, not the moment the
+  // payment settles — while it is open the stash may be the only thing
+  // naming the payment, since a dashboard-configured redirect arrives with
+  // no reference on it. Dropping it mid-flight would pull the reference out
+  // from under the verification still on screen. An unsettled payment keeps
+  // its stash so the shopper can pick it up again later.
+  const settledRef = useRef(settled);
+  useEffect(() => {
+    settledRef.current = settled;
+  }, [settled]);
+  useEffect(
+    () => () => {
+      if (settledRef.current) {
+        forgetPendingPayment();
+      }
+    },
+    [],
+  );
+
   let body;
-  if (!reference) {
+  if (!reference && !hydrated) {
+    body = (
+      <>
+        <Loader2 className="size-10 animate-spin text-muted" aria-hidden />
+        <h1 className="mt-6 text-3xl font-semibold sm:text-4xl">Checking your payment…</h1>
+        <p className="mt-3 max-w-md text-muted">One moment.</p>
+      </>
+    );
+  } else if (!reference) {
     body = (
       <>
         <AlertTriangle className="size-10 text-warning" aria-hidden />
