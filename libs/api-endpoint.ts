@@ -120,6 +120,8 @@ export const SERVICE_ENDPOINTS = {
   vendorServices: "/vendor/services",
   vendorService: (serviceId: string) => `/vendor/services/${enc(serviceId)}`,
   vendorServiceStatus: (serviceId: string) => `/vendor/services/${enc(serviceId)}/status`,
+  vendorServiceAvailability: (serviceId: string) => `/vendor/services/${enc(serviceId)}/availability`,
+  vendorAvailabilityExceptions: "/vendor/services/availability/exceptions",
   vendorServiceBookings: "/vendor/services/bookings/all",
   vendorQuotations: "/vendor/services/quotations/all",
   vendorQuotationSend: (quotationId: string) => `/vendor/services/quotations/${enc(quotationId)}/send`,

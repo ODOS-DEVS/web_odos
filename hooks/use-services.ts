@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  availabilityService,
   bookingFlowService,
   bookingsService,
   servicesService,
@@ -9,10 +10,9 @@ import {
 } from "@/services/services.service";
 import { serviceQueries } from "@/services/queries";
 import { useSession } from "./use-auth";
-import type { BookingDraft, ServiceInput } from "@/types/services";
+import type { AvailabilityException, AvailabilityRule, BookingDraft, ServiceInput } from "@/types/services";
 
 const keys = {
-  detail: (id: string) => ["services", "detail", id] as const,
   mine: ["services", "mine"] as const,
 };
 
@@ -30,12 +30,7 @@ export function useServices(params: ServiceListParams = {}) {
 }
 
 export function useService(serviceId: string) {
-  return useQuery({
-    queryKey: keys.detail(serviceId),
-    queryFn: () => servicesService.detail(serviceId),
-    enabled: Boolean(serviceId),
-    retry: false,
-  });
+  return useQuery({ ...serviceQueries.detail(serviceId), enabled: Boolean(serviceId) });
 }
 
 /* ---------- Provider side ---------- */
@@ -200,5 +195,38 @@ export function useBookingHold(bookingId: string | undefined, enabled = true) {
     queryFn: () => bookingFlowService.hold(bookingId!),
     enabled: enabled && Boolean(bookingId),
     retry: false,
+  });
+}
+
+/* ---------- Availability ---------- */
+
+export function useServiceAvailability(serviceId: string | undefined) {
+  return useQuery({
+    queryKey: ["services", "availability", serviceId] as const,
+    queryFn: () => availabilityService.rules(serviceId!),
+    enabled: Boolean(serviceId),
+    retry: false,
+  });
+}
+
+export function useSaveAvailability() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ serviceId, rules }: { serviceId: string; rules: AvailabilityRule[] }) =>
+      availabilityService.replaceRules(serviceId, rules),
+    onSuccess: (_data, { serviceId }) => {
+      queryClient.invalidateQueries({ queryKey: ["services", "availability", serviceId] });
+      // Changing the pattern changes which slots shoppers are offered.
+      queryClient.invalidateQueries({ queryKey: ["services", "slots"] });
+    },
+  });
+}
+
+export function useAddAvailabilityException() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ serviceId, exception }: { serviceId: string; exception: AvailabilityException }) =>
+      availabilityService.addException(serviceId, exception),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["services", "slots"] }),
   });
 }

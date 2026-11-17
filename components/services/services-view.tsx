@@ -73,7 +73,10 @@ export function ServicesView() {
   const [query, setQuery] = useState("");
 
   const categories = useServiceCategories();
-  const services = useServices({ ...(category ? { category } : {}), ...(query.trim() ? { q: query.trim() } : {}) });
+  const services = useServices({
+    ...(category ? { category_id: category } : {}),
+    ...(query.trim() ? { q: query.trim() } : {}),
+  });
 
   const unavailable = categories.isError && services.isError;
 
@@ -150,10 +153,10 @@ export function ServicesView() {
             <button
               key={c.id}
               type="button"
-              onClick={() => setCategory(c.slug)}
+              onClick={() => setCategory(c.id)}
               className={cn(
                 "press shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium",
-                category === c.slug ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground",
+                category === c.id ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground",
               )}
             >
               {c.title}

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { HydrationBoundary } from "@tanstack/react-query";
 import { StoreView } from "@/components/store/store-view";
 import { dehydrated, getServerQueryClient, prefetchAll } from "@/libs/query-client.server";
-import { catalogQueries, voucherQueries } from "@/services/queries";
+import { catalogQueries, serviceQueries, voucherQueries } from "@/services/queries";
 import type { Store } from "@/types/catalog";
 
 /**
@@ -39,6 +39,10 @@ export default async function StorePage({ params }: PageProps<"/stores/[slug]">)
     catalogQueries.products({ store_id: store.id }),
     catalogQueries.storeSections(store.id),
     voucherQueries.forStore(store.id),
+    // A business can offer both. Prefetched so the Products/Services tabs are in the markup
+    // rather than appearing after hydration; prefetchQuery records a failure in query state
+    // instead of rejecting, so a store on an environment without services still renders.
+    serviceQueries.list({ store_id: store.id }),
   );
 
   const jsonLd = {

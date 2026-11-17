@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Zap } from "lucide-react";
 import { ProductGrid, ProductGridSkeleton } from "@/components/product/product-grid";
 import { DeliveryNote } from "@/components/store/delivery-note";
@@ -12,12 +13,20 @@ import { Container } from "@/components/ui/container";
 import { QueryError } from "@/components/ui/query-error";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { useProducts, useStoreBySlug, useStoreSections } from "@/hooks/use-catalog";
+import { useServices } from "@/hooks/use-services";
+import { ServiceCard } from "@/components/services/services-view";
+import { SegmentedControl } from "@/components/vendor/vendor-ui";
+import { cn } from "@/libs/cn";
 import { useStoreVouchers } from "@/hooks/use-vouchers";
 import type { Product } from "@/types/catalog";
 
 export function StoreView({ slug }: { slug: string }) {
+  const [tab, setTab] = useState<"products" | "services">("products");
   const { data: store, isPending, isError, error, refetch } = useStoreBySlug(slug);
   const products = useProducts({ store_id: store?.id });
+  // A business can offer products, services, or both. Services only exist for stores whose
+  // `offerings` include them, so an empty list here is the normal case for a product-only shop.
+  const storeServices = useServices(store?.id ? { store_id: store.id } : {});
   const sections = useStoreSections(store?.id);
   const storeVouchers = useStoreVouchers(store?.id);
 
@@ -29,6 +38,9 @@ export function StoreView({ slug }: { slug: string }) {
   const flash = list.filter((p) => p.tags.includes("flash"));
   const hasEndDate = flash.some((p) => p.flashSale?.endsAt);
   const vouchers = storeVouchers.data ?? [];
+  const services = (storeServices.data ?? []).filter((service) => service.storeId === store.id);
+  // Only worth a tab bar when there is genuinely something on both sides.
+  const hasBoth = list.length > 0 && services.length > 0;
 
   // Vendors group their products into their own sections ("Shoes", "Bags"…); anything left over follows.
   const grouped: { id: string; title: string; items: Product[] }[] = [];
@@ -72,7 +84,49 @@ export function StoreView({ slug }: { slug: string }) {
             </section>
           )}
 
-          <section id="products" aria-labelledby="products-heading" className="scroll-mt-40">
+          {hasBoth && (
+            <div className="-mb-6">
+              <SegmentedControl
+                label="What this business offers"
+                value={tab}
+                onChange={setTab}
+                options={[
+                  { value: "products", label: `Products (${list.length})` },
+                  { value: "services", label: `Services (${services.length})` },
+                ]}
+              />
+            </div>
+          )}
+
+          {services.length > 0 && (
+            <section
+              id="services"
+              aria-labelledby="services-heading"
+              /* Rendered either way and hidden by the tab, rather than conditionally mounted:
+                 both catalogues stay in the markup for search engines, and switching tabs costs
+                 no refetch. */
+              className={cn("scroll-mt-40", hasBoth && tab !== "services" && "hidden")}
+            >
+              <h2 id="services-heading" className="sr-only">
+                Services
+              </h2>
+              <SectionHeading
+                title="Services"
+                description="Book this business for work, not just goods. ODOS holds the payment until the job is confirmed."
+              />
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {services.map((service) => (
+                  <ServiceCard key={service.id} service={service} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section
+            id="products"
+            aria-labelledby="products-heading"
+            className={cn("scroll-mt-40", hasBoth && tab !== "products" && "hidden")}
+          >
             <h2 id="products-heading" className="sr-only">
               Products
             </h2>

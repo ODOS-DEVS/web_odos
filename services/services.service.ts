@@ -1,6 +1,8 @@
 import { SERVICE_ENDPOINTS } from "@/libs/api-endpoint";
 import { toBookingStatus } from "@/libs/service-bookings";
 import type {
+  AvailabilityException,
+  AvailabilityRule,
   Booking,
   BookingDraft,
   BookingHold,
@@ -136,10 +138,24 @@ const toDetail = (d: DetailRead): ServiceDetail => ({
     .map((i) => ({ url: i.image_url as string, caption: i.caption ?? null })),
 });
 
+/**
+ * Mirrors `GET /services` exactly. The names matter: an unrecognised query parameter is silently
+ * ignored by FastAPI, so a near-miss like `category` instead of `category_id` produces an
+ * unfiltered list rather than an error — which is what happened here.
+ */
 export type ServiceListParams = {
-  category?: string;
   q?: string;
-  area?: string;
+  /** A category *id*, matched against both category and subcategory. */
+  category_id?: string;
+  /** One business's services, for its storefront page. */
+  store_id?: string;
+  /** Matches providers based there or who travel there. */
+  city?: string;
+  min_price?: number;
+  max_price?: number;
+  min_rating?: number;
+  location_mode?: string;
+  booking_type?: string;
   limit?: number;
   offset?: number;
 };
@@ -452,4 +468,52 @@ export const bookingFlowService = {
       awaitingConfirmation: Boolean(h.awaiting_confirmation),
     };
   },
+};
+
+/* ---------- Availability ---------- */
+
+type RuleRead = { id: string; weekday: number; start_time: string; end_time: string; is_active?: boolean };
+
+/** "09:00:00" from the API, "09:00" in an <input type="time">. */
+const toTimeInput = (value: string) => value.slice(0, 5);
+
+export const availabilityService = {
+  async rules(serviceId: string): Promise<AvailabilityRule[]> {
+    const rows = await apiFetch<RuleRead[]>(SERVICE_ENDPOINTS.vendorServiceAvailability(serviceId), {
+      revalidate: false,
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      weekday: r.weekday,
+      startTime: toTimeInput(r.start_time),
+      endTime: toTimeInput(r.end_time),
+      isActive: r.is_active ?? true,
+    }));
+  },
+
+  /**
+   * Replaces the whole week. The API deletes and rewrites rather than diffing, deliberately —
+   * so the caller must always send the complete pattern, not just what changed.
+   */
+  replaceRules: (serviceId: string, rules: AvailabilityRule[]) =>
+    apiFetch<unknown>(SERVICE_ENDPOINTS.vendorServiceAvailability(serviceId), {
+      method: "PUT",
+      body: rules.map((r) => ({ weekday: r.weekday, start_time: r.startTime, end_time: r.endTime })),
+      revalidate: false,
+    }),
+
+  /** A one-off closure or special hours on a date. */
+  addException: (serviceId: string, exception: AvailabilityException) =>
+    apiFetch<unknown>(SERVICE_ENDPOINTS.vendorAvailabilityExceptions, {
+      method: "POST",
+      body: {
+        service_id: serviceId,
+        exception_date: exception.exceptionDate,
+        is_available: exception.isAvailable,
+        start_time: exception.startTime ?? null,
+        end_time: exception.endTime ?? null,
+        note: exception.note ?? null,
+      },
+      revalidate: false,
+    }),
 };

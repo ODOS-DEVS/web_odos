@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Eye, EyeOff, Pencil, Plus, Wrench, X } from "lucide-react";
+import { CalendarClock, Eye, EyeOff, Pencil, Plus, Wrench, X } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -19,6 +19,7 @@ import {
   useUpdateService,
 } from "@/hooks/use-services";
 import type { ServiceSummary } from "@/types/services";
+import { AvailabilityEditor } from "./availability-editor";
 
 const STATUS_TONE: Record<string, BadgeTone> = {
   published: "success",
@@ -254,6 +255,7 @@ export function VendorServicesView() {
   const setStatus = useSetServiceStatus();
   const [editing, setEditing] = useState<ServiceSummary | null>(null);
   const [creating, setCreating] = useState(false);
+  const [scheduling, setScheduling] = useState<ServiceSummary | null>(null);
 
   // The services API is not deployed everywhere yet; say so rather than showing a broken page.
   if (query.isError) {
@@ -289,6 +291,7 @@ export function VendorServicesView() {
 
       {creating && <ServiceForm onDone={() => setCreating(false)} />}
       {editing && <ServiceForm service={editing} onDone={() => setEditing(null)} />}
+      {scheduling && <AvailabilityEditor serviceId={scheduling.id} title={scheduling.title} />}
 
       {query.isPending ? (
         <SkeletonRows count={3} />
@@ -322,6 +325,15 @@ export function VendorServicesView() {
                 <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(service)}>
                   <Pencil className="size-3.5" aria-hidden />
                   Edit
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setScheduling((current) => (current?.id === service.id ? null : service))}
+                >
+                  <CalendarClock className="size-3.5" aria-hidden />
+                  Hours
                 </Button>
                 <Button
                   type="button"

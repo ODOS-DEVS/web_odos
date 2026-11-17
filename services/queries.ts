@@ -68,6 +68,7 @@ export const queryKeys = {
   homeFeed: ["feed", "home"] as const,
   serviceCategories: ["services", "categories"] as const,
   serviceList: (params: ServiceListParams) => ["services", "list", params] as const,
+  serviceDetail: (id: string) => ["services", "detail", id] as const,
   feedSection: (key: string) => ["feed", "section", key] as const,
   notifications: ["notifications"] as const,
   wallet: ["wallet"] as const,
@@ -324,6 +325,13 @@ export const serviceQueries = {
     queryOptions({
       queryKey: queryKeys.serviceList(params),
       queryFn: () => servicesService.list(params),
+      staleTime: MINUTE,
+      retry: false,
+    }),
+  detail: (serviceId: string) =>
+    queryOptions({
+      queryKey: queryKeys.serviceDetail(serviceId),
+      queryFn: () => servicesService.detail(serviceId),
       staleTime: MINUTE,
       retry: false,
     }),

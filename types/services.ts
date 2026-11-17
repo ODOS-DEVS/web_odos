@@ -207,3 +207,39 @@ export type BookingHold = {
   /** Provider says it's done and the money has not moved yet. */
   awaitingConfirmation: boolean;
 };
+
+/* ---------- Availability ---------- */
+
+/**
+ * One open window on one weekday. `weekday` follows Python's `date.weekday()`, which the backend
+ * compares against directly: **0 is Monday**, 6 is Sunday. Getting this wrong silently shifts a
+ * provider's whole week.
+ */
+export type AvailabilityRule = {
+  id?: string;
+  weekday: number;
+  /** "HH:MM" — the API takes a time, not a datetime. */
+  startTime: string;
+  endTime: string;
+  isActive?: boolean;
+};
+
+/** A one-off override: a closed day, or different hours on a specific date. */
+export type AvailabilityException = {
+  exceptionDate: string;
+  isAvailable: boolean;
+  startTime?: string | null;
+  endTime?: string | null;
+  note?: string | null;
+};
+
+/** 0-indexed from Monday, matching `AvailabilityRule.weekday`. */
+export const WEEKDAY_LABELS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const;
