@@ -2,6 +2,10 @@ import { SERVICE_ENDPOINTS } from "@/libs/api-endpoint";
 import { toBookingStatus } from "@/libs/service-bookings";
 import type {
   Booking,
+  BookingDraft,
+  BookingHold,
+  BookingQuote,
+  BookingSlot,
   Quotation,
   ServiceAddon,
   ServiceCategory,
@@ -186,6 +190,7 @@ function toWire(input: Partial<ServiceInput>) {
     category_id: input.categoryId,
     pricing_model: input.pricingModel,
     booking_type: input.bookingType,
+    payment_timing: input.paymentTiming,
     base_price: input.basePrice,
     duration_minutes: input.durationMinutes,
     location_modes: input.locationModes,
@@ -322,4 +327,129 @@ export const bookingsService = {
         estimated_duration_minutes: input.durationMinutes ?? null,
       },
     }),
+};
+
+/* ---------- Slots, quotes, booking creation and escrow ---------- */
+
+type SlotRead = { start_at: string; end_at: string };
+
+type QuoteRead = {
+  currency: string;
+  base_amount: number;
+  addons_amount: number;
+  total_amount: number;
+  deposit_amount: number;
+  due_now: number;
+  duration_minutes: number;
+  addons?: { title: string; unit_price: number; quantity: number }[];
+};
+
+type HoldRead = {
+  amount_held: number;
+  work_completed_at?: string | null;
+  auto_release_at?: string | null;
+  customer_confirmed_at?: string | null;
+  released_at?: string | null;
+  release_reason?: string | null;
+  awaiting_confirmation?: boolean;
+};
+
+const draftBody = (draft: BookingDraft) => ({
+  package_id: draft.packageId ?? null,
+  addons: (draft.addons ?? []).map((a) => ({ addon_id: a.addonId, quantity: a.quantity })),
+  start_at: draft.startAt ?? null,
+  location_mode: draft.locationMode ?? null,
+  location_address: draft.locationAddress ?? null,
+  location_city: draft.locationCity ?? null,
+  customer_note: draft.customerNote ?? null,
+  hours: draft.hours ?? null,
+});
+
+export const bookingFlowService = {
+  /** Bookable times on one day. Empty means the provider has nothing free, not an error. */
+  async slots(serviceId: string, day: string, draft: BookingDraft = {}): Promise<BookingSlot[]> {
+    const query: Record<string, string | number> = { day };
+    if (draft.packageId) query.package_id = draft.packageId;
+    if (draft.hours) query.hours = draft.hours;
+    const rows = await apiFetch<SlotRead[]>(SERVICE_ENDPOINTS.serviceSlots(serviceId), {
+      auth: false,
+      query,
+      revalidate: false,
+    });
+    return rows.map((r) => ({ startAt: r.start_at, endAt: r.end_at }));
+  },
+
+  /**
+   * What a configuration costs. The API calls this advisory and reprices when the booking is
+   * written, so it is shown as an estimate and never used to decide what was charged.
+   */
+  async quote(serviceId: string, draft: BookingDraft): Promise<BookingQuote> {
+    const q = await apiFetch<QuoteRead>(SERVICE_ENDPOINTS.serviceQuote(serviceId), {
+      auth: false,
+      method: "POST",
+      body: draftBody(draft),
+      revalidate: false,
+    });
+    return {
+      currency: q.currency,
+      baseAmount: q.base_amount,
+      addonsAmount: q.addons_amount,
+      totalAmount: q.total_amount,
+      dueNow: q.due_now,
+      durationMinutes: q.duration_minutes,
+      addons: (q.addons ?? []).map((a) => ({ title: a.title, unitPrice: a.unit_price, quantity: a.quantity })),
+    };
+  },
+
+  /** Creates the booking. Requires a session: it belongs to the signed-in customer. */
+  async create(serviceId: string, draft: BookingDraft): Promise<Booking> {
+    const row = await apiFetch<BookingRead>(`${SERVICE_ENDPOINTS.service(serviceId)}/bookings`, {
+      method: "POST",
+      body: draftBody(draft),
+      revalidate: false,
+    });
+    return toBooking(row);
+  },
+
+  /** Opens a gateway checkout for the full booking amount. Returns where to send the customer. */
+  async checkout(bookingId: string): Promise<{ checkoutUrl: string | null; reference: string | null }> {
+    const row = await apiFetch<{ checkout_url?: string | null; reference?: string | null }>(
+      `${SERVICE_ENDPOINTS.booking(bookingId)}/checkout`,
+      { method: "POST", revalidate: false },
+    );
+    return { checkoutUrl: row.checkout_url ?? null, reference: row.reference ?? null };
+  },
+
+  /**
+   * Confirms a payment by reference. The gateway is the authority — the UI never marks a booking
+   * paid on its own, it asks the backend to go and check.
+   */
+  verifyPayment: (reference: string) =>
+    apiFetch<unknown>(`/bookings/payments/${encodeURIComponent(reference)}/verify`, {
+      method: "POST",
+      revalidate: false,
+    }),
+
+  /** The customer releasing the held payment once the work is actually done. */
+  async confirmWork(bookingId: string): Promise<Booking> {
+    const row = await apiFetch<BookingRead>(`${SERVICE_ENDPOINTS.booking(bookingId)}/confirm`, {
+      method: "POST",
+      revalidate: false,
+    });
+    return toBooking(row);
+  },
+
+  /** What ODOS is holding on this booking, and when it leaves. */
+  async hold(bookingId: string): Promise<BookingHold> {
+    const h = await apiFetch<HoldRead>(`${SERVICE_ENDPOINTS.booking(bookingId)}/hold`, { revalidate: false });
+    return {
+      amountHeld: h.amount_held,
+      workCompletedAt: h.work_completed_at ?? null,
+      autoReleaseAt: h.auto_release_at ?? null,
+      customerConfirmedAt: h.customer_confirmed_at ?? null,
+      releasedAt: h.released_at ?? null,
+      releaseReason: h.release_reason ?? null,
+      awaitingConfirmation: Boolean(h.awaiting_confirmation),
+    };
+  },
 };

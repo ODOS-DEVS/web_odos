@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Clock, MapPin, Search, Sparkles, Star, Wrench } from "lucide-react";
+import { Clock, MapPin, Search, ShieldCheck, Sparkles, Star, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
+import { Carousel } from "@/components/ui/carousel";
 import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
@@ -95,6 +96,13 @@ export function ServicesView() {
 
   const rows = services.data ?? [];
   const topLevel = (categories.data ?? []).filter((c) => !c.parentId);
+  // Searching or filtering means they want results, not a curated homepage.
+  const browsing = Boolean(category) || Boolean(query.trim());
+  const topRated = rows
+    .filter((s) => s.rating !== null && s.reviewCount > 0)
+    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    .slice(0, 10);
+  const bookable = rows.filter((s) => s.bookingType === "instant").slice(0, 10);
 
   return (
     <Container className="py-8 sm:py-10">
@@ -102,6 +110,17 @@ export function ServicesView() {
         title="Services"
         description="Hire trusted local professionals — from repairs and cleaning to photography and tutoring."
       />
+
+      <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <ShieldCheck className="size-4 shrink-0 text-success" aria-hidden />
+          You pay ODOS, not the provider — we hold it until the work is done
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Star className="size-4 shrink-0 text-warning" aria-hidden />
+          Reviews from customers who actually booked
+        </span>
+      </div>
 
       <div className="relative mt-6 max-w-xl">
         <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" aria-hidden />
@@ -161,10 +180,10 @@ export function ServicesView() {
             }
           />
         </div>
-      ) : (
+      ) : browsing ? (
         <>
           <p className="mt-6 text-sm text-muted">
-            {rows.length} service{rows.length === 1 ? "" : "s"} available
+            {rows.length} service{rows.length === 1 ? "" : "s"} match
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {rows.map((service) => (
@@ -172,6 +191,49 @@ export function ServicesView() {
             ))}
           </div>
         </>
+      ) : (
+        <div className="mt-10 space-y-12">
+          {/* Curated rows, all derived from the one list the API returns — no section here
+              depends on an endpoint that does not exist. A row with nothing in it is skipped
+              rather than rendered empty. */}
+          {topRated.length > 0 && (
+            <section>
+              <SectionHeading title="Highly rated" description="Providers customers rated well." />
+              <div className="mt-5">
+                <Carousel label="Highly rated services" itemClassName="w-[15rem] sm:w-[17rem]">
+                  {topRated.map((service) => (
+                    <ServiceCard key={service.id} service={service} />
+                  ))}
+                </Carousel>
+              </div>
+            </section>
+          )}
+
+          {bookable.length > 0 && (
+            <section>
+              <SectionHeading
+                title="Book instantly"
+                description="Pick a time and it is held straight away."
+              />
+              <div className="mt-5">
+                <Carousel label="Instantly bookable services" itemClassName="w-[15rem] sm:w-[17rem]">
+                  {bookable.map((service) => (
+                    <ServiceCard key={service.id} service={service} />
+                  ))}
+                </Carousel>
+              </div>
+            </section>
+          )}
+
+          <section>
+            <SectionHeading title="All services" description={`${rows.length} available on ODOS`} />
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {rows.map((service) => (
+                <ServiceCard key={service.id} service={service} />
+              ))}
+            </div>
+          </section>
+        </div>
       )}
 
       <p className="mt-10 flex items-center gap-2 text-sm text-muted">

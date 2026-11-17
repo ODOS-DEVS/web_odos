@@ -8,6 +8,7 @@ import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
 import { formatMoney } from "@/libs/format";
+import { BookingPanel } from "./booking-panel";
 import { useService } from "@/hooks/use-services";
 import { useStores } from "@/hooks/use-catalog";
 import { formatServicePrice } from "./services-view";
@@ -39,6 +40,8 @@ export function ServiceDetailView({ id }: { id: string }) {
   }
 
   const store = stores.data?.find((s) => s.id === service.storeId);
+  // A quote-priced service has no amount to charge yet, so it goes through enquiry, not checkout.
+  const bookable = service.pricingModel !== "quote";
   const gallery = service.images.length ? service.images : service.imageUrl ? [service.imageUrl] : [];
 
   return (
@@ -149,6 +152,8 @@ export function ServiceDetailView({ id }: { id: string }) {
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          {bookable && <BookingPanel service={service} />}
+
           <div className="rounded-2xl border border-line bg-surface p-5">
             <p className="text-2xl font-bold">{formatServicePrice(service)}</p>
             <p className="mt-1 text-xs text-muted">
@@ -182,9 +187,14 @@ export function ServiceDetailView({ id }: { id: string }) {
 
             {/* Enquiries go through the existing vendor chat rather than a second messaging system. */}
             {store ? (
-              <ButtonLink href={`/stores/${store.slug}/chat`} size="lg" className="mt-4 w-full">
+              <ButtonLink
+                href={`/stores/${store.slug}/chat`}
+                variant={bookable ? "outline" : "primary"}
+                size="lg"
+                className="mt-4 w-full"
+              >
                 <MessageSquare className="size-4" aria-hidden />
-                {service.pricingModel === "quote" ? "Request a quote" : "Contact the provider"}
+                {service.pricingModel === "quote" ? "Request a quote" : "Message the provider"}
               </ButtonLink>
             ) : (
               <p className="mt-4 rounded-xl bg-surface-muted p-3 text-xs text-muted">

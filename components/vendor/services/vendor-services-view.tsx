@@ -35,6 +35,16 @@ const PRICING_MODELS = [
   { value: "quote", label: "Quote on request" },
 ];
 
+/**
+ * Escrow or nothing. `upfront` means the customer pays in full and ODOS holds it until the work
+ * is confirmed; `free` is for consultations and quote-first work. There is no pay-on-completion
+ * option — that was removed when escrow landed, and the API rejects it.
+ */
+const PAYMENT_TIMINGS = [
+  { value: "upfront", label: "Customer pays upfront, ODOS holds it until confirmed" },
+  { value: "free", label: "No charge at booking (consultation or quote first)" },
+];
+
 const BOOKING_TYPES = [
   { value: "request", label: "Customer requests, I accept" },
   { value: "instant", label: "Customers book a slot instantly" },
@@ -61,6 +71,7 @@ function ServiceForm({ service, onDone }: { service?: ServiceSummary; onDone: ()
     categoryId: service?.categoryId ?? "",
     pricingModel: service?.pricingModel ?? "fixed",
     bookingType: service?.bookingType ?? "request",
+    paymentTiming: "upfront",
     basePrice: service ? String(service.basePrice) : "",
     durationMinutes: service?.durationMinutes ? String(service.durationMinutes) : "",
     serviceAreas: "",
@@ -84,6 +95,7 @@ function ServiceForm({ service, onDone }: { service?: ServiceSummary; onDone: ()
       categoryId: form.categoryId || null,
       pricingModel: form.pricingModel,
       bookingType: form.bookingType,
+      paymentTiming: form.paymentTiming as "upfront" | "free",
       basePrice: Number(form.basePrice || 0),
       durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : null,
       serviceAreas: splitList(form.serviceAreas),
@@ -179,6 +191,21 @@ function ServiceForm({ service, onDone }: { service?: ServiceSummary; onDone: ()
             />
           </label>
         </div>
+
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium">How you get paid</span>
+          <select className={inputClass} value={form.paymentTiming} onChange={(e) => set("paymentTiming", e.target.value)}>
+            {PAYMENT_TIMINGS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-xs text-muted">
+            ODOS releases the money to you once the customer confirms the work, or automatically 48 hours
+            after you mark it complete.
+          </span>
+        </label>
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium">How customers book</span>

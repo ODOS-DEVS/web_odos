@@ -12,6 +12,7 @@ import { LoyaltyTab } from "@/components/account/loyalty-tab";
 import { PaymentMethodsTab } from "@/components/account/payment-methods-tab";
 import { ReturnsTab } from "@/components/account/returns-tab";
 import { ReviewsTab } from "@/components/account/reviews-tab";
+import { BookingsTab } from "@/components/account/bookings-tab";
 import { VendorTab } from "@/components/account/vendor-tab";
 import { VouchersTab } from "@/components/account/vouchers-tab";
 import { WalletTab } from "@/components/account/wallet-tab";
@@ -35,6 +36,7 @@ const TABS = [
   { id: "payment", label: "Payment methods" },
   { id: "wallet", label: "Wallet" },
   { id: "loyalty", label: "Rewards" },
+  { id: "bookings", label: "Bookings" },
   { id: "returns", label: "Returns" },
   { id: "chats", label: "Chats" },
   { id: "reviews", label: "Reviews" },
@@ -351,6 +353,7 @@ function ProfileTabs() {
         {activeTab === "payment" && <PaymentMethodsTab />}
         {activeTab === "wallet" && <WalletTab />}
         {activeTab === "address" && <AddressTab />}
+        {activeTab === "bookings" && <BookingsTab />}
         {activeTab === "returns" && <ReturnsTab />}
         {activeTab === "reviews" && <ReviewsTab />}
         {activeTab === "vouchers" && <VouchersTab />}

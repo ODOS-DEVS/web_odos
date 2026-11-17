@@ -1,10 +1,15 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { bookingsService, servicesService, type ServiceListParams } from "@/services/services.service";
+import {
+  bookingFlowService,
+  bookingsService,
+  servicesService,
+  type ServiceListParams,
+} from "@/services/services.service";
 import { serviceQueries } from "@/services/queries";
 import { useSession } from "./use-auth";
-import type { ServiceInput } from "@/types/services";
+import type { BookingDraft, ServiceInput } from "@/types/services";
 
 const keys = {
   detail: (id: string) => ["services", "detail", id] as const,
@@ -129,5 +134,71 @@ export function useSendQuote() {
     mutationFn: ({ id, ...input }: { id: string; amount: number; message?: string | null; durationMinutes?: number | null }) =>
       bookingsService.sendQuote(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["services", "quotations"] }),
+  });
+}
+
+/* ---------- Booking flow and escrow ---------- */
+
+export function useServiceSlots(serviceId: string, day: string | null, draft: BookingDraft = {}) {
+  return useQuery({
+    queryKey: ["services", "slots", serviceId, day, draft.packageId ?? null, draft.hours ?? null] as const,
+    queryFn: () => bookingFlowService.slots(serviceId, day!, draft),
+    enabled: Boolean(serviceId && day),
+    retry: false,
+  });
+}
+
+/**
+ * Live estimate for the configuration on screen. Advisory by design — the API reprices when the
+ * booking is written, so this must never be presented as the amount charged.
+ */
+export function useBookingQuote(serviceId: string, draft: BookingDraft, enabled = true) {
+  return useQuery({
+    queryKey: ["services", "quote", serviceId, draft] as const,
+    queryFn: () => bookingFlowService.quote(serviceId, draft),
+    enabled: enabled && Boolean(serviceId),
+    retry: false,
+  });
+}
+
+export function useCreateBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ serviceId, draft }: { serviceId: string; draft: BookingDraft }) =>
+      bookingFlowService.create(serviceId, draft),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["services", "bookings"] }),
+  });
+}
+
+export function useBookingCheckout() {
+  return useMutation({ mutationFn: (bookingId: string) => bookingFlowService.checkout(bookingId) });
+}
+
+export function useVerifyBookingPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reference: string) => bookingFlowService.verifyPayment(reference),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["services", "bookings"] }),
+  });
+}
+
+/** The customer releasing escrow. Invalidates the hold as well as the booking lists. */
+export function useConfirmWork() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (bookingId: string) => bookingFlowService.confirmWork(bookingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services", "bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["services", "hold"] });
+    },
+  });
+}
+
+export function useBookingHold(bookingId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ["services", "hold", bookingId] as const,
+    queryFn: () => bookingFlowService.hold(bookingId!),
+    enabled: enabled && Boolean(bookingId),
+    retry: false,
   });
 }

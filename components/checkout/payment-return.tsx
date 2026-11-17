@@ -72,6 +72,18 @@ export function PaymentReturn({
       return;
     }
 
+    // A booking settles on the bookings tab, where the escrow state the customer now cares
+    // about ("ODOS is holding this until you confirm") actually lives.
+    if (resolvedKind === "booking") {
+      const bookingRef = reference ?? pending?.reference;
+      router.replace(
+        bookingRef
+          ? `/account?tab=bookings&booking=${encodeURIComponent(bookingRef)}`
+          : "/account?tab=bookings",
+      );
+      return;
+    }
+
     // Orders, and the no-stash case: the checkout result screen already
     // handles a missing reference honestly, and is the right place to land
     // if this browser has lost track of what was being paid for.

@@ -78,8 +78,16 @@ export type ServiceDetail = ServiceSummary & {
 };
 
 /** What a provider sends when creating or editing a listing. */
+/**
+ * How the money is taken. Only these two exist: `upfront` is the escrow model (customer pays in
+ * full, ODOS holds it until the work is confirmed) and `free` is for consultations and
+ * quote-first work where nothing is charged at booking.
+ */
+export type ServicePaymentTiming = "upfront" | "free";
+
 export type ServiceInput = {
   title: string;
+  paymentTiming?: ServicePaymentTiming;
   summary?: string | null;
   description?: string | null;
   categoryId?: string | null;
@@ -148,4 +156,54 @@ export type Quotation = {
   expiresAt: string | null;
   bookingId: string | null;
   createdAt: string;
+};
+
+/* ---------- Booking creation, pricing and escrow ---------- */
+
+export type BookingSlot = { startAt: string; endAt: string };
+
+export type PricedAddon = { title: string; unitPrice: number; quantity: number };
+
+/**
+ * What a configuration costs. **Advisory**: the API reprices on write, so this is for showing
+ * the shopper a figure before they commit — never for deciding what they actually pay.
+ */
+export type BookingQuote = {
+  currency: string;
+  baseAmount: number;
+  addonsAmount: number;
+  totalAmount: number;
+  dueNow: number;
+  durationMinutes: number;
+  addons: PricedAddon[];
+};
+
+export type BookingDraft = {
+  packageId?: string | null;
+  addons?: { addonId: string; quantity: number }[];
+  startAt?: string | null;
+  locationMode?: string | null;
+  locationAddress?: string | null;
+  locationCity?: string | null;
+  customerNote?: string | null;
+  hours?: number | null;
+};
+
+/**
+ * What ODOS is holding on a booking, and when it leaves.
+ *
+ * The customer pays in full at booking and the money sits as provider liability until one of
+ * three things happens: the customer confirms, the grace window elapses after the provider
+ * claimed completion, or an admin resolves a dispute. A provider marking work `completed` is a
+ * claim, not a release — which is the entire point of the hold.
+ */
+export type BookingHold = {
+  amountHeld: number;
+  workCompletedAt: string | null;
+  autoReleaseAt: string | null;
+  customerConfirmedAt: string | null;
+  releasedAt: string | null;
+  releaseReason: string | null;
+  /** Provider says it's done and the money has not moved yet. */
+  awaitingConfirmation: boolean;
 };

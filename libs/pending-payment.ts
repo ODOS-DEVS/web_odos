@@ -21,9 +21,16 @@ const TTL_MS = 30 * 60 * 1000;
  * Which endpoint settles this reference. An order reference sent to the wallet's
  * verify route is simply not found, so the two cannot be confused.
  */
-export type PendingPaymentKind = "order" | "topup";
+/** Service bookings pay through the same gateway as orders, so they need their own kind. */
+export type PendingPaymentKind = "order" | "topup" | "booking";
 
 export type PendingPayment = { reference: string; kind: PendingPaymentKind; at: number };
+
+/** Guards what comes back out of localStorage; a stash written by an older build is discarded. */
+const KINDS = new Set<string>(["order", "topup", "booking"]);
+
+const isPendingPaymentKind = (value: unknown): value is PendingPaymentKind =>
+  typeof value === "string" && KINDS.has(value);
 
 /** Same-tab subscribers. The `storage` event only fires in *other* tabs, so local
  *  writes have to announce themselves. */
@@ -100,7 +107,7 @@ export function readPendingPayment(): PendingPayment | null {
     if (
       typeof parsed?.reference !== "string" ||
       typeof parsed?.at !== "number" ||
-      (parsed?.kind !== "order" && parsed?.kind !== "topup")
+      !isPendingPaymentKind(parsed?.kind)
     ) {
       forgetPendingPayment();
       return null;
