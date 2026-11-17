@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { vendorOpsService } from "@/services/vendor-ops.service";
+import { fetchVoucherRedemptions, vendorOpsService } from "@/services/vendor-ops.service";
 import { queryKeys } from "@/services/queries";
 import type { VendorPayoutDetailsInput, VendorReturn, VendorReview, VendorVoucher, VendorVoucherInput } from "@/types/vendor";
 
@@ -135,5 +135,14 @@ export function useVendorMovements(limit = 40) {
   return useQuery({
     queryKey: queryKeys.vendorMovements,
     queryFn: () => vendorOpsService.inventoryMovements(limit),
+  });
+}
+
+/** Redemptions for one voucher. Only fetched when a voucher is actually opened. */
+export function useVoucherRedemptions(voucherId: string | undefined) {
+  return useQuery({
+    queryKey: ["vendor", "voucher-redemptions", voucherId] as const,
+    queryFn: () => fetchVoucherRedemptions(voucherId!),
+    enabled: Boolean(voucherId),
   });
 }

@@ -77,7 +77,13 @@ export function FavoritesButton() {
 
         {items.length > 0 && (
           <div className="space-y-3 border-t border-line px-5 py-4">
-            <ButtonLink href="/products" variant="primary" size="lg" className="w-full" onClick={() => setOpen(false)}>
+            {/* The drawer is a peek; the full list lives on its own page where items can be
+                checked against live stock and moved into the cart. */}
+            <ButtonLink href="/wishlist" variant="primary" size="lg" className="w-full" onClick={() => setOpen(false)}>
+              <Heart className="size-4" aria-hidden />
+              View all saved items
+            </ButtonLink>
+            <ButtonLink href="/products" variant="outline" size="lg" className="w-full" onClick={() => setOpen(false)}>
               <ShoppingBag className="size-4" aria-hidden />
               Keep shopping
             </ButtonLink>

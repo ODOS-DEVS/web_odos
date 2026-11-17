@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { vendorService, type VendorProductCreate, type VendorProductUpdate } from "@/services/vendor.service";
 import { queryKeys, vendorQueries } from "@/services/queries";
-import { isActive } from "@/libs/orders";
 import type { VendorStatus } from "@/types/api";
-import type { SellerStats, VendorProduct, VendorProductStatus } from "@/types/vendor";
+import type {
+  VendorAnalyticsPeriod,
+  VendorOrderStatus,
+  VendorProduct,
+  VendorProductSelfServiceStatus,
+} from "@/types/vendor";
 import { useSession } from "./use-auth";
 
 /**
@@ -43,40 +46,13 @@ export function useVendorCustomers() {
   return useQuery({ ...vendorQueries.customers(), enabled: useVendorGate() });
 }
 
-/**
- * Dashboard headline numbers. `/vendor/analytics` has the money and the open-returns count, but not
- * the "awaiting confirmation / shipment" queues or the fulfilment rate — those are counted off the
- * order list, which the dashboard needs loaded anyway.
- */
-export function useSellerStats() {
-  const enabled = useVendorGate();
-  const analytics = useQuery({ ...vendorQueries.analytics(), enabled });
-  const orders = useQuery({ ...vendorQueries.orders(), enabled });
-  const store = useQuery({ ...vendorQueries.store(), enabled });
+/** Whole-business counters, computed server-side rather than off a page of orders. */
+export function useVendorDashboard() {
+  return useQuery({ ...vendorQueries.dashboard(), enabled: useVendorGate() });
+}
 
-  const stats = useMemo<SellerStats | undefined>(() => {
-    if (!analytics.data) return undefined;
-    const rows = orders.data ?? [];
-    const awaitingConfirmation = rows.filter((o) => o.status === "pending").length;
-    const awaitingShipment = rows.filter((o) => o.status === "confirmed" || o.status === "preparing").length;
-    const closed = rows.filter((o) => !isActive(o.status)).length;
-
-    return {
-      ...analytics.data,
-      storeName: store.data?.storeName ?? "Your store",
-      awaitingConfirmation,
-      awaitingShipment,
-      fulfilledPercent: rows.length ? Math.round((closed / rows.length) * 100) : 0,
-    };
-  }, [analytics.data, orders.data, store.data]);
-
-  return {
-    stats,
-    isPending: analytics.isPending || orders.isPending,
-    isError: analytics.isError,
-    error: analytics.error,
-    refetch: analytics.refetch,
-  };
+export function useVendorAnalytics(period: VendorAnalyticsPeriod = "30d") {
+  return useQuery({ ...vendorQueries.analytics(period), enabled: useVendorGate() });
 }
 
 /** Invalidates everything a product write can affect, including the shopper-facing catalogue. */
@@ -84,6 +60,7 @@ function useVendorProductInvalidation() {
   const queryClient = useQueryClient();
   return () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.vendorProducts });
+    queryClient.invalidateQueries({ queryKey: queryKeys.vendorDashboard });
     queryClient.invalidateQueries({ queryKey: ["catalog"] });
   };
 }
@@ -121,8 +98,18 @@ export function useSetVendorProductStock() {
 export function useSetVendorProductStatus() {
   const invalidate = useVendorProductInvalidation();
   return useMutation({
-    mutationFn: ({ productId, status }: { productId: string; status: VendorProductStatus }) =>
+    mutationFn: ({ productId, status }: { productId: string; status: VendorProductSelfServiceStatus }) =>
       vendorService.setProductStatus(productId, status),
+    onSuccess: invalidate,
+  });
+}
+
+/** Stock or visibility across a selection. JSON and narrow — no whole-record gallery risk. */
+export function useBulkUpdateVendorProducts() {
+  const invalidate = useVendorProductInvalidation();
+  return useMutation({
+    mutationFn: (input: { productIds: string[]; stock?: number; status?: VendorProductSelfServiceStatus }) =>
+      vendorService.bulkUpdateProducts(input),
     onSuccess: invalidate,
   });
 }
@@ -135,14 +122,100 @@ export function useDeleteVendorProduct() {
   });
 }
 
+/**
+ * Advances (or cancels) this vendor's package.
+ *
+ * The API accepts only an exact single step forward, plus `cancelled` from pending/confirmed, so
+ * callers derive the target with `getVendorOrderNextStatus` rather than naming a status directly.
+ */
+export function useAdvanceVendorOrder() {
+  return useSetVendorOrderStatus();
+}
+
+function useVendorOrderInvalidation() {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.vendorOrders });
+    queryClient.invalidateQueries({ queryKey: queryKeys.vendorDashboard });
+  };
+}
+
+/** Proof-of-handover photo, shown to the customer alongside the delivery. */
+export function useUploadDispatchPhoto() {
+  const invalidate = useVendorOrderInvalidation();
+  return useMutation({
+    mutationFn: ({ orderId, photo }: { orderId: string; photo: File }) =>
+      vendorService.uploadDispatchPhoto(orderId, photo),
+    onSuccess: invalidate,
+  });
+}
+
+export function useNotifyDeparture() {
+  const invalidate = useVendorOrderInvalidation();
+  return useMutation({
+    mutationFn: (orderId: string) => vendorService.notifyDeparture(orderId),
+    onSuccess: invalidate,
+  });
+}
+
+/** Opt-in per order: hands this delivery to an ODOS rider instead of the vendor's own. */
+export function useRequestCourier() {
+  const invalidate = useVendorOrderInvalidation();
+  return useMutation({
+    mutationFn: (orderId: string) => vendorService.requestCourier(orderId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAcknowledgeVendorOrder() {
+  const invalidate = useVendorOrderInvalidation();
+  return useMutation({
+    mutationFn: (orderId: string) => vendorService.acknowledgeOrder(orderId),
+    onSuccess: invalidate,
+  });
+}
+
 export function useSetVendorOrderStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
+    mutationFn: ({ orderId, status }: { orderId: string; status: VendorOrderStatus }) =>
       vendorService.setOrderStatus(orderId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.vendorOrders });
-      queryClient.invalidateQueries({ queryKey: queryKeys.vendorAnalytics });
+      // Analytics is keyed per period, so invalidate the whole branch, not one window.
+      queryClient.invalidateQueries({ queryKey: ["vendor", "analytics"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.vendorDashboard });
     },
   });
+}
+
+/**
+ * Where "Seller Centre" should send someone, by their vendor standing.
+ *
+ * One place, because this link exists in the header menu, the account page and the vendor tab,
+ * and they had drifted: two of them pointed at `/account?tab=dashboard`, a tab that no longer
+ * exists, so an approved vendor landed on their shopper profile instead of their dashboard.
+ *
+ * `/seller` itself re-checks standing (see `VendorShell`), so this is about sending people
+ * somewhere useful rather than about access control.
+ */
+export function sellerCenterTarget(status: VendorStatus): { href: string; label: string } {
+  switch (status) {
+    case "approved":
+      return { href: "/seller", label: "Seller Centre" };
+    case "pending":
+    case "under_review":
+      // Their application is in flight; the account tab is where its progress is reported.
+      return { href: "/account?tab=vendor", label: "Application status" };
+    case "rejected":
+    case "suspended":
+      return { href: "/account?tab=vendor", label: "Vendor account" };
+    default:
+      return { href: "/account?tab=vendor&apply=1", label: "Become a Vendor" };
+  }
+}
+
+/** The signed-in user's own Seller Centre destination. */
+export function useSellerCenterTarget() {
+  return sellerCenterTarget(useVendorStatus().status);
 }

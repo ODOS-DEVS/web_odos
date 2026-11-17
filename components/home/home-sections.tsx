@@ -3,6 +3,7 @@
 import { Zap } from "lucide-react";
 import { CategoryStrip } from "@/components/home/category-strip";
 import { Faq } from "@/components/home/faq";
+import { FeedSections } from "@/components/home/feed-sections";
 import { Hero } from "@/components/home/hero";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { MarketNearYou } from "@/components/home/market-near-you";
@@ -107,6 +108,12 @@ export function HomeSections() {
       <Container className="mt-20">
         <PromoCollage />
       </Container>
+
+      {/* Personalised rows from /home-feed/: recommendations, trending, recently viewed, saved.
+          Renders nothing for a shopper the API has no sections for. */}
+      <div className="mt-14">
+        <FeedSections />
+      </div>
 
       {popular.length > 0 && (
         <Container className="mt-20">

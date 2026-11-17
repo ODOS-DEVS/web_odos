@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { Store } from "@/types/catalog";
 import { formatMoneyCompact } from "@/libs/format";
 import { ButtonLink } from "@/components/ui/button";
+import { FollowStoreButton } from "@/components/store/follow-store-button";
 import { Media } from "@/components/ui/media";
 
 /** Cover image + identity row. Only the logo overlaps the cover; the name sits fully below it. */
@@ -50,6 +51,7 @@ export function StoreHeader({ store }: { store: Store }) {
 
         {/* In-app chat stays available even when the vendor has not published external contact details. */}
         <div className="mt-3 flex w-full flex-wrap gap-2 min-[400px]:mt-4 sm:w-auto">
+            <FollowStoreButton store={store} className="flex-1 sm:flex-none" />
             <ButtonLink href={`/stores/${store.slug}/chat`} variant="accent" size="sm" className="flex-1 sm:flex-none">
               <MessageCircle className="size-4" aria-hidden />
               Chat

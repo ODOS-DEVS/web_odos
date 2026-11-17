@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CreditCard, Info, MapPin } from "lucide-react";
+import { ArrowLeft, CreditCard, Info, MapPin, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import { RequireLogin } from "@/components/auth/require-login";
 import { OrderSummary } from "@/components/cart/order-summary";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { QueryError } from "@/components/ui/query-error";
 import { formatDate, formatDateTime } from "@/libs/format";
@@ -51,7 +51,11 @@ function OrderDetail({ id }: { id: string }) {
             Placed <time dateTime={o.placedAt}>{formatDate(o.placedAt)}</time> · {o.packages.length} {o.packages.length === 1 ? "package" : "packages"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <ButtonLink href={`/orders/${o.id}/receipt`} variant="outline" size="sm">
+            <ReceiptText className="size-4" aria-hidden />
+            Receipt
+          </ButtonLink>
           {ability.can && (
             <Button variant="outline" size="sm" disabled={cancel.isPending} onClick={() => setConfirming(true)}>
               {cancel.isPending ? "Cancelling…" : "Cancel order"}

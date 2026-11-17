@@ -25,6 +25,12 @@
   --danger: #b3261e;
   --danger-soft: #fbe6e4;
 
+  /* Chart series. Separate from --accent because a mark on a chart surface has to sit inside
+     the OKLCH lightness band for its mode; the light accent already does, the dark one does not
+     (L 0.727 vs a 0.48–0.67 band), so dark mode gets its own validated step of the same hue. */
+  --chart-1: #cf4310;
+  --chart-grid: #e8e4da;
+
   /* Strong custom curves — the built-in CSS easings are too weak. */
   --ease-snap: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
@@ -47,6 +53,9 @@
   --warning-soft: #33290f;
   --danger: #ff8a80;
   --danger-soft: #3a1a17;
+
+  --chart-1: #e65914;
+  --chart-grid: #33302a;
 }
 
 @theme inline {
@@ -65,6 +74,8 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-grid: var(--chart-grid);
 
   --font-sans:
     var(--font-montserrat), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
@@ -205,5 +216,44 @@ h3 {
   .theme-transition,
   .theme-transition * {
     transition: none !important;
+  }
+}
+
+/* Printing.
+   The receipt and the vendor packing slip are the two pages people actually print. Site chrome
+   (header, footer, chat dock, drawers) is noise on paper, and the dark theme would burn ink, so
+   printing always falls back to black on white. */
+@media print {
+  :root {
+    color-scheme: light;
+    --background: #ffffff;
+    --surface: #ffffff;
+    --surface-muted: #ffffff;
+    --foreground: #000000;
+    --muted: #444444;
+    --line: #cccccc;
+  }
+
+  header[class*="sticky"],
+  footer,
+  nav[aria-label="Seller Center"],
+  [role="dialog"],
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  /* Keep a table row or a card from being split across two sheets. */
+  tr,
+  article,
+  section {
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: "";
   }
 }

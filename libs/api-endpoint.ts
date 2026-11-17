@@ -102,6 +102,44 @@ export const FEED_ENDPOINTS = {
 } as const;
 
 // Shopping
+/**
+ * The service marketplace. Browsing is public; everything under `vendor/` belongs to the provider.
+ *
+ * NOTE: not deployed to production at the time of writing — every one of these 404s against
+ * appbe.odos.market until the backend services work ships.
+ */
+export const SERVICE_ENDPOINTS = {
+  categories: "/services/categories",
+  services: "/services",
+  service: (serviceId: string) => `/services/${enc(serviceId)}`,
+  serviceSlots: (serviceId: string) => `/services/${enc(serviceId)}/slots`,
+  serviceQuote: (serviceId: string) => `/services/${enc(serviceId)}/quote`,
+  bookings: "/bookings",
+  booking: (bookingId: string) => `/bookings/${enc(bookingId)}`,
+  quotations: "/quotations",
+  vendorServices: "/vendor/services",
+  vendorService: (serviceId: string) => `/vendor/services/${enc(serviceId)}`,
+  vendorServiceStatus: (serviceId: string) => `/vendor/services/${enc(serviceId)}/status`,
+  vendorServiceBookings: "/vendor/services/bookings/all",
+  vendorQuotations: "/vendor/services/quotations/all",
+} as const;
+
+/**
+ * The ODOS Assistant. `status` and `chat` are deliberately unauthenticated — a signed-out shopper
+ * still gets answers and product suggestions; only `session` (the stored thread) needs a login.
+ */
+export const ASSISTANT_ENDPOINTS = {
+  status: "/assistant/status",
+  session: "/assistant/session",
+  chat: "/assistant/chat",
+  feedback: "/assistant/feedback",
+} as const;
+
+/** Write-only: what the shopper viewed, which is what fills `recently_viewed` and recommendations. */
+export const BEHAVIOR_ENDPOINTS = {
+  eventsBatch: "/behavior/events/batch",
+} as const;
+
 export const DELIVERY_ENDPOINTS = {
   quote: "/delivery/quote",
 } as const;
@@ -214,7 +252,10 @@ export const VENDOR_ENDPOINTS = {
   applications: "/vendor/applications",
   myApplication: "/vendor/applications/me",
   store: "/vendor/store",
-  analytics: "/vendor/analytics",
+  /** Headline business counters in one call — order counts by status, stock health, balances. */
+  dashboard: "/vendor/dashboard",
+  /** `period` is validated server-side and must be exactly "7d", "30d" or "90d". */
+  analytics: (period: string) => `/vendor/analytics?period=${enc(period)}`,
   customers: "/vendor/customers",
   products: "/vendor/products",
   product: (productId: string) => `/vendor/products/${enc(productId)}`,
@@ -224,6 +265,10 @@ export const VENDOR_ENDPOINTS = {
   order: (orderId: string) => `/vendor/orders/${enc(orderId)}`,
   orderStatus: (orderId: string) => `/vendor/orders/${enc(orderId)}/status`,
   orderAcknowledge: (orderId: string) => `/vendor/orders/${enc(orderId)}/acknowledge`,
+  orderDispatchPhoto: (orderId: string) => `/vendor/orders/${enc(orderId)}/dispatch-photo`,
+  orderNotifyDeparture: (orderId: string) => `/vendor/orders/${enc(orderId)}/notify-departure`,
+  /** Opt-in per order: asks ODOS to deliver with one of its own riders. */
+  orderRequestCourier: (orderId: string) => `/vendor/orders/${enc(orderId)}/request-courier`,
   // Stock lives under /vendor/products/*, never /vendor/inventory/* — that
   // second API anchors ownership on Store.vendor_id, breaks with multiple
   // stores, and reports failure as {"success": false} under HTTP 200.
@@ -241,4 +286,24 @@ export const VENDOR_ENDPOINTS = {
     `/vendor/wallet/payout-institutions?payout_method_type=${encodeURIComponent(methodType)}`,
   walletPayoutDetails: "/vendor/wallet/payout-details",
   walletWithdrawals: "/vendor/wallet/withdrawals",
+  productsBulk: "/vendor/products/bulk",
+  productMovements: (productId: string, limit: number) =>
+    `/vendor/products/${enc(productId)}/inventory-movements?limit=${limit}`,
+  voucherRedemptions: (voucherId: string) => `/vendor/vouchers/${enc(voucherId)}/redemptions`,
+  deliverySettings: "/vendor/delivery-settings",
+  storeSections: "/vendor/store/sections",
+  storeSection: (sectionId: string) => `/vendor/store/sections/${enc(sectionId)}`,
+  storeSectionSuggestions: "/vendor/store/sections/starter-suggestions",
+  storeSectionsReorder: "/vendor/store/sections/reorder",
+  storeSectionProducts: (sectionId: string) => `/vendor/store/sections/${enc(sectionId)}/products`,
+  flashSaleNominations: "/vendor/flash-sale-nominations",
+  openMerchandisingCampaigns: "/vendor/merchandising-campaigns/open",
+  merchandisingOptIns: "/vendor/merchandising-campaign-opt-ins",
+  campaigns: "/vendor/campaigns",
+  campaign: (campaignId: string) => `/vendor/campaigns/${enc(campaignId)}`,
+  promoOverview: "/vendor/analytics/promotions/overview",
+  promoTimeseries: "/vendor/analytics/promotions/timeseries",
+  promoLeaderboard: "/vendor/analytics/promotions/leaderboard",
+  voucherAnalytics: "/vendor/analytics/vouchers",
+  campaignAnalytics: "/vendor/analytics/campaigns",
 } as const;

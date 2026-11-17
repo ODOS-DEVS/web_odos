@@ -30,7 +30,7 @@ export default async function CategoriesPage() {
         <ul className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
           {categories.map((category, index) => (
             <li key={category.id} className="rise-in" style={{ "--i": Math.min(index, 8) } as CSSProperties}>
-              <Link href={`/products?category=${category.slug}`} className="press group block">
+              <Link href={`/categories/${category.slug}`} className="press group block">
                 <div className="aspect-square overflow-hidden rounded-2xl">
                   <Media
                     src={category.imageUrl}

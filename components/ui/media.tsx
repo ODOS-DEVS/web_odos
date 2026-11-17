@@ -19,8 +19,8 @@ export function Media({
   src?: string | null;
   /** Empty by default: images beside their own text label are decorative. */
   alt?: string;
-  /** Used for the fallback initials and colour. */
-  name: string;
+  /** Used for the fallback initials and colour. Tolerates a missing value. */
+  name: string | null | undefined;
   sizes?: string;
   priority?: boolean;
   className?: string;

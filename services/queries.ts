@@ -8,6 +8,8 @@ import {
 } from "./catalog.service";
 import { chatService } from "./chat.service";
 import { deliveryService, type DeliveryQuoteInput } from "./delivery.service";
+import { feedService } from "./feed.service";
+import { servicesService, type ServiceListParams } from "./services.service";
 import { loyaltyService } from "./loyalty.service";
 import { notificationsService } from "./notifications.service";
 import { ordersService } from "./orders.service";
@@ -17,6 +19,7 @@ import { vendorService } from "./vendor.service";
 import { vouchersService } from "./vouchers.service";
 import { walletService } from "./wallet.service";
 import { wishlistService } from "./wishlist.service";
+import type { VendorAnalyticsPeriod } from "@/types/vendor";
 
 const MINUTE = 60_000;
 
@@ -53,7 +56,8 @@ export const queryKeys = {
   vendorProducts: ["vendor", "products"] as const,
   vendorOrders: ["vendor", "orders"] as const,
   vendorCustomers: ["vendor", "customers"] as const,
-  vendorAnalytics: ["vendor", "analytics"] as const,
+  vendorAnalytics: (period: string) => ["vendor", "analytics", period] as const,
+  vendorDashboard: ["vendor", "dashboard"] as const,
   vendorReturns: ["vendor", "returns"] as const,
   vendorReviews: ["vendor", "reviews"] as const,
   vendorVouchers: ["vendor", "vouchers"] as const,
@@ -61,6 +65,10 @@ export const queryKeys = {
   vendorPayoutInstitutions: (methodType: string) => ["vendor", "payout-institutions", methodType] as const,
   vendorPerformance: (days: number) => ["vendor", "performance", days] as const,
   vendorMovements: ["vendor", "movements"] as const,
+  homeFeed: ["feed", "home"] as const,
+  serviceCategories: ["services", "categories"] as const,
+  serviceList: (params: ServiceListParams) => ["services", "list", params] as const,
+  feedSection: (key: string) => ["feed", "section", key] as const,
   notifications: ["notifications"] as const,
   wallet: ["wallet"] as const,
   loyalty: ["loyalty", "account"] as const,
@@ -281,10 +289,16 @@ export const vendorQueries = {
       queryFn: () => vendorService.customers(),
       staleTime: MINUTE,
     }),
-  analytics: () =>
+  analytics: (period: VendorAnalyticsPeriod = "30d") =>
     queryOptions({
-      queryKey: queryKeys.vendorAnalytics,
-      queryFn: () => vendorService.analytics(),
+      queryKey: queryKeys.vendorAnalytics(period),
+      queryFn: () => vendorService.analytics(period),
+      staleTime: 30_000,
+    }),
+  dashboard: () =>
+    queryOptions({
+      queryKey: queryKeys.vendorDashboard,
+      queryFn: () => vendorService.dashboard(),
       staleTime: 30_000,
     }),
   myApplication: () =>
@@ -294,6 +308,39 @@ export const vendorQueries = {
       staleTime: 60_000,
       // A shopper who has never applied gets a 404, which is an answer, not a failure.
       retry: false,
+    }),
+};
+
+export const serviceQueries = {
+  categories: () =>
+    queryOptions({
+      queryKey: queryKeys.serviceCategories,
+      queryFn: () => servicesService.categories(),
+      staleTime: 5 * MINUTE,
+      // Not deployed everywhere yet, so a 404 is an answer rather than something to retry.
+      retry: false,
+    }),
+  list: (params: ServiceListParams = {}) =>
+    queryOptions({
+      queryKey: queryKeys.serviceList(params),
+      queryFn: () => servicesService.list(params),
+      staleTime: MINUTE,
+      retry: false,
+    }),
+};
+
+export const feedQueries = {
+  home: () =>
+    queryOptions({
+      queryKey: queryKeys.homeFeed,
+      queryFn: () => feedService.home(),
+      staleTime: MINUTE,
+    }),
+  section: (key: string) =>
+    queryOptions({
+      queryKey: queryKeys.feedSection(key),
+      queryFn: () => feedService.section(key),
+      staleTime: MINUTE,
     }),
 };
 

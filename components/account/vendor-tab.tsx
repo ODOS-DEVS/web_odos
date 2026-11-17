@@ -361,7 +361,7 @@ export function VendorTab() {
         )}
         {status === "approved" && (
           <Link
-            href="/account?tab=dashboard"
+            href="/seller"
             className="press flex shrink-0 items-center gap-1 rounded-full border border-line px-4 py-2 text-sm font-medium hover:border-foreground"
           >
             Seller Center

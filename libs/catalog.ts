@@ -10,6 +10,8 @@ export type ProductFilters = {
   q?: string;
   /** Category slug. */
   category?: string;
+  /** Subcategory *name* as it appears on the product — not a slug. */
+  subcategory?: string;
   /** Store slug. */
   store?: string;
   /** Market slug — stores are each tied to at most one physical market. */
@@ -32,6 +34,9 @@ export function filterProducts(products: Product[], stores: Store[], filters: Pr
       if (!haystack.includes(needle)) return false;
     }
     if (filters.category && !p.categorySlugs.includes(filters.category)) return false;
+    // Subcategory is a free-text label on the product, not a slug, so it is matched
+    // case-insensitively against the names the category record advertises.
+    if (filters.subcategory && (p.subcategory ?? "").toLowerCase() !== filters.subcategory.toLowerCase()) return false;
     if (filters.store && p.storeId !== storeId) return false;
     if (filters.market && (p.storeId ? storeById.get(p.storeId)?.marketSlug : undefined) !== filters.market) return false;
     if (filters.tag && !p.tags.includes(filters.tag)) return false;

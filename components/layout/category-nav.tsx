@@ -8,12 +8,14 @@ const linkClass =
 const primaryLinks = [
   { href: "/products", label: "All products" },
   { href: "/deals", label: "Deals" },
+  { href: "/services", label: "Services" },
   { href: "/stores", label: "Stores" },
   { href: "/market", label: "Market" },
   { href: "/orders", label: "Orders" },
 ];
 
-const secondaryLinks = [{ href: "#", label: "Resources" }];
+// Was `href: "#"` — a nav item that scrolled nowhere. Points at the help centre now.
+const secondaryLinks = [{ href: "/help", label: "Help" }];
 
 /** Browse row: fixed product/store links, then a divider, then resource links. */
 export function CategoryNav() {

@@ -3,7 +3,7 @@
 import { Suspense, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Camera } from "lucide-react";
+import { Camera, Store } from "lucide-react";
 import type { UserRead, UserUpdate } from "@/types/api";
 import { AddressTab } from "@/components/account/address-tab";
 import { ChatsTab } from "@/components/account/chats-tab";
@@ -13,14 +13,10 @@ import { PaymentMethodsTab } from "@/components/account/payment-methods-tab";
 import { ReturnsTab } from "@/components/account/returns-tab";
 import { ReviewsTab } from "@/components/account/reviews-tab";
 import { VendorTab } from "@/components/account/vendor-tab";
-import { SellerCenter } from "@/components/vendor/seller-dashboard";
-import { VendorCustomersTab } from "@/components/vendor/vendor-customers-tab";
-import { VendorOrdersTab } from "@/components/vendor/vendor-orders-tab";
-import { VendorProductsTab } from "@/components/vendor/vendor-products-tab";
 import { VouchersTab } from "@/components/account/vouchers-tab";
 import { WalletTab } from "@/components/account/wallet-tab";
 import { RequireLogin } from "@/components/auth/require-login";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Field, inputClass } from "@/components/ui/field";
 import { Media } from "@/components/ui/media";
@@ -35,12 +31,6 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 
 const TABS = [
   { id: "profile", label: "Profile" },
-  // `vendorOnly` tabs are the seller workspace: hidden unless the account is an approved vendor,
-  // matching the mobile app, which refuses these screens for every other vendor status.
-  { id: "dashboard", label: "Dashboard", vendorOnly: true },
-  { id: "orders", label: "Orders", vendorOnly: true },
-  { id: "products", label: "Products", vendorOnly: true },
-  { id: "customers", label: "Customers", vendorOnly: true },
   { id: "address", label: "Addresses" },
   { id: "payment", label: "Payment methods" },
   { id: "wallet", label: "Wallet" },
@@ -312,23 +302,30 @@ function ProfileTabs() {
   if (!user) return null;
 
   const visibleTabs = TABS.filter((t) => {
-    if ("vendorOnly" in t && t.vendorOnly) return isVendor;
     if ("shopperOnly" in t && t.shopperOnly) return !isVendor;
     return true;
   });
-  // A tab the current account cannot see must never render, whichever direction it is wrong in:
-  // the workspace for a non-vendor, or the become-a-vendor form for someone already approved.
+  // The become-a-vendor form must never render for someone already approved.
   const activeTab = visibleTabs.some((t) => t.id === tab) ? tab : "profile";
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-5 sm:p-6">
-        <UserAvatar name={user.full_name} avatarUrl={user.avatar_url} sizes="64px" className="size-16 text-xl" />
-        <div className="min-w-0">
-          <p className="truncate text-lg font-semibold">{user.full_name}</p>
-          <p className="truncate text-sm text-muted">{user.email}</p>
-          <p className="mt-1 text-xs text-muted">Member since {formatDate(user.created_at)}</p>
+      <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex items-center gap-4">
+          <UserAvatar name={user.full_name} avatarUrl={user.avatar_url} sizes="64px" className="size-16 text-xl" />
+          <div className="min-w-0">
+            <p className="truncate text-lg font-semibold">{user.full_name}</p>
+            <p className="truncate text-sm text-muted">{user.email}</p>
+            <p className="mt-1 text-xs text-muted">Member since {formatDate(user.created_at)}</p>
+          </div>
         </div>
+        {/* The seller workspace is its own section at /seller — this page stays the shopper's. */}
+        {isVendor && (
+          <ButtonLink href="/seller" variant="outline" className="shrink-0">
+            <Store className="size-4" aria-hidden />
+            Seller Center
+          </ButtonLink>
+        )}
       </div>
 
       <div role="tablist" className="no-scrollbar flex gap-5 overflow-x-auto border-b border-line">
@@ -351,10 +348,6 @@ function ProfileTabs() {
 
       <div className="mt-6">
         {activeTab === "profile" && <ProfileDetailsForm user={user} />}
-        {activeTab === "dashboard" && <SellerCenter />}
-        {activeTab === "orders" && <VendorOrdersTab />}
-        {activeTab === "products" && <VendorProductsTab />}
-        {activeTab === "customers" && <VendorCustomersTab />}
         {activeTab === "payment" && <PaymentMethodsTab />}
         {activeTab === "wallet" && <WalletTab />}
         {activeTab === "address" && <AddressTab />}

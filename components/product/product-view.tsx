@@ -18,6 +18,7 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { relatedProducts } from "@/libs/catalog";
 import { discountPercent } from "@/libs/format";
 import { useProduct, useProductReviews, useProducts, useStoreMap } from "@/hooks/use-catalog";
+import { useRecordProductView } from "@/hooks/use-feed";
 
 const LONG_DESCRIPTION_LENGTH = 420;
 const MAX_PRODUCT_NAME_LENGTH = 48;
@@ -70,6 +71,9 @@ export function ProductView({ id }: { id: string }) {
   const product = useProduct(id);
   const reviews = useProductReviews(id);
   const all = useProducts();
+  // Feeds the `recently_viewed` home-feed section and the recommendation model. Without this the
+  // website consumes a browsing history it never writes to.
+  useRecordProductView(id, product.data?.categoryName);
   const { map: stores } = useStoreMap();
 
   if (product.isError) return <Container className="py-12"><QueryError error={product.error} onRetry={() => product.refetch()} title="We couldn’t load this product" /></Container>;

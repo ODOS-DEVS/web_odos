@@ -11,6 +11,7 @@ import { TogglePill } from "@/components/ui/toggle-pill";
 import { useVendorProducts, useSetVendorProductStock } from "@/hooks/use-vendor";
 import { useVendorMovements, useVendorPerformance } from "@/hooks/use-vendor-ops";
 import { formatDate, formatMoney } from "@/libs/format";
+import { VENDOR_PRODUCT_STATUS_LABELS } from "@/libs/vendor-orders";
 import type { VendorProduct } from "@/types/vendor";
 
 const PAGE_SIZE = 8;
@@ -66,7 +67,7 @@ function StockRow({
         <p className="mt-0.5 text-xs text-muted">
           {formatMoney(product.price)}
           {soldInWindow > 0 && <> · {soldInWindow} sold in {PERFORMANCE_WINDOW_DAYS} days</>}
-          {product.status === "draft" && <> · Draft</>}
+          {product.status !== "active" && <> · {VENDOR_PRODUCT_STATUS_LABELS[product.status]}</>}
         </p>
         {(out || low) && (
           <p className={`mt-1 flex items-center gap-1 text-xs font-medium ${out ? "text-danger" : "text-warning"}`}>

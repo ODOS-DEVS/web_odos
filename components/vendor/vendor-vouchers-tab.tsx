@@ -5,6 +5,7 @@ import { Gift, Pencil, Plus, Ticket, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { VoucherRedemptions } from "@/components/vendor/voucher-redemptions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -411,6 +412,10 @@ function VoucherCard({
         <Button size="sm" variant="outline" onClick={onToggle} disabled={toggling}>
           {toggling ? "Saving…" : voucher.isActive ? "Pause" : "Resume"}
         </Button>
+      </div>
+
+      <div className="mt-2">
+        <VoucherRedemptions voucherId={voucher.id} count={voucher.redemptionCount} />
       </div>
     </li>
   );

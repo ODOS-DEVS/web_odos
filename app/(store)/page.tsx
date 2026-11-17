@@ -1,7 +1,7 @@
 import { HydrationBoundary } from "@tanstack/react-query";
 import { HomeSections } from "@/components/home/home-sections";
 import { dehydrated, getServerQueryClient, prefetchAll } from "@/libs/query-client.server";
-import { catalogQueries } from "@/services/queries";
+import { catalogQueries, feedQueries } from "@/services/queries";
 
 /**
  * The catalogue is public, so every section the shopper sees first is fetched on the server and
@@ -17,6 +17,7 @@ export default async function HomePage() {
     catalogQueries.deals(),
     catalogQueries.markets(),
     catalogQueries.promoBanners(),
+    feedQueries.home(),
   );
 
   return (

@@ -41,12 +41,24 @@ const dateTime = new Intl.DateTimeFormat(LOCALE, {
   timeZone: "UTC",
 });
 
-export function formatDate(iso: string) {
-  return date.format(new Date(iso));
+/**
+ * `Intl.format` throws "Invalid time value" on an unparseable date, which takes down the whole
+ * page it renders in — a missing or misnamed timestamp field should degrade to a dash, not a
+ * crash. (It already did: a vendor order's timeline arrives on `occurred_at`, and reading the
+ * wrong key here crashed the order detail page.)
+ */
+function safeFormat(formatter: Intl.DateTimeFormat, iso: string | null | undefined) {
+  if (!iso) return "—";
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? "—" : formatter.format(parsed);
 }
 
-export function formatDateTime(iso: string) {
-  return dateTime.format(new Date(iso));
+export function formatDate(iso: string | null | undefined) {
+  return safeFormat(date, iso);
+}
+
+export function formatDateTime(iso: string | null | undefined) {
+  return safeFormat(dateTime, iso);
 }
 
 const chatClockTime = new Intl.DateTimeFormat(LOCALE, { hour: "numeric", minute: "2-digit", timeZone: "UTC" });

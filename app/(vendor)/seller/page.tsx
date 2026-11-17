@@ -1,9 +1,18 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import { VendorAccountView } from "@/components/vendor/vendor-account-view";
+import { VendorDashboardView } from "@/components/vendor/vendor-dashboard-view";
+import { LegacyTabRedirect } from "@/components/vendor/legacy-tab-redirect";
 
-// Private to the logged-in vendor, same as /account.
-export const metadata: Metadata = { title: "Vendor Account", robots: { index: false } };
+export const metadata: Metadata = { title: "Dashboard" };
 
-export default function SellerPage() {
-  return <VendorAccountView />;
+export default function SellerDashboardPage() {
+  return (
+    <>
+      {/* useSearchParams needs a Suspense boundary to keep the rest of the page static. */}
+      <Suspense fallback={null}>
+        <LegacyTabRedirect />
+      </Suspense>
+      <VendorDashboardView />
+    </>
+  );
 }

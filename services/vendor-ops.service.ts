@@ -418,3 +418,38 @@ export const vendorOpsService = {
     }));
   },
 };
+
+/* ---------- Voucher redemptions ---------- */
+
+export type VendorVoucherRedemption = {
+  id: string;
+  orderId: string;
+  voucherCode: string;
+  discountAmount: number;
+  createdAt: string;
+};
+
+type VoucherRedemptionRead = {
+  id: string;
+  order_id: string;
+  voucher_code: string;
+  discount_amount: number;
+  created_at: string;
+};
+
+/**
+ * Who redeemed one of your vouchers. The API returns a `user_id` but no name or contact — this
+ * is deliberately not joined to a shopper identity, so the UI shows the order, not the person.
+ */
+export async function fetchVoucherRedemptions(voucherId: string): Promise<VendorVoucherRedemption[]> {
+  const rows = await apiFetch<VoucherRedemptionRead[]>(VENDOR_ENDPOINTS.voucherRedemptions(voucherId), {
+    revalidate: false,
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    orderId: r.order_id,
+    voucherCode: r.voucher_code,
+    discountAmount: r.discount_amount,
+    createdAt: r.created_at,
+  }));
+}

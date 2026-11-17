@@ -10,6 +10,7 @@ function parseFilters(raw: Record<string, string | string[] | undefined>): Activ
   return {
     q: first(raw.q)?.trim() || undefined,
     category: first(raw.category),
+    subcategory: first(raw.subcategory),
     store: first(raw.store),
     tag: first(raw.tag),
     free: first(raw.free),
@@ -23,6 +24,7 @@ export async function generateMetadata({ searchParams }: PageProps<"/products">)
   const filters = parseFilters(await searchParams);
   if (filters.q) return { title: `Results for “${filters.q}”` };
   if (filters.tag && TAG_TITLE[filters.tag]) return { title: TAG_TITLE[filters.tag] };
+  if (filters.subcategory) return { title: filters.subcategory };
   if (filters.category) {
     // Shares the per-request query client with the page body, so this costs no extra request.
     const categories = await getServerQueryClient().fetchQuery(catalogQueries.categories());

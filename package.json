@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "api:types": "openapi-typescript https://appbe.odos.market/openapi.json -o types/api-schema.d.ts"
+    "api:types": "openapi-typescript https://appbe.odos.market/openapi.json -o types/api-schema.d.ts",
+    "check:wire": "python3 scripts/check-wire-types.py"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

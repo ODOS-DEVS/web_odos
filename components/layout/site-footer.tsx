@@ -11,6 +11,7 @@ const columns = [
       { href: "/products?tag=flash", label: "Flash deals" },
       { href: "/products?tag=new", label: "New arrivals" },
       { href: "/stores", label: "Stores" },
+      { href: "/services", label: "Services" },
     ],
   },
   {
@@ -19,7 +20,16 @@ const columns = [
       { href: "/login", label: "Log in" },
       { href: "/signup", label: "Create an account" },
       { href: "/orders", label: "Track an order" },
-      { href: "/cart", label: "Cart" },
+      { href: "/wishlist", label: "Saved items" },
+    ],
+  },
+  {
+    title: "Help",
+    links: [
+      { href: "/help", label: "Help & support" },
+      { href: "/help#faq", label: "FAQs" },
+      { href: "/deals", label: "Deals" },
+      { href: "/market", label: "Market" },
     ],
   },
 ];
@@ -27,7 +37,7 @@ const columns = [
 export function SiteFooter() {
   return (
     <footer className="mt-24 border-t border-line bg-surface-muted/60">
-      <Container className="grid grid-cols-1 gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr]">
+      <Container className="grid grid-cols-1 gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div className="max-w-sm">
           <Link href="/" className="text-2xl font-bold tracking-tight">
             odos<span className="text-accent">.</span>

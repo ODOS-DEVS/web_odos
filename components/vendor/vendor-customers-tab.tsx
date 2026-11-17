@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Mail, MapPin, Phone, Search, Users } from "lucide-react";
-import { StatusBadge } from "@/components/orders/status-badge";
+import { VendorStatusBadge } from "@/components/vendor/vendor-status-badge";
 import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
@@ -123,7 +123,7 @@ function CustomerDetails({ customer }: { customer: VendorCustomer }) {
                 <p className="mt-0.5 text-xs text-muted">{formatDate(order.placedAt)}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2.5">
-                <StatusBadge status={order.status} />
+                <VendorStatusBadge status={order.status} />
                 <p className="font-semibold tabular-nums">{formatMoney(order.total)}</p>
               </div>
             </li>

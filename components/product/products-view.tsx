@@ -40,6 +40,7 @@ export function ProductsView({ filters }: { filters: ActiveFilters }) {
   const results = filterProducts(source.data ?? [], storeList, {
     q: filters.q && source === products ? filters.q : undefined,
     category: filters.category,
+    subcategory: filters.subcategory,
     store: filters.store,
     tag,
     freeDelivery: Boolean(filters.free),
@@ -49,7 +50,9 @@ export function ProductsView({ filters }: { filters: ActiveFilters }) {
 
   const title = filters.q
     ? `Results for “${filters.q}”`
-    : (categories.data?.find((c) => c.slug === filters.category)?.name ??
+    // A chosen subcategory is the most specific thing the shopper picked, so it names the page.
+    : (filters.subcategory ??
+      categories.data?.find((c) => c.slug === filters.category)?.name ??
       (filters.store ? `Products from ${storeList.find((s) => s.slug === filters.store)?.name ?? "this store"}` : undefined) ??
       (tag ? TAG_TITLE[tag] : "All products"));
 
