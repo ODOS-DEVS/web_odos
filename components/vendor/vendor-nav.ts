@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Bell,
+  CalendarClock,
   CreditCard,
   LayoutDashboard,
   LayoutGrid,
@@ -16,12 +17,13 @@ import {
   Truck,
   Users,
   Warehouse,
+  Wrench,
   Zap,
   type LucideIcon,
 } from "lucide-react";
 
 /** Counts the sidebar can surface as a badge, resolved once in the shell. */
-export type VendorNavCountKey = "orders" | "returns" | "chats" | "lowStock" | "notifications";
+export type VendorNavCountKey = "orders" | "returns" | "chats" | "lowStock" | "notifications" | "bookings";
 
 export type VendorNavItem = {
   href: string;
@@ -50,6 +52,13 @@ export const VENDOR_NAV: VendorNavGroup[] = [
       { href: "/seller/products", label: "Products", icon: Package, nested: true },
       { href: "/seller/inventory", label: "Inventory", icon: Warehouse, count: "lowStock" },
       { href: "/seller/returns", label: "Returns", icon: RotateCcw, count: "returns" },
+    ],
+  },
+  {
+    label: "Services",
+    items: [
+      { href: "/seller/services", label: "Service listings", icon: Wrench, nested: true },
+      { href: "/seller/bookings", label: "Bookings", icon: CalendarClock, count: "bookings" },
     ],
   },
   {

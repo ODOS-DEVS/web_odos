@@ -68,9 +68,19 @@ export type Campaign = {
   subtitle: string | null;
   description: string | null;
   bannerImageUrl: string | null;
+  thumbnailImageUrl: string | null;
+  /** Vendor/admin-chosen accent. Ink is derived from it — see `libs/contrast.ts`. */
+  themeColor: string | null;
   isFeatured: boolean;
   displayPriority: number;
   productCount: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  /**
+   * Seconds until the campaign closes, counted by the server. Preferred over comparing `endsAt`
+   * to the browser clock, which is wrong often enough to matter on a countdown.
+   */
+  secondsRemaining: number;
 };
 
 /** A campaign plus the products in it, from `GET /catalog/campaigns/{slug}`. */

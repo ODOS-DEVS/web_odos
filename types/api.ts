@@ -548,9 +548,15 @@ export type MerchandisingCampaignRead = {
   subtitle?: string | null;
   description?: string | null;
   banner_image_url?: string | null;
+  thumbnail_image_url?: string | null;
+  theme_color?: string | null;
   is_featured?: boolean;
   display_priority?: number;
   product_count?: number;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  /** Counted down server-side, so it is immune to a wrong clock on the client. */
+  seconds_remaining?: number;
 };
 
 /** `GET /catalog/deals-hub` — only the fields the web consumes are typed. */

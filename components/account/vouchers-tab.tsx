@@ -44,6 +44,7 @@ function RedeemForm() {
         <input
           type="text"
           placeholder="Enter voucher code"
+          aria-label="Voucher code"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           className={cn(inputClass, "sm:flex-1")}

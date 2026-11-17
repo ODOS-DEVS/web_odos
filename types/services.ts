@@ -44,17 +44,21 @@ export type ServiceSummary = {
 
 export type ServicePackage = {
   id: string;
+  /** `title` on the wire, not `name`. */
   name: string;
   description: string | null;
   price: number;
   durationMinutes: number | null;
+  inclusions: string[];
 };
 
 export type ServiceAddon = {
   id: string;
+  /** `title` on the wire, not `name`. */
   name: string;
   description: string | null;
   price: number;
+  maxQuantity: number;
 };
 
 export type ServiceDetail = ServiceSummary & {
@@ -69,6 +73,8 @@ export type ServiceDetail = ServiceSummary & {
   packages: ServicePackage[];
   addons: ServiceAddon[];
   images: string[];
+  /** Images the provider flagged as portfolio work, with their captions. */
+  portfolio: { url: string; caption: string | null }[];
 };
 
 /** What a provider sends when creating or editing a listing. */
@@ -85,4 +91,61 @@ export type ServiceInput = {
   serviceAreas?: string[];
   requirementsNote?: string | null;
   cancellationPolicy?: string | null;
+};
+
+/* ---------- Bookings and quotations ---------- */
+
+/** The nine states a booking moves through. Mirrors `TRANSITIONS` in the backend state machine. */
+export type BookingStatus =
+  | "pending_provider"
+  | "pending_payment"
+  | "confirmed"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "declined"
+  | "expired"
+  | "disputed";
+
+export type Booking = {
+  id: string;
+  bookingNumber: string;
+  serviceId: string;
+  storeId: string;
+  status: BookingStatus;
+  bookingType: string;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+  locationMode: string | null;
+  locationAddress: string | null;
+  locationCity: string | null;
+  customerNote: string | null;
+  currency: string;
+  baseAmount: number;
+  addonsAmount: number;
+  totalAmount: number;
+  amountPaid: number;
+  paymentStatus: string;
+  paymentDeadlineAt: string | null;
+};
+
+export type QuotationStatus = "requested" | "quoted" | "accepted" | "declined" | "expired" | string;
+
+export type Quotation = {
+  id: string;
+  reference: string;
+  serviceId: string;
+  storeId: string;
+  status: QuotationStatus;
+  customerBrief: string;
+  preferredDate: string | null;
+  locationMode: string | null;
+  locationCity: string | null;
+  quotedAmount: number | null;
+  currency: string;
+  providerMessage: string | null;
+  estimatedDurationMinutes: number | null;
+  expiresAt: string | null;
+  bookingId: string | null;
+  createdAt: string;
 };

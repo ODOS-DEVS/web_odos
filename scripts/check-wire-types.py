@@ -49,6 +49,13 @@ MAP = {
     "VoucherRedemptionRead": "VendorVoucherRedemptionRead", "PromoOverviewRead": "PromoAnalyticsOverviewRead",
     "VendorVoucherRead": "VendorVoucherRead", "VendorReturnRead": "VendorReturnRequestRead",
     "VendorReviewRead": "VendorReviewRead", "VendorWalletRead": "VendorWalletRead",
+    # Service marketplace. Added after `ServicePackageRead.title` was read as `name`, which is
+    # the same mistake this script exists to catch.
+    "CategoryRead": "ServiceCategoryRead", "SummaryRead": "ServiceSummaryRead",
+    "ActionRead": "AssistantActionRead", "ProductRead": "AssistantProductRead",
+    "StoreRead": "AssistantStoreRead", "MessageRead": "AssistantMessageRead",
+    "StatusRead": "AssistantStatusResponse", "ChatRead": "AssistantChatResponse",
+    "SessionRead": "AssistantSessionResponse",
 }
 # Inline nested literals: TS parent type -> (wire key, backend model)
 NESTED = {
@@ -56,13 +63,19 @@ NESTED = {
     ("VendorAnalyticsRead", "daily_points"): "VendorAnalyticsDailyPoint",
     ("PromoOverviewRead", "channels"): "PromoAnalyticsChannelSummary",
     ("PromoOverviewRead", "top_performers"): "PromoAnalyticsEntityPerformance",
+    ("DetailRead", "packages"): "ServicePackageRead",
+    ("DetailRead", "addons"): "ServiceAddonRead",
+    ("DetailRead", "images"): "ServiceImageRead",
 }
 
 src = {f: open(f).read() for f in glob.glob(f"{WEB}/services/*.ts")}
 
 def find_type(name):
+    """Body of a TS type alias, including intersections like `type X = Y & { ... }`."""
     for text in src.values():
-        m = re.search(rf"type {name} = \{{(.*?)\}};", text, re.S)
+        # Non-greedy to the first literal `};`. Nested arrays-of-objects end `}[];`, which this
+        # deliberately does not match, so a multi-line type still closes at its own brace.
+        m = re.search(rf"type {name} = (?:\w+\s*&\s*)?\{{(.*?)\}};", text, re.S)
         if m: return m.group(1)
     return None
 

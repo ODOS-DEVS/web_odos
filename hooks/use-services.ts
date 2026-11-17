@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { servicesService, type ServiceListParams } from "@/services/services.service";
+import { bookingsService, servicesService, type ServiceListParams } from "@/services/services.service";
 import { serviceQueries } from "@/services/queries";
 import { useSession } from "./use-auth";
 import type { ServiceInput } from "@/types/services";
@@ -71,5 +71,63 @@ export function useSetServiceStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => servicesService.setStatus(id, status),
     onSuccess: invalidate,
+  });
+}
+
+/* ---------- Bookings and quotations ---------- */
+
+const bookingKeys = {
+  provider: ["services", "bookings", "provider"] as const,
+  mine: ["services", "bookings", "mine"] as const,
+  providerQuotes: ["services", "quotations", "provider"] as const,
+  myQuotes: ["services", "quotations", "mine"] as const,
+};
+
+export function useProviderBookings() {
+  return useQuery({
+    queryKey: bookingKeys.provider,
+    queryFn: () => bookingsService.forProvider(),
+    enabled: Boolean(useSession()),
+    retry: false,
+  });
+}
+
+export function useMyBookings() {
+  return useQuery({
+    queryKey: bookingKeys.mine,
+    queryFn: () => bookingsService.mine(),
+    enabled: Boolean(useSession()),
+    retry: false,
+  });
+}
+
+export function useProviderQuotations() {
+  return useQuery({
+    queryKey: bookingKeys.providerQuotes,
+    queryFn: () => bookingsService.quotationsForProvider(),
+    enabled: Boolean(useSession()),
+    retry: false,
+  });
+}
+
+/** Moving a booking changes both queues and the provider's earnings, so both are invalidated. */
+export function useTransitionBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, note }: { id: string; status: string; note?: string | null }) =>
+      bookingsService.transition(id, status, note),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services", "bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["vendor", "wallet"] });
+    },
+  });
+}
+
+export function useSendQuote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string; amount: number; message?: string | null; durationMinutes?: number | null }) =>
+      bookingsService.sendQuote(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["services", "quotations"] }),
   });
 }

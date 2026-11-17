@@ -58,9 +58,14 @@ export function toCampaign(c: MerchandisingCampaignRead): Campaign {
     subtitle: c.subtitle ?? null,
     description: c.description ?? null,
     bannerImageUrl: c.banner_image_url ?? null,
+    thumbnailImageUrl: c.thumbnail_image_url ?? null,
+    themeColor: c.theme_color ?? null,
     isFeatured: Boolean(c.is_featured),
     displayPriority: c.display_priority ?? 0,
     productCount: c.product_count ?? 0,
+    startsAt: c.starts_at ?? null,
+    endsAt: c.ends_at ?? null,
+    secondsRemaining: c.seconds_remaining ?? 0,
   };
 }
 

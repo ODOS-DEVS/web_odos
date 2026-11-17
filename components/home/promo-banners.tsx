@@ -3,9 +3,11 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { buttonStyles } from "@/components/ui/button";
+import { Carousel } from "@/components/ui/carousel";
 import { Media } from "@/components/ui/media";
 import { usePromoBanners } from "@/hooks/use-catalog";
 import { cn } from "@/libs/cn";
+import { inkFor } from "@/libs/contrast";
 import type { PromoBanner } from "@/types/catalog";
 
 /**
@@ -27,6 +29,18 @@ export function PromoBanners() {
 
   if (!data?.length) return null;
 
+  // Two fit side by side. Beyond that a grid stacks into tall rows that push the rest of the
+  // homepage down, so the row scrolls instead.
+  if (data.length > 2) {
+    return (
+      <Carousel label="Promotions" itemClassName="w-[20rem] sm:w-[26rem] lg:w-[32rem]">
+        {data.map((promo) => (
+          <PromoCard key={promo.id} promo={promo} />
+        ))}
+      </Carousel>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
       {data.map((promo) => (
@@ -37,11 +51,22 @@ export function PromoBanners() {
 }
 
 function PromoCard({ promo }: { promo: PromoBanner }) {
+  // The accent is supplied by whoever scheduled the banner, so the ink has to be chosen from it.
+  // Previously the text was always white, which was invisible on a pale accent — and on the
+  // no-accent fallback, where the card sits on a light surface.
+  const ink = inkFor(promo.accent);
+  const titleClass = ink === "light" ? "text-white" : "text-foreground";
+  const subtitleClass = ink === "light" ? "text-white/70" : "text-muted";
+  const ctaClass =
+    ink === "light"
+      ? "bg-white/10 text-white group-hover:bg-white/20"
+      : "bg-foreground/10 text-foreground group-hover:bg-foreground/20";
+
   return (
     <Link
       href={promo.ctaHref}
       className={cn(
-        "group grid min-h-36 grid-cols-[minmax(0,40%)_1fr] items-center gap-3 rounded-2xl bg-surface-muted p-3 touch-manipulation select-none transition-transform duration-300 ease-out active:scale-[0.99] sm:min-h-40 sm:grid-cols-[minmax(0,36%)_1fr] sm:gap-5 sm:rounded-3xl sm:p-4 md:grid-cols-[minmax(0,42%)_1fr] lg:min-h-52 lg:gap-6 hover:-translate-y-1",
+        "group grid h-full min-h-36 grid-cols-[minmax(0,40%)_1fr] items-center gap-3 rounded-2xl bg-surface-muted p-3 touch-manipulation select-none transition-transform duration-300 ease-out active:scale-[0.99] sm:min-h-40 sm:grid-cols-[minmax(0,36%)_1fr] sm:gap-5 sm:rounded-3xl sm:p-4 md:grid-cols-[minmax(0,42%)_1fr] lg:min-h-52 lg:gap-6 hover:-translate-y-1",
       )}
       // The accent is vendor-supplied, so it is applied as a style rather than a Tailwind class.
       style={promo.accent ? { backgroundColor: promo.accent } : undefined}
@@ -57,21 +82,30 @@ function PromoCard({ promo }: { promo: PromoBanner }) {
       </div>
 
       <div className="flex min-w-0 flex-col justify-center py-1 pr-1 sm:py-3 sm:pr-3 lg:py-6 lg:pr-4">
-        <h3 className="mb-1 text-base font-extrabold uppercase leading-tight text-white min-[380px]:text-lg sm:mb-2 sm:text-2xl lg:text-4xl">
+        <h3
+          className={cn(
+            "mb-1 line-clamp-2 text-base font-extrabold uppercase leading-tight min-[380px]:text-lg sm:mb-2 sm:text-2xl lg:text-4xl",
+            titleClass,
+          )}
+        >
           {promo.title}
         </h3>
         {promo.subtitle && (
-          <p className="mb-2 text-[11px] text-white/70 sm:mb-4 sm:text-sm lg:mb-6 lg:text-base">{promo.subtitle}</p>
+          <p className={cn("mb-2 line-clamp-2 text-[11px] sm:mb-4 sm:text-sm lg:mb-6 lg:text-base", subtitleClass)}>
+            {promo.subtitle}
+          </p>
         )}
         <span
           className={buttonStyles({
             size: "sm",
-            className:
-              "h-8 w-fit gap-1.5 rounded-full border-none bg-white/10 px-3 text-[11px] text-white transition-colors sm:h-9 sm:px-4 sm:text-xs lg:px-5 group-hover:bg-white/20",
+            className: cn(
+              "h-8 w-fit gap-1.5 rounded-full border-none px-3 text-[11px] transition-colors sm:h-9 sm:px-4 sm:text-xs lg:px-5",
+              ctaClass,
+            ),
           })}
         >
           {promo.ctaLabel}
-          <ArrowRight className="size-3.5 text-[#ea6734] sm:size-4" aria-hidden />
+          <ArrowRight className="size-3.5 sm:size-4" aria-hidden />
         </span>
       </div>
     </Link>

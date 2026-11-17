@@ -6,6 +6,7 @@ import { vendorOpsService } from "@/services/vendor-ops.service";
 import { useSession } from "./use-auth";
 import { useChatThreads } from "./use-chats";
 import { useNotifications } from "./use-notifications";
+import { useProviderBookings } from "./use-services";
 import { countVendorOrdersByQueue } from "@/libs/vendor-orders";
 import type { VendorNavCountKey } from "@/components/vendor/vendor-nav";
 
@@ -21,6 +22,9 @@ export function useVendorPortalCounts(): Record<VendorNavCountKey, number> {
   const products = useQuery({ ...vendorQueries.products(), enabled });
   const returns = useQuery({ queryKey: queryKeys.vendorReturns, queryFn: () => vendorOpsService.returns(), enabled });
   const { unreadCount: chats } = useChatThreads();
+  // Service bookings waiting on the provider. The services API is not deployed everywhere, so a
+  // failure here resolves to zero rather than breaking the sidebar.
+  const bookings = useProviderBookings();
   const { unreadCount: notifications } = useNotifications();
 
   const rows = orders.data ?? [];
@@ -35,6 +39,7 @@ export function useVendorPortalCounts(): Record<VendorNavCountKey, number> {
     chats,
     notifications,
     lowStock: (products.data ?? []).filter((p) => isLowStock(p.stock)).length,
+    bookings: (bookings.data ?? []).filter((b) => b.status === "pending_provider").length,
   };
 }
 

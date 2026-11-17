@@ -1,5 +1,8 @@
 import { SERVICE_ENDPOINTS } from "@/libs/api-endpoint";
+import { toBookingStatus } from "@/libs/service-bookings";
 import type {
+  Booking,
+  Quotation,
   ServiceAddon,
   ServiceCategory,
   ServiceDetail,
@@ -49,9 +52,16 @@ type DetailRead = SummaryRead & {
   requirements_note?: string | null;
   cancellation_policy?: string | null;
   booking_count?: number;
-  packages?: { id: string; name: string; description?: string | null; price: number; duration_minutes?: number | null }[];
-  addons?: { id: string; name: string; description?: string | null; price: number }[];
-  images?: { image_url?: string | null }[];
+  packages?: {
+    id: string;
+    title: string;
+    description?: string | null;
+    price: number;
+    duration_minutes?: number | null;
+    inclusions?: string[] | null;
+  }[];
+  addons?: { id: string; title: string; description?: string | null; price: number; max_quantity?: number }[];
+  images?: { image_url?: string | null; caption?: string | null; is_portfolio?: boolean }[];
 };
 
 /* ---------- Mappers ---------- */
@@ -87,17 +97,19 @@ const toSummary = (s: SummaryRead): ServiceSummary => ({
 
 const toPackage = (p: NonNullable<DetailRead["packages"]>[number]): ServicePackage => ({
   id: p.id,
-  name: p.name,
+  name: p.title,
   description: p.description ?? null,
   price: p.price,
   durationMinutes: p.duration_minutes ?? null,
+  inclusions: p.inclusions ?? [],
 });
 
 const toAddon = (a: NonNullable<DetailRead["addons"]>[number]): ServiceAddon => ({
   id: a.id,
-  name: a.name,
+  name: a.title,
   description: a.description ?? null,
   price: a.price,
+  maxQuantity: a.max_quantity ?? 1,
 });
 
 const toDetail = (d: DetailRead): ServiceDetail => ({
@@ -112,7 +124,12 @@ const toDetail = (d: DetailRead): ServiceDetail => ({
   bookingCount: d.booking_count ?? 0,
   packages: (d.packages ?? []).map(toPackage),
   addons: (d.addons ?? []).map(toAddon),
-  images: (d.images ?? []).map((i) => i.image_url).filter((url): url is string => Boolean(url)),
+  images: (d.images ?? [])
+    .map((i) => i.image_url)
+    .filter((url): url is string => Boolean(url)),
+  portfolio: (d.images ?? [])
+    .filter((i) => i.is_portfolio && i.image_url)
+    .map((i) => ({ url: i.image_url as string, caption: i.caption ?? null })),
 });
 
 export type ServiceListParams = {
@@ -177,3 +194,132 @@ function toWire(input: Partial<ServiceInput>) {
     cancellation_policy: input.cancellationPolicy,
   };
 }
+
+/* ---------- Bookings and quotations ---------- */
+
+type BookingRead = {
+  id: string;
+  booking_number: string;
+  service_id: string;
+  store_id: string;
+  status: string;
+  booking_type: string;
+  scheduled_start_at?: string | null;
+  scheduled_end_at?: string | null;
+  location_mode?: string | null;
+  location_address?: string | null;
+  location_city?: string | null;
+  customer_note?: string | null;
+  currency: string;
+  base_amount: number;
+  addons_amount: number;
+  total_amount: number;
+  amount_paid: number;
+  payment_status: string;
+  payment_deadline_at?: string | null;
+};
+
+type QuotationRead = {
+  id: string;
+  reference: string;
+  service_id: string;
+  store_id: string;
+  status: string;
+  customer_brief: string;
+  preferred_date?: string | null;
+  location_mode?: string | null;
+  location_city?: string | null;
+  quoted_amount?: number | null;
+  currency: string;
+  provider_message?: string | null;
+  estimated_duration_minutes?: number | null;
+  expires_at?: string | null;
+  booking_id?: string | null;
+  created_at: string;
+};
+
+const toBooking = (b: BookingRead): Booking => ({
+  id: b.id,
+  bookingNumber: b.booking_number,
+  serviceId: b.service_id,
+  storeId: b.store_id,
+  status: toBookingStatus(b.status),
+  bookingType: b.booking_type,
+  scheduledStartAt: b.scheduled_start_at ?? null,
+  scheduledEndAt: b.scheduled_end_at ?? null,
+  locationMode: b.location_mode ?? null,
+  locationAddress: b.location_address ?? null,
+  locationCity: b.location_city ?? null,
+  customerNote: b.customer_note ?? null,
+  currency: b.currency,
+  baseAmount: b.base_amount,
+  addonsAmount: b.addons_amount,
+  totalAmount: b.total_amount,
+  amountPaid: b.amount_paid,
+  paymentStatus: b.payment_status,
+  paymentDeadlineAt: b.payment_deadline_at ?? null,
+});
+
+const toQuotation = (q: QuotationRead): Quotation => ({
+  id: q.id,
+  reference: q.reference,
+  serviceId: q.service_id,
+  storeId: q.store_id,
+  status: q.status,
+  customerBrief: q.customer_brief,
+  preferredDate: q.preferred_date ?? null,
+  locationMode: q.location_mode ?? null,
+  locationCity: q.location_city ?? null,
+  quotedAmount: q.quoted_amount ?? null,
+  currency: q.currency,
+  providerMessage: q.provider_message ?? null,
+  estimatedDurationMinutes: q.estimated_duration_minutes ?? null,
+  expiresAt: q.expires_at ?? null,
+  bookingId: q.booking_id ?? null,
+  createdAt: q.created_at,
+});
+
+export const bookingsService = {
+  /** Every booking against this provider's services. */
+  async forProvider(): Promise<Booking[]> {
+    const rows = await apiFetch<BookingRead[]>(SERVICE_ENDPOINTS.vendorServiceBookings, { revalidate: false });
+    return rows.map(toBooking);
+  },
+
+  /** The shopper's own bookings. */
+  async mine(): Promise<Booking[]> {
+    const rows = await apiFetch<BookingRead[]>(SERVICE_ENDPOINTS.bookings, { revalidate: false });
+    return rows.map(toBooking);
+  },
+
+  /**
+   * Moves a booking. The backend validates both the transition and that a provider is allowed to
+   * make it, so callers must derive the target from `PROVIDER_TRANSITIONS` rather than guess.
+   */
+  transition: (bookingId: string, status: string, note?: string | null) =>
+    apiFetch<unknown>(SERVICE_ENDPOINTS.bookingTransition(bookingId), {
+      method: "POST",
+      body: { status, note: note ?? null },
+    }),
+
+  async quotationsForProvider(): Promise<Quotation[]> {
+    const rows = await apiFetch<QuotationRead[]>(SERVICE_ENDPOINTS.vendorQuotations, { revalidate: false });
+    return rows.map(toQuotation);
+  },
+
+  async myQuotations(): Promise<Quotation[]> {
+    const rows = await apiFetch<QuotationRead[]>(SERVICE_ENDPOINTS.quotations, { revalidate: false });
+    return rows.map(toQuotation);
+  },
+
+  /** Provider replies to an enquiry with a price. */
+  sendQuote: (quotationId: string, input: { amount: number; message?: string | null; durationMinutes?: number | null }) =>
+    apiFetch<unknown>(SERVICE_ENDPOINTS.vendorQuotationSend(quotationId), {
+      method: "POST",
+      body: {
+        quoted_amount: input.amount,
+        provider_message: input.message ?? null,
+        estimated_duration_minutes: input.durationMinutes ?? null,
+      },
+    }),
+};

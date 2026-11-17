@@ -167,6 +167,7 @@ export function VendorCustomersTab() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by name or phone"
+          aria-label="Search customers"
           className="h-11 w-full rounded-full border border-line bg-surface pr-4 pl-10 text-sm placeholder:text-muted/70 focus:border-foreground focus:outline-none"
         />
       </div>

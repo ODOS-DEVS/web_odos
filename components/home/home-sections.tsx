@@ -3,6 +3,7 @@
 import { Zap } from "lucide-react";
 import { CategoryStrip } from "@/components/home/category-strip";
 import { Faq } from "@/components/home/faq";
+import { FeaturedCampaigns } from "@/components/home/featured-campaigns";
 import { FeedSections } from "@/components/home/feed-sections";
 import { Hero } from "@/components/home/hero";
 import { HowItWorks } from "@/components/home/how-it-works";
@@ -108,6 +109,10 @@ export function HomeSections() {
       <Container className="mt-20">
         <PromoCollage />
       </Container>
+
+      <div className="mt-20">
+        <FeaturedCampaigns />
+      </div>
 
       {/* Personalised rows from /home-feed/: recommendations, trending, recently viewed, saved.
           Renders nothing for a shopper the API has no sections for. */}

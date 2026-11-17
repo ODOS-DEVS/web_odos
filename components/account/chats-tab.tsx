@@ -122,6 +122,7 @@ export function ChatsTab() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search conversations…"
+                aria-label="Search conversations"
                 className="h-10 w-full rounded-full border border-line bg-surface-muted py-2 pr-3 pl-9 text-sm outline-none focus:border-foreground"
               />
             </div>

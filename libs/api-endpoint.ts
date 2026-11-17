@@ -122,6 +122,8 @@ export const SERVICE_ENDPOINTS = {
   vendorServiceStatus: (serviceId: string) => `/vendor/services/${enc(serviceId)}/status`,
   vendorServiceBookings: "/vendor/services/bookings/all",
   vendorQuotations: "/vendor/services/quotations/all",
+  vendorQuotationSend: (quotationId: string) => `/vendor/services/quotations/${enc(quotationId)}/send`,
+  bookingTransition: (bookingId: string) => `/bookings/${enc(bookingId)}/transition`,
 } as const;
 
 /**
