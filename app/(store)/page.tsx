@@ -17,6 +17,9 @@ export default async function HomePage() {
     catalogQueries.deals(),
     catalogQueries.markets(),
     catalogQueries.promoBanners(),
+    // Without this the campaigns row renders its skeleton on the server and the promos slot
+    // looks empty on first paint — including the default card that fills it when nothing is on.
+    catalogQueries.campaigns(),
     feedQueries.home(),
   );
 
