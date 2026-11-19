@@ -13,17 +13,23 @@ import type { Campaign } from "@/types/catalog";
  * without writing gesture code, and with JS unavailable it degrades to a scrollable row rather
  * than a stuck first slide.
  *
- * There is no autoplay and no timer anywhere in this file. A campaign that slides away on its
- * own moves a link out from under the reader mid-click, and on a page whose whole purpose is to
- * be clicked that is the one thing it must not do.
+ * Advances on its own every few seconds, and stops the moment anyone engages with it — hover,
+ * focus or touch. Without that pause an autoplaying row moves a link out from under the reader
+ * mid-click, which on a page whose whole purpose is to be clicked is the one thing it must not
+ * do. It also honours `prefers-reduced-motion`, where it does not move at all.
  *
  * The arrows sit outside the card on large screens, where there is room, and tuck over its
  * corners below that. Both are mirrored by the dots, which are real buttons — so every control
  * is reachable without a pointer.
  */
+/** Long enough to read a card before it moves. */
+const AUTOPLAY_MS = 6500;
+
 export function CampaignShowcase({ campaigns, source = "home" }: { campaigns: Campaign[]; source?: string }) {
   const trackRef = useRef<HTMLUListElement>(null);
   const [index, setIndex] = useState(0);
+  // Set from real interactions, never from an effect.
+  const [paused, setPaused] = useState(false);
 
   const sync = useCallback(() => {
     const track = trackRef.current;
@@ -46,12 +52,27 @@ export function CampaignShowcase({ campaigns, source = "home" }: { campaigns: Ca
     };
   }, [sync, campaigns.length]);
 
-  const goTo = (next: number) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const clamped = Math.max(0, Math.min(campaigns.length - 1, next));
-    track.scrollTo({ left: clamped * track.clientWidth, behavior: "smooth" });
-  };
+  const goTo = useCallback(
+    (next: number) => {
+      const track = trackRef.current;
+      if (!track) return;
+      const clamped = Math.max(0, Math.min(campaigns.length - 1, next));
+      track.scrollTo({ left: clamped * track.clientWidth, behavior: "smooth" });
+    },
+    [campaigns.length],
+  );
+
+  // Autoplay. Scrolls the track rather than setting state, so nothing here is a setState in an
+  // effect; `index` is a dependency so each tick starts fresh from wherever the reader is.
+  useEffect(() => {
+    if (paused || campaigns.length < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const timer = window.setInterval(() => {
+      goTo(index >= campaigns.length - 1 ? 0 : index + 1);
+    }, AUTOPLAY_MS);
+    return () => window.clearInterval(timer);
+  }, [paused, index, campaigns.length, goTo]);
 
   if (campaigns.length === 0) return null;
 
@@ -69,7 +90,16 @@ export function CampaignShowcase({ campaigns, source = "home" }: { campaigns: Ca
   const atEnd = index >= campaigns.length - 1;
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div
+      className="mx-auto max-w-5xl"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+      // A touch means the reader is driving. Autoplay does not resume on mobile afterwards,
+      // because there is no pointer-leave to tell us they have finished.
+      onTouchStart={() => setPaused(true)}
+    >
       <div className="relative">
         <ul
           ref={trackRef}

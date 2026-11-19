@@ -4,45 +4,8 @@ import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { CampaignShowcase } from "@/components/home/campaign-showcase";
 import { Container } from "@/components/ui/container";
+import { SectionHeading } from "@/components/ui/section-heading";
 import { useCampaigns } from "@/hooks/use-catalog";
-
-/**
- * Section header in the reference's rhythm: a small tinted eyebrow pill, a large heading, then
- * one quiet line of explanation. Shared by both states so the slot keeps its shape whether or
- * not a campaign is running.
- */
-function ShowcaseHeading({
-  eyebrow,
-  title,
-  description,
-  href,
-  hrefLabel,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  href: string;
-  hrefLabel: string;
-}) {
-  return (
-    <div className="mx-auto mb-8 flex max-w-5xl flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
-        <span className="inline-flex items-center rounded-full bg-accent-soft px-3 py-1.5 text-[10px] font-bold tracking-[0.12em] text-accent uppercase">
-          {eyebrow}
-        </span>
-        <h2 className="mt-3 text-3xl font-bold tracking-tight text-balance sm:text-4xl">{title}</h2>
-        <p className="mt-2 max-w-xl text-sm text-muted">{description}</p>
-      </div>
-      <Link
-        href={href}
-        className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold hover:underline"
-      >
-        {hrefLabel}
-        <ArrowRight className="size-4" aria-hidden />
-      </Link>
-    </div>
-  );
-}
 
 /**
  * Shown when no campaign is scheduled.
@@ -96,9 +59,9 @@ export function FeaturedCampaigns() {
   if (isPending) {
     return (
       <Container>
-        <div className="mx-auto mb-8 max-w-5xl">
-          <div className="h-6 w-32 animate-pulse rounded-full bg-surface-muted" aria-busy="true" />
-          <div className="mt-3 h-9 w-72 animate-pulse rounded-lg bg-surface-muted" />
+        <div className="mb-6">
+          <div className="h-8 w-72 animate-pulse rounded-lg bg-surface-muted" aria-busy="true" />
+          <div className="mt-2 h-5 w-96 max-w-full animate-pulse rounded bg-surface-muted" />
         </div>
         <div className="mx-auto h-[21rem] max-w-5xl animate-pulse rounded-[1.75rem] bg-surface-muted" />
       </Container>
@@ -110,9 +73,8 @@ export function FeaturedCampaigns() {
   if (campaigns.length === 0) {
     return (
       <Container>
-        <ShowcaseHeading
-          eyebrow="Promotions"
-          title="What is discounted right now"
+        <SectionHeading
+          title="Promotions"
           description="Seasonal events and everyday reductions from vendors across ODOS."
           href="/deals"
           hrefLabel="All deals"
@@ -128,8 +90,9 @@ export function FeaturedCampaigns() {
 
   return (
     <Container>
-      <ShowcaseHeading
-        eyebrow="Shopping events"
+      {/* The shared heading, so the title, the "All campaigns" link and its arrow line up with
+          every other section on the home page. The card below stays centred on its own. */}
+      <SectionHeading
         title="Choose the event that suits you"
         description="Seasonal sales and curated collections running on ODOS right now."
         href="/campaigns"
