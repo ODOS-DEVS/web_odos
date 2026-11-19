@@ -1,8 +1,8 @@
 import { CATALOG_ENDPOINTS } from "@/libs/api-endpoint";
-import type { CategoryRead, MarketRead, MerchandisingCampaignRead, ProductRead, PromoBannerRead, StoreRead, StoreSectionRead, DealsHubRead } from "@/types/api";
-import type { Campaign, CampaignDetail, Category, Market, Product, PromoBanner, Store, DealsHub, FlashEvent } from "@/types/catalog";
+import type { CategoryRead, MarketRead, MerchandisingCampaignRead, ProductRead, PromoBannerRead, StoreRead, StoreSectionDetailRead, StoreSectionRead, DealsHubRead } from "@/types/api";
+import type { Campaign, CampaignDetail, Category, Market, Product, PromoBanner, Store, StoreSection, StoreSectionDetail, DealsHub, FlashEvent } from "@/types/catalog";
 import { apiFetch } from "./http";
-import { toCampaign, toCategory, toMarket, toProduct, toPromoBanner, toStore, toVoucher } from "./mappers";
+import { toCampaign, toCategory, toMarket, toProduct, toPromoBanner, toStore, toStoreSection, toVoucher } from "./mappers";
 
 /** Query params accepted by GET /catalog/products (the API caps `limit` at 100). */
 export type ProductListParams = {
@@ -20,7 +20,7 @@ export type ProductListParams = {
 
 export type StoreListParams = { market_slug?: string; category?: string; audience?: string };
 
-export type StoreSection = { id: string; title: string; slug: string; products: Product[] };
+export type { StoreSection } from "@/types/catalog";
 
 export const catalogService = {
   async categories(): Promise<Category[]> {
@@ -44,7 +44,13 @@ export const catalogService = {
 
   async storeSections(storeId: string): Promise<StoreSection[]> {
     const rows = await apiFetch<StoreSectionRead[]>(CATALOG_ENDPOINTS.storeSections(storeId));
-    return rows.map((s) => ({ id: s.id, title: s.title, slug: s.slug, products: (s.products ?? []).map(toProduct) }));
+    return rows.map(toStoreSection);
+  },
+
+  /** One shelf and its store. Separate from the list so a section page fetches only its own products. */
+  async storeSection(storeId: string, sectionSlug: string): Promise<StoreSectionDetail> {
+    const row = await apiFetch<StoreSectionDetailRead>(CATALOG_ENDPOINTS.storeSection(storeId, sectionSlug));
+    return { ...toStoreSection(row), store: toStore(row.store) };
   },
 
   async products(params: ProductListParams = {}): Promise<Product[]> {

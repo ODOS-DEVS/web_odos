@@ -473,6 +473,8 @@ export type VendorStoreSection = {
   id: string;
   title: string;
   slug: string;
+  description: string | null;
+  coverImageUrl: string | null;
   sortOrder: number;
   isActive: boolean;
   productCount: number;

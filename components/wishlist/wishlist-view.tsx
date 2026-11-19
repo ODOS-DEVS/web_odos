@@ -16,7 +16,8 @@ import { catalogQueries } from "@/services/queries";
 import { formatMoney } from "@/libs/format";
 import { useCart } from "@/hooks/use-cart";
 import { useFavorites } from "@/hooks/use-favorites";
-import { useStoreFavorites } from "@/hooks/use-store-favorites";
+import { useSavedStores, useToggleSavedStore } from "@/hooks/use-saved-stores";
+import { SavedStoreCard } from "@/components/store/saved-store-card";
 import { useSession } from "@/hooks/use-auth";
 import type { Product } from "@/types/catalog";
 
@@ -30,32 +31,29 @@ import type { Product } from "@/types/catalog";
  */
 
 function SavedStores() {
-  const { items, remove } = useStoreFavorites();
-  if (!items.length) return null;
+  const saved = useSavedStores();
+  const toggle = useToggleSavedStore();
+  const rows = saved.data ?? [];
+  // Signed-out shoppers have no server-side saves to show, and the section is a secondary
+  // block on this page — so it simply stays out of the way rather than prompting to sign in.
+  if (rows.length === 0) return null;
 
   return (
     <section className="mt-14">
-      <SectionHeading title="Saved stores" description={`${items.length} store${items.length === 1 ? "" : "s"} saved on this device`} />
-      <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((store) => (
-          <li key={store.storeId} className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4">
-            <Link href={`/stores/${store.slug}`} className="press shrink-0">
-              <Media src={store.logoUrl} name={store.name} sizes="48px" className="size-12 rounded-xl" />
-            </Link>
-            <Link href={`/stores/${store.slug}`} className="press min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{store.name}</p>
-              <p className="mt-0.5 text-xs text-muted">Visit store</p>
-            </Link>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              aria-label={`Remove ${store.name} from saved stores`}
-              onClick={() => remove(store.storeId)}
-            >
-              <Trash2 className="size-4" aria-hidden />
-            </Button>
-          </li>
+      <SectionHeading
+        title="Saved stores"
+        description={`${rows.length} store${rows.length === 1 ? "" : "s"} saved to your account`}
+        href="/account/saved-stores"
+        hrefLabel="Manage"
+      />
+      <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map((row) => (
+          <SavedStoreCard
+            key={row.store.id}
+            store={row.store}
+            removing={toggle.isPending}
+            onRemove={() => toggle.mutate({ storeId: row.store.id, saved: true })}
+          />
         ))}
       </ul>
     </section>

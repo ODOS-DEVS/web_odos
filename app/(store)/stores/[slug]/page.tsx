@@ -21,10 +21,26 @@ export async function generateMetadata({ params }: PageProps<"/stores/[slug]">):
   const { slug } = await params;
   const store = await loadStore(slug);
   if (!store) return {};
+  // A shared store link has to render a real card in WhatsApp and on Facebook, which needs the
+  // title, description, canonical URL and an image — an images-only openGraph block left the
+  // first two to be guessed from the page, and gave the crawler no canonical to attribute to.
+  const title = store.name;
+  const description = store.description || `${store.name} on ODOS`;
+  const image = store.bannerUrl ?? store.logoUrl;
+
   return {
-    title: store.name,
-    description: store.description || `${store.name} on ODOS`,
-    openGraph: { images: store.bannerUrl ? [store.bannerUrl] : store.logoUrl ? [store.logoUrl] : [] },
+    title,
+    description,
+    alternates: { canonical: `/stores/${slug}` },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: `/stores/${slug}`,
+      siteName: "ODOS",
+      images: image ? [image] : [],
+    },
+    twitter: { card: image ? "summary_large_image" : "summary", title, description },
   };
 }
 

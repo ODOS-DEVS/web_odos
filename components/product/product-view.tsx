@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useId, useState } from "react";
 import { Check, ChevronDown, ChevronRight, ListChecks, Star } from "lucide-react";
 import { ProductGallery } from "@/components/product/product-gallery";
+import { VerifiedBadge } from "@/components/store/verified-badge";
 import { ProductGrid } from "@/components/product/product-grid";
 import { ProductInfoGrid } from "@/components/product/product-info-grid";
 import { PurchasePanel } from "@/components/product/purchase-panel";
@@ -113,6 +114,7 @@ export function ProductView({ id }: { id: string }) {
             >
               <Media src={store.logoUrl} name={store.name} sizes="32px" className="size-8 shrink-0 rounded-full" />
               <span className="truncate font-medium">{store.name}</span>
+              {store.isVerified && <VerifiedBadge size="sm" />}
               {store.rating > 0 && <Rating value={store.rating} />}
             </Link>
           )}

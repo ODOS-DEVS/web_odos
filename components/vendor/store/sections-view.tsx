@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Eye, EyeOff, LayoutGrid, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, EyeOff, LayoutGrid, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -17,6 +17,7 @@ import {
   useUpdateStoreSection,
   useVendorStoreSections,
 } from "@/hooks/use-vendor-store";
+import { SectionEditor } from "@/components/vendor/store/section-editor";
 import type { VendorStoreSection } from "@/types/vendor";
 
 /** Sections are the rows a shopper scrolls on your storefront, in the order set here. */
@@ -31,6 +32,7 @@ export function StoreSectionsView() {
   const [deleting, setDeleting] = useState<VendorStoreSection | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [editing, setEditing] = useState<VendorStoreSection | null>(null);
 
   const sections = query.data ?? [];
 
@@ -63,7 +65,7 @@ export function StoreSectionsView() {
             event.preventDefault();
             const trimmed = title.trim();
             if (!trimmed) return;
-            create.mutate(trimmed, {
+            create.mutate({ title: trimmed }, {
               onSuccess: () => {
                 toast.success(`"${trimmed}" added`);
                 setTitle("");
@@ -165,13 +167,19 @@ export function StoreSectionsView() {
                     >
                       <span className="block font-medium">{section.title}</span>
                       <span className="block text-xs text-muted">
-                        {section.productCount} product{section.productCount === 1 ? "" : "s"} · tap to rename
+                        {section.productCount} product{section.productCount === 1 ? "" : "s"}
+                        {section.description ? ` · ${section.description}` : " · tap to rename"}
                       </span>
                     </button>
                   )}
                 </div>
 
                 <Badge tone={section.isActive ? "success" : "neutral"}>{section.isActive ? "Visible" : "Hidden"}</Badge>
+
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditing(section)}>
+                  <Pencil className="size-4" aria-hidden />
+                  Edit
+                </Button>
 
                 <Button
                   type="button"
@@ -200,6 +208,13 @@ export function StoreSectionsView() {
             ))}
           </ul>
         </Panel>
+      )}
+
+      {editing && (
+        <SectionEditor
+          section={editing}
+          onClose={() => setEditing(null)}
+        />
       )}
 
       <ConfirmDialog

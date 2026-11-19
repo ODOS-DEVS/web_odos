@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { VerifiedBadge } from "@/components/store/verified-badge";
 import { MapPin, Star, Truck } from "lucide-react";
 import type { Store } from "@/types/catalog";
 import { formatMoneyCompact } from "@/libs/format";
@@ -50,13 +51,14 @@ export function StoreCard({ store, priority }: { store: Store; priority?: boolea
 
       <div className="mt-3.5 px-0.5">
         <div className="flex items-baseline justify-between gap-3">
-          <h3 className="min-w-0 truncate text-sm font-semibold tracking-tight min-[360px]:text-base">
+          <h3 className="flex min-w-0 items-center gap-1 text-sm font-semibold tracking-tight min-[360px]:text-base">
             <Link
               href={`/stores/${store.slug}`}
-              className="underline-offset-4 group-hover:underline after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+              className="truncate underline-offset-4 group-hover:underline after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
             >
               {store.name}
             </Link>
+            {store.isVerified && <VerifiedBadge size="sm" />}
           </h3>
           {store.rating > 0 && (
             <p className="flex shrink-0 items-center gap-1 text-xs min-[360px]:text-sm" aria-label={`Rated ${store.rating.toFixed(1)} out of 5`}>

@@ -36,7 +36,29 @@ export type Store = {
   isOnVacation: boolean;
   vacationMessage: string | null;
   marketSlug: string | null;
+  /**
+   * The owning vendor's application is approved and not suspended. Computed by the API from
+   * `users.vendor_status`, so a revoked vendor loses the badge immediately — there is no
+   * separate flag here that could drift. Carries no detail about how they were verified.
+   */
+  isVerified: boolean;
 };
+
+/** A shelf a shop arranged, with the products currently on it. */
+export type StoreSection = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  coverImageUrl: string | null;
+  sortOrder: number;
+  products: Product[];
+};
+
+/** One shelf plus the shop it belongs to, for the section's own page. */
+export type StoreSectionDetail = StoreSection & { store: Store };
+
+export type SavedStore = { store: Store; savedAt: string };
 
 /** A physical market a vendor trades in, e.g. "Kaneshie Market". */
 export type Market = {

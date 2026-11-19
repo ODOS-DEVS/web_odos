@@ -25,6 +25,12 @@ export const useStores = (params: StoreListParams = {}) => useQuery(catalogQueri
 export const useStoreSections = (storeId: string | undefined) =>
   useQuery({ ...catalogQueries.storeSections(storeId ?? ""), enabled: Boolean(storeId) });
 
+export const useStoreSection = (storeId: string | undefined, sectionSlug: string) =>
+  useQuery({
+    ...catalogQueries.storeSection(storeId ?? "", sectionSlug),
+    enabled: Boolean(storeId && sectionSlug),
+  });
+
 export const useProducts = (params: ProductListParams = {}) => useQuery(catalogQueries.products(params));
 
 export const useProduct = (id: string) => useQuery(catalogQueries.product(id));

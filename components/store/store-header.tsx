@@ -4,7 +4,9 @@ import type { ReactNode } from "react";
 import type { Store } from "@/types/catalog";
 import { formatMoneyCompact } from "@/libs/format";
 import { ButtonLink } from "@/components/ui/button";
-import { FollowStoreButton } from "@/components/store/follow-store-button";
+import { SaveStoreButton } from "@/components/store/save-store-button";
+import { ShareStoreButton } from "@/components/store/share-store-button";
+import { VerifiedBadge, VerifiedNote } from "@/components/store/verified-badge";
 import { Media } from "@/components/ui/media";
 
 /** Cover image + identity row. Only the logo overlaps the cover; the name sits fully below it. */
@@ -40,18 +42,25 @@ export function StoreHeader({ store }: { store: Store }) {
         <div className="mt-3 min-w-0 min-[400px]:mt-4">
           {/* Name + rating pill on one line, like a marketplace shop header (Etsy, Depop). */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h1 className="max-w-full text-xl leading-tight font-semibold min-[360px]:text-2xl min-[400px]:text-3xl sm:text-4xl">{store.name}</h1>
+            {/* The badge lives inside the heading so it wraps with the name rather than
+                orphaning onto its own line on a narrow screen. */}
+            <h1 className="max-w-full text-xl leading-tight font-semibold min-[360px]:text-2xl min-[400px]:text-3xl sm:text-4xl">
+              {store.name}
+              {store.isVerified && <VerifiedBadge size="lg" className="ml-1.5" />}
+            </h1>
             <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-1 text-xs font-semibold min-[400px]:px-2.5 min-[400px]:text-sm">
               <Star className="size-3.5 fill-current text-warning" aria-hidden />
               {store.rating > 0 ? store.rating.toFixed(1) : "New"}
             </span>
           </div>
           <p className="mt-1 text-[13px] leading-5 text-muted min-[400px]:text-base sm:text-lg">{[store.category, place].filter(Boolean).join(" · ")}</p>
+          {store.isVerified && <VerifiedNote className="mt-2.5" />}
         </div>
 
         {/* In-app chat stays available even when the vendor has not published external contact details. */}
         <div className="mt-3 flex w-full flex-wrap gap-2 min-[400px]:mt-4 sm:w-auto">
-            <FollowStoreButton store={store} className="flex-1 sm:flex-none" />
+            <SaveStoreButton store={store} className="flex-1 sm:flex-none" />
+            <ShareStoreButton store={store} className="flex-1 sm:flex-none" />
             <ButtonLink href={`/stores/${store.slug}/chat`} variant="accent" size="sm" className="flex-1 sm:flex-none">
               <MessageCircle className="size-4" aria-hidden />
               Chat

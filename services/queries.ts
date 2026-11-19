@@ -37,6 +37,8 @@ export const queryKeys = {
     ["catalog", "stores", params] as const,
   storeSections: (storeId: string) =>
     ["catalog", "store-sections", storeId] as const,
+  storeSection: (storeId: string, sectionSlug: string) =>
+    ["catalog", "store-section", storeId, sectionSlug] as const,
   products: (params: ProductListParams = {}) =>
     ["catalog", "products", params] as const,
   product: (id: string) => ["catalog", "product", id] as const,
@@ -146,6 +148,12 @@ export const catalogQueries = {
     queryOptions({
       queryKey: queryKeys.storeSections(storeId),
       queryFn: () => catalogService.storeSections(storeId),
+      staleTime: 5 * MINUTE,
+    }),
+  storeSection: (storeId: string, sectionSlug: string) =>
+    queryOptions({
+      queryKey: queryKeys.storeSection(storeId, sectionSlug),
+      queryFn: () => catalogService.storeSection(storeId, sectionSlug),
       staleTime: 5 * MINUTE,
     }),
   products: (params: ProductListParams = {}) =>

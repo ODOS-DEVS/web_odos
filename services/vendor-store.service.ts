@@ -154,7 +154,16 @@ type DeliverySettingsRead = {
   is_custom?: boolean;
 };
 
-type SectionRead = { id: string; title: string; slug: string; sort_order: number; is_active: boolean; product_count?: number };
+type SectionRead = {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string | null;
+  cover_image_url?: string | null;
+  sort_order: number;
+  is_active: boolean;
+  product_count?: number;
+};
 
 type NominationRead = {
   id: string;
@@ -189,6 +198,8 @@ const toSection = (s: SectionRead): VendorStoreSection => ({
   id: s.id,
   title: s.title,
   slug: s.slug,
+  description: s.description ?? null,
+  coverImageUrl: s.cover_image_url ?? null,
   sortOrder: s.sort_order,
   isActive: s.is_active,
   productCount: s.product_count ?? 0,
@@ -323,10 +334,16 @@ export const vendorStoreService = {
     return rows.map(toSection).sort((a, b) => a.sortOrder - b.sortOrder);
   },
 
-  createSection: (title: string) =>
-    apiFetch<unknown>(VENDOR_ENDPOINTS.storeSections, { method: "POST", body: { title } }),
+  createSection: (input: { title: string; description?: string | null }) =>
+    apiFetch<unknown>(VENDOR_ENDPOINTS.storeSections, {
+      method: "POST",
+      body: { title: input.title, description: input.description ?? null },
+    }),
 
-  updateSection: (sectionId: string, changes: { title?: string; isActive?: boolean }) =>
+  updateSection: (
+    sectionId: string,
+    changes: { title?: string; description?: string | null; isActive?: boolean },
+  ) =>
     apiFetch<unknown>(VENDOR_ENDPOINTS.storeSection(sectionId), {
       method: "PATCH",
       body: { title: changes.title, is_active: changes.isActive },
@@ -341,11 +358,24 @@ export const vendorStoreService = {
   sectionProducts: (sectionId: string) =>
     apiFetch<string[]>(VENDOR_ENDPOINTS.storeSectionProducts(sectionId), { revalidate: false }),
 
+  /**
+   * The finished shelf. PUT replaces rather than appends — a picker that posted additions
+   * would silently keep anything the vendor had unticked.
+   */
   setSectionProducts: (sectionId: string, productIds: string[]) =>
     apiFetch<unknown>(VENDOR_ENDPOINTS.storeSectionProducts(sectionId), {
-      method: "POST",
+      method: "PUT",
       body: { product_ids: productIds },
     }),
+
+  uploadSectionCover: (sectionId: string, file: File) => {
+    const form = new FormData();
+    form.append("cover_image", file);
+    return apiFetch<unknown>(VENDOR_ENDPOINTS.storeSectionCover(sectionId), {
+      method: "POST",
+      body: form,
+    });
+  },
 
   /* ---------- Flash sales and campaigns (both ODOS-reviewed) ---------- */
 

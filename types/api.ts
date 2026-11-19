@@ -198,15 +198,22 @@ export type StoreRead = {
   business_hours?: Record<string, unknown> | null;
   delivery_badge?: string | null;
   delivery_fee_from?: number | null;
+  is_verified?: boolean;
 };
 
 export type StoreSectionRead = {
   id: string;
   title: string;
   slug: string;
+  description?: string | null;
+  cover_image_url?: string | null;
   sort_order: number;
   products: ProductRead[];
 };
+
+export type StoreSectionDetailRead = StoreSectionRead & { store: StoreRead };
+
+export type SavedStoreRead = { store: StoreRead; saved_at: string };
 
 // Orders
 

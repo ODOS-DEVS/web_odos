@@ -61,6 +61,8 @@ MAP = {
     "CampaignBriefRead": "VendorCampaignBriefRead",
     "CampaignSubmissionRead": "VendorCampaignSubmissionRead",
     "CampaignSubmissionResultRead": "VendorCampaignSubmissionResult",
+    # Store experience: the vendor's own view of a shelf.
+    "SectionRead": "VendorStoreSectionRead",
 }
 # Inline nested literals: TS parent type -> (wire key, backend model)
 NESTED = {

@@ -71,6 +71,9 @@ export const CATALOG_ENDPOINTS = {
   stores: "/catalog/stores",
   store: (storeId: string) => `/catalog/stores/${enc(storeId)}`,
   storeSections: (storeId: string) => `/catalog/stores/${enc(storeId)}/sections`,
+  /** One shelf with its store, so a section page does not fetch every shelf in the shop. */
+  storeSection: (storeId: string, sectionSlug: string) =>
+    `/catalog/stores/${enc(storeId)}/sections/${enc(sectionSlug)}`,
   products: "/catalog/products",
   product: (productId: string) => `/catalog/products/${enc(productId)}`,
   search: "/catalog/search",
@@ -252,6 +255,11 @@ export const CHAT_ENDPOINTS = {
  *   never clear `old_price`, and reports failure as `{"success": false}` under HTTP 200. The
  *   `/vendor/products/*` routes below are the mainline ones.
  */
+export const SAVED_STORE_ENDPOINTS = {
+  list: "/saved-stores",
+  one: (storeId: string) => `/saved-stores/${enc(storeId)}`,
+} as const;
+
 export const VENDOR_ENDPOINTS = {
   applications: "/vendor/applications",
   myApplication: "/vendor/applications/me",
@@ -299,6 +307,7 @@ export const VENDOR_ENDPOINTS = {
   storeSection: (sectionId: string) => `/vendor/store/sections/${enc(sectionId)}`,
   storeSectionSuggestions: "/vendor/store/sections/starter-suggestions",
   storeSectionsReorder: "/vendor/store/sections/reorder",
+  storeSectionCover: (sectionId: string) => `/vendor/store/sections/${enc(sectionId)}/cover`,
   storeSectionProducts: (sectionId: string) => `/vendor/store/sections/${enc(sectionId)}/products`,
   flashSaleNominations: "/vendor/flash-sale-nominations",
   openMerchandisingCampaigns: "/vendor/merchandising-campaigns/open",

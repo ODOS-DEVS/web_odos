@@ -65,15 +65,48 @@ function useSectionInvalidation() {
 
 export function useCreateStoreSection() {
   const invalidate = useSectionInvalidation();
-  return useMutation({ mutationFn: (title: string) => vendorStoreService.createSection(title), onSuccess: invalidate });
+  return useMutation({
+    mutationFn: (input: { title: string; description?: string | null }) =>
+      vendorStoreService.createSection(input),
+    onSuccess: invalidate,
+  });
 }
 
 export function useUpdateStoreSection() {
   const invalidate = useSectionInvalidation();
   return useMutation({
-    mutationFn: ({ id, ...changes }: { id: string; title?: string; isActive?: boolean }) =>
+    mutationFn: ({
+      id,
+      ...changes
+    }: { id: string; title?: string; description?: string | null; isActive?: boolean }) =>
       vendorStoreService.updateSection(id, changes),
     onSuccess: invalidate,
+  });
+}
+
+export function useSectionProducts(sectionId: string | null) {
+  return useQuery({
+    queryKey: [...keys.sections, sectionId, "products"] as const,
+    queryFn: () => vendorStoreService.sectionProducts(sectionId ?? ""),
+    enabled: useGate() && Boolean(sectionId),
+  });
+}
+
+export function useSetSectionProducts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sectionId, productIds }: { sectionId: string; productIds: string[] }) =>
+      vendorStoreService.setSectionProducts(sectionId, productIds),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.sections }),
+  });
+}
+
+export function useUploadSectionCover() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sectionId, file }: { sectionId: string; file: File }) =>
+      vendorStoreService.uploadSectionCover(sectionId, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.sections }),
   });
 }
 

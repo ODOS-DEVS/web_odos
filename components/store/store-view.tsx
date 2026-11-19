@@ -17,6 +17,7 @@ import { useServices } from "@/hooks/use-services";
 import { ServiceCard } from "@/components/services/services-view";
 import { SegmentedControl } from "@/components/vendor/vendor-ui";
 import { cn } from "@/libs/cn";
+import { StoreSectionNav } from "@/components/store/store-section-nav";
 import { useStoreVouchers } from "@/hooks/use-vouchers";
 import type { Product } from "@/types/catalog";
 
@@ -43,16 +44,19 @@ export function StoreView({ slug }: { slug: string }) {
   const hasBoth = list.length > 0 && services.length > 0;
 
   // Vendors group their products into their own sections ("Shoes", "Bags"…); anything left over follows.
-  const grouped: { id: string; title: string; items: Product[] }[] = [];
+  const grouped: { id: string; title: string; slug: string | null; items: Product[] }[] = [];
   const placed = new Set<string>();
   for (const section of sections.data ?? []) {
     const items = section.products.filter((p) => list.some((l) => l.id === p.id));
     items.forEach((p) => placed.add(p.id));
-    if (items.length) grouped.push({ id: section.id, title: section.title, items });
+    if (items.length) grouped.push({ id: section.id, title: section.title, slug: section.slug, items });
   }
   const rest = list.filter((p) => !placed.has(p.id));
-  if (grouped.length && rest.length) grouped.push({ id: "other", title: "More products", items: rest });
-  const blocks = grouped.length ? grouped : [{ id: "all", title: "Products", items: list }];
+  // Products in no section still have to be reachable, which is what this block is for.
+  if (grouped.length && rest.length) {
+    grouped.push({ id: "other", title: "More products", slug: null, items: rest });
+  }
+  const blocks = grouped.length ? grouped : [{ id: "all", title: "Products", slug: null, items: list }];
 
   return (
     <Container className="pt-4 pb-8 sm:pt-6">
@@ -138,9 +142,16 @@ export function StoreView({ slug }: { slug: string }) {
               <p className="rounded-2xl border border-dashed border-line px-6 py-14 text-center text-muted">This store hasn’t listed any products yet.</p>
             ) : (
               <div className="space-y-12">
+                <StoreSectionNav store={store} sections={sections.data ?? []} total={list.length} />
                 {blocks.map((block) => (
                   <div key={block.id}>
-                    <SectionHeading title={block.title} />
+                    <SectionHeading
+                      title={block.title}
+                      /* Only a real shelf has its own page; "More products" is a leftovers
+                         bucket with no section behind it. */
+                      href={block.slug ? `/stores/${store.slug}/sections/${block.slug}` : undefined}
+                      hrefLabel={block.slug ? "See all" : undefined}
+                    />
                     <ProductGrid products={block.items} stores={storeMap} columns={3} className="xl:grid-cols-3" />
                   </div>
                 ))}

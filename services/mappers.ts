@@ -1,5 +1,5 @@
-import type { CategoryRead, MarketRead, MerchandisingCampaignRead, ProductRead, ProductReviewRead, PromoBannerRead, StoreRead, StoreVoucherRead } from "@/types/api";
-import type { Campaign, Category, Market, Product, ProductTag, PromoBanner, Review, Store, Voucher } from "@/types/catalog";
+import type { CategoryRead, MarketRead, MerchandisingCampaignRead, ProductRead, ProductReviewRead, PromoBannerRead, StoreRead, StoreSectionRead, StoreVoucherRead } from "@/types/api";
+import type { Campaign, Category, Market, Product, ProductTag, PromoBanner, Review, Store, StoreSection, Voucher } from "@/types/catalog";
 import type { OrderItemRead, OrderPackageRead, OrderRead, ReturnRequestRead } from "@/types/api";
 import type { FulfilmentStatus, Order, OrderItem, OrderPackage } from "@/types/order";
 import type { ReturnRequest, ReturnRequestType } from "@/types/returns";
@@ -92,6 +92,19 @@ export function toStore(s: StoreRead): Store {
     isOnVacation: Boolean(s.is_on_vacation),
     vacationMessage: s.vacation_message ?? null,
     marketSlug: s.market_slug ?? null,
+    isVerified: Boolean(s.is_verified),
+  };
+}
+
+export function toStoreSection(s: StoreSectionRead): StoreSection {
+  return {
+    id: s.id,
+    title: s.title,
+    slug: s.slug,
+    description: s.description ?? null,
+    coverImageUrl: s.cover_image_url ?? null,
+    sortOrder: s.sort_order ?? 0,
+    products: (s.products ?? []).map(toProduct),
   };
 }
 

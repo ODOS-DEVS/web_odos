@@ -10,6 +10,7 @@ import { ChatsTab } from "@/components/account/chats-tab";
 import { HelpSupportTab } from "@/components/account/help-support-tab";
 import { LoyaltyTab } from "@/components/account/loyalty-tab";
 import { PaymentMethodsTab } from "@/components/account/payment-methods-tab";
+import { SavedStoresPanel } from "@/components/account/saved-stores-panel";
 import { ReturnsTab } from "@/components/account/returns-tab";
 import { ReviewsTab } from "@/components/account/reviews-tab";
 import { BookingsTab } from "@/components/account/bookings-tab";
@@ -41,6 +42,7 @@ const TABS = [
   { id: "chats", label: "Chats" },
   { id: "reviews", label: "Reviews" },
   { id: "vouchers", label: "Vouchers" },
+  { id: "saved-stores", label: "Saved stores" },
   { id: "help", label: "Help & Support" },
   // Replaced by the workspace tabs once approved; still shown while an application is in flight,
   // because that is where its progress is reported.
@@ -350,6 +352,7 @@ function ProfileTabs() {
 
       <div className="mt-6">
         {activeTab === "profile" && <ProfileDetailsForm user={user} />}
+        {activeTab === "saved-stores" && <SavedStoresPanel />}
         {activeTab === "payment" && <PaymentMethodsTab />}
         {activeTab === "wallet" && <WalletTab />}
         {activeTab === "address" && <AddressTab />}
