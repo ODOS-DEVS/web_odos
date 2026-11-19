@@ -506,3 +506,71 @@ export type MerchandisingOptIn = {
   status: string;
   createdAt: string;
 };
+
+
+/* ---------- Campaign participation ---------- */
+
+/**
+ * A campaign as its vendor submission page needs it: identity plus the rules that govern
+ * nominating into it. `acceptsSubmissions` is a different question from whether shoppers can
+ * see the campaign — a seasonal sale collects nominations weeks before it opens, and stops
+ * collecting them before it closes.
+ */
+export type CampaignBrief = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  bannerImageUrl: string | null;
+  thumbnailImageUrl: string | null;
+  themeColor: string | null;
+  status: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  submissionDeadline: string | null;
+  /** The effective close: the explicit deadline, or the campaign end when there is none. */
+  submissionClosesAt: string | null;
+  acceptsSubmissions: boolean;
+  requiresProposedPrice: boolean;
+  minDiscountPercent: number | null;
+  maxProducts: number | null;
+  productCount: number;
+};
+
+export type VendorCampaignSubmission = {
+  id: string;
+  campaignId: string;
+  productId: string;
+  productTitle: string;
+  productImageUrl: string | null;
+  /** The product's shelf price today, for comparison with what was proposed. */
+  currentPrice: number | null;
+  proposedPrice: number | null;
+  proposedOldPrice: number | null;
+  discountPercent: number | null;
+  vendorNote: string | null;
+  /** "pending" | "approved" | "rejected". */
+  status: string;
+  reviewNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CampaignWorkspace = {
+  campaign: CampaignBrief;
+  submissions: VendorCampaignSubmission[];
+};
+
+/** Per-product verdicts: one bad item in a batch must not hide the rest. */
+export type CampaignSubmissionResult = {
+  campaignSlug: string;
+  submitted: number;
+  rejected: number;
+  outcomes: {
+    productId: string;
+    accepted: boolean;
+    reason: string | null;
+    detail: string | null;
+  }[];
+};

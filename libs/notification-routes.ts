@@ -39,6 +39,10 @@ export function notificationHref(notification: AppNotification): string | null {
       return id ? `/seller/products/${id}` : "/seller/products";
     case "vendor_campaign":
       return "/seller/campaigns";
+    case "vendor_campaign_submit":
+      // The target is the campaign slug, so a campaign invitation opens that campaign's own
+      // submission page rather than a generic list the vendor then has to search.
+      return id ? `/seller/campaigns/${id}/submit` : "/seller/campaigns";
     case "vendor_flash_sale":
       return "/seller/flash-sales";
     default:

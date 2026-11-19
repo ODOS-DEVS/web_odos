@@ -42,9 +42,16 @@ export function CampaignsIndexView() {
           description="Seasonal sales and shopping events will appear here when they go live."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {rows.map((campaign) => (
-            <CampaignCard key={campaign.id} campaign={campaign} source="campaigns" />
+        // Stacked full-width rather than a two-up grid: this is the same large card the
+        // homepage shows, and halving its width would make it a different component.
+        <div className="mx-auto flex max-w-5xl flex-col gap-8">
+          {rows.map((campaign, index) => (
+            <CampaignCard
+              key={campaign.id}
+              campaign={campaign}
+              source="campaigns"
+              priority={index === 0}
+            />
           ))}
         </div>
       )}

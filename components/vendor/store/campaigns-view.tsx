@@ -1,40 +1,32 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import { ArrowUpRight, Check, Megaphone, Search } from "lucide-react";
+import { ArrowUpRight, CalendarClock, Megaphone, Package } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
-import { Button, ButtonLink } from "@/components/ui/button";
-import { Drawer } from "@/components/ui/drawer";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
 import { QueryError } from "@/components/ui/query-error";
-import { PageHeader, Panel, PanelHeader, SearchInput, SkeletonRows } from "@/components/vendor/vendor-ui";
-import { campaignTiming } from "@/libs/campaign-timing";
+import { PageHeader, Panel, PanelHeader, SkeletonRows } from "@/components/vendor/vendor-ui";
 import { cn } from "@/libs/cn";
-import { inkFor } from "@/libs/contrast";
 import { formatDate } from "@/libs/format";
-import { useCampaignOptIns, useOpenCampaigns, useOptInToCampaign } from "@/hooks/use-vendor-store";
+import { inkFor } from "@/libs/contrast";
+import { useCampaignOptIns, useOpenCampaigns } from "@/hooks/use-vendor-store";
 import { useVendorProducts } from "@/hooks/use-vendor";
-import type { Campaign } from "@/types/catalog";
-import type { MerchandisingOptIn, VendorProduct } from "@/types/vendor";
+import type { CampaignBrief, MerchandisingOptIn } from "@/types/vendor";
 
 const TONE: Record<string, BadgeTone> = { approved: "success", pending: "warning", rejected: "danger" };
 
 /**
- * Campaigns are ODOS-run merchandising slots (a themed row on the homepage, say). A vendor puts
- * products forward and ODOS reviews each one — there is no vendor-created campaign in this API.
+ * Campaigns a vendor can take part in.
  *
- * The nomination endpoint takes a single product per call, so nominating several fires one request
- * each. Partial failure is real and is reported as such rather than rolled up into one "done".
+ * This page only lists and routes — nominating happens on each campaign's own submission page,
+ * which is also where the invitation notification lands. Keeping one destination means a vendor
+ * arriving from a notification and a vendor arriving from the menu see the same screen.
  */
 export function CampaignsView() {
   const campaigns = useOpenCampaigns();
   const optIns = useCampaignOptIns();
   const products = useVendorProducts();
-  const optIn = useOptInToCampaign();
-
-  const [nominating, setNominating] = useState<Campaign | null>(null);
 
   if (campaigns.isError) {
     return <QueryError title="We couldn't load campaigns" error={campaigns.error} onRetry={() => campaigns.refetch()} />;
@@ -43,19 +35,18 @@ export function CampaignsView() {
   const open = campaigns.data ?? [];
   const mine = optIns.data ?? [];
 
-  /** Entries grouped by campaign, so each card can show what the vendor already has in it. */
-  const byCampaign = new Map<string, MerchandisingOptIn[]>();
+  const counts = new Map<string, MerchandisingOptIn[]>();
   for (const entry of mine) {
-    const bucket = byCampaign.get(entry.campaignId);
+    const bucket = counts.get(entry.campaignId);
     if (bucket) bucket.push(entry);
-    else byCampaign.set(entry.campaignId, [entry]);
+    else counts.set(entry.campaignId, [entry]);
   }
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Campaigns"
-        description="Put products forward for an ODOS merchandising campaign. Each entry is reviewed before it runs."
+        description="ODOS runs seasonal events and invites vendors to put products forward. Every entry is reviewed before it goes live."
       />
 
       {campaigns.isPending ? (
@@ -64,17 +55,15 @@ export function CampaignsView() {
         <EmptyState
           icon={<Megaphone className="size-10 text-muted" aria-hidden />}
           title="No campaigns open right now"
-          description="When ODOS opens a campaign for entries it shows up here, and you can nominate products for it."
+          description="When ODOS opens a campaign for entries you'll get a notification, and it will appear here."
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {open.map((campaign) => (
-            <CampaignCard
+            <CampaignRow
               key={campaign.id}
               campaign={campaign}
-              entries={byCampaign.get(campaign.id) ?? []}
-              products={products.data ?? []}
-              onNominate={() => setNominating(campaign)}
+              entries={counts.get(campaign.id) ?? []}
             />
           ))}
         </div>
@@ -113,62 +102,11 @@ export function CampaignsView() {
           </ul>
         )}
       </Panel>
-
-      {nominating && (
-        <NominateDrawer
-          campaign={nominating}
-          products={products.data ?? []}
-          entries={byCampaign.get(nominating.id) ?? []}
-          pending={optIn.isPending}
-          onClose={() => setNominating(null)}
-          onSubmit={async (productIds) => {
-            // One request per product. Settled, not `all`, so one rejection doesn't hide the rest.
-            const results = await Promise.allSettled(
-              productIds.map((productId) => optIn.mutateAsync({ campaignId: nominating.id, productId })),
-            );
-            const failed = results.filter((r) => r.status === "rejected").length;
-            const sent = results.length - failed;
-
-            if (sent > 0) {
-              toast.success(
-                sent === 1
-                  ? `1 product entered into ${nominating.title}`
-                  : `${sent} products entered into ${nominating.title}`,
-              );
-            }
-            if (failed > 0) {
-              const first = results.find((r) => r.status === "rejected");
-              const reason = first && first.status === "rejected" ? first.reason : null;
-              toast.error(
-                `${failed} ${failed === 1 ? "product" : "products"} couldn't be entered. ${
-                  reason instanceof Error ? reason.message : ""
-                }`.trim(),
-              );
-            }
-            if (failed === 0) setNominating(null);
-          }}
-        />
-      )}
     </div>
   );
 }
 
-/**
- * The campaign as the vendor will see it on the storefront — same artwork, same accent — so the
- * decision to nominate is made against the real slot rather than a title in a list.
- */
-function CampaignCard({
-  campaign,
-  entries,
-  products,
-  onNominate,
-}: {
-  campaign: Campaign;
-  entries: MerchandisingOptIn[];
-  products: VendorProduct[];
-  onNominate: () => void;
-}) {
-  const timing = campaignTiming(campaign);
+function CampaignRow({ campaign, entries }: { campaign: CampaignBrief; entries: MerchandisingOptIn[] }) {
   const ink = inkFor(campaign.themeColor);
   const approved = entries.filter((e) => e.status === "approved").length;
   const pending = entries.filter((e) => e.status === "pending").length;
@@ -190,17 +128,23 @@ function CampaignCard({
           {campaign.subtitle && <p className="mt-0.5 line-clamp-2 text-sm opacity-80">{campaign.subtitle}</p>}
           <p className="mt-1.5 text-xs opacity-75">
             {campaign.productCount} {campaign.productCount === 1 ? "product" : "products"} live
-            {timing ? ` · ${timing.label}` : ""}
           </p>
         </div>
       </div>
 
       <div className="space-y-3 p-5">
-        {campaign.description && <p className="text-sm text-muted">{campaign.description}</p>}
-        {(campaign.startsAt || campaign.endsAt) && (
-          <p className="text-xs text-muted">
-            {campaign.startsAt && `Runs ${formatDate(campaign.startsAt)}`}
-            {campaign.endsAt && ` until ${formatDate(campaign.endsAt)}`}
+        {campaign.submissionClosesAt && (
+          <p className="flex items-center gap-1.5 text-xs text-muted">
+            <CalendarClock className="size-3.5" aria-hidden />
+            Submissions close {formatDate(campaign.submissionClosesAt)}
+          </p>
+        )}
+
+        {campaign.requiresProposedPrice && (
+          <p className="flex items-center gap-1.5 text-xs text-muted">
+            <Package className="size-3.5" aria-hidden />
+            A campaign price is required
+            {campaign.minDiscountPercent ? `, at least ${campaign.minDiscountPercent}% off` : ""}
           </p>
         )}
 
@@ -213,138 +157,20 @@ function CampaignCard({
         )}
 
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button type="button" onClick={onNominate} disabled={products.length === 0}>
-            {entries.length > 0 ? "Nominate more" : "Nominate products"}
-          </Button>
-          <ButtonLink href={`/campaigns/${campaign.slug}`} variant="outline" target="_blank" rel="noopener noreferrer">
+          <ButtonLink href={`/seller/campaigns/${campaign.slug}/submit`}>
+            {entries.length > 0 ? "Submit more products" : "Submit products"}
+          </ButtonLink>
+          <ButtonLink
+            href={`/campaigns/${campaign.slug}`}
+            variant="outline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             View page
             <ArrowUpRight className="size-4" aria-hidden />
           </ButtonLink>
         </div>
-
-        {products.length === 0 && (
-          <p className="text-xs text-muted">Add a product to your store first — there is nothing to nominate yet.</p>
-        )}
       </div>
     </Panel>
-  );
-}
-
-/** Multi-select product picker. Products already in the campaign are shown with their status, not hidden. */
-function NominateDrawer({
-  campaign,
-  products,
-  entries,
-  pending,
-  onClose,
-  onSubmit,
-}: {
-  campaign: Campaign;
-  products: VendorProduct[];
-  entries: MerchandisingOptIn[];
-  pending: boolean;
-  onClose: () => void;
-  onSubmit: (productIds: string[]) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<string[]>([]);
-
-  const entered = useMemo(
-    () => new Map(entries.filter((e) => e.productId).map((e) => [e.productId as string, e.status])),
-    [entries],
-  );
-
-  const matches = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    const live = products.filter((p) => p.status === "active");
-    if (!needle) return live;
-    return live.filter((p) => p.name.toLowerCase().includes(needle) || p.category.toLowerCase().includes(needle));
-  }, [products, query]);
-
-  const toggle = (id: string) =>
-    setPicked((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
-
-  return (
-    <Drawer open onClose={onClose} title={`Nominate for ${campaign.title}`} labelId="nominate-campaign">
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b border-line px-5 py-3">
-          <SearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder="Search your products"
-            label="Search your products"
-            icon={<Search className="size-4" aria-hidden />}
-          />
-          <p className="mt-2 text-xs text-muted">
-            Only active products can be nominated. ODOS reviews each one before it appears in the campaign.
-          </p>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {matches.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-muted">
-              {query.trim() ? "No products match that search." : "You have no active products to nominate."}
-            </p>
-          ) : (
-            <ul className="divide-y divide-line">
-              {matches.map((product) => {
-                const status = entered.get(product.id);
-                const isPicked = picked.includes(product.id);
-                return (
-                  <li key={product.id}>
-                    <label
-                      className={cn(
-                        "flex cursor-pointer items-center gap-3 px-5 py-3",
-                        status && "cursor-not-allowed opacity-60",
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={isPicked}
-                        disabled={Boolean(status)}
-                        onChange={() => toggle(product.id)}
-                      />
-                      <span
-                        aria-hidden
-                        className={cn(
-                          "grid size-5 shrink-0 place-items-center rounded-md border",
-                          isPicked ? "border-accent bg-accent text-white" : "border-line",
-                        )}
-                      >
-                        {isPicked && <Check className="size-3.5" />}
-                      </span>
-                      <Media src={product.imageUrl} name={product.name} className="size-11 shrink-0 rounded-lg" sizes="44px" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{product.name}</span>
-                        <span className="mt-0.5 block truncate text-xs text-muted">
-                          GHS {product.price.toLocaleString()} · {product.availableStock} in stock
-                        </span>
-                      </span>
-                      {status && <Badge tone={TONE[status] ?? "neutral"}>{status}</Badge>}
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        <div className="border-t border-line px-5 py-4">
-          <Button
-            type="button"
-            className="w-full"
-            disabled={picked.length === 0 || pending}
-            onClick={() => onSubmit(picked)}
-          >
-            {pending
-              ? "Entering…"
-              : picked.length === 0
-                ? "Choose products to nominate"
-                : `Nominate ${picked.length} ${picked.length === 1 ? "product" : "products"}`}
-          </Button>
-        </div>
-      </div>
-    </Drawer>
   );
 }

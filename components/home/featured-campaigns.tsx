@@ -2,53 +2,93 @@
 
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
-import { CampaignCard } from "@/components/home/campaign-card";
-import { Carousel } from "@/components/ui/carousel";
+import { CampaignShowcase } from "@/components/home/campaign-showcase";
 import { Container } from "@/components/ui/container";
-import { SectionHeading } from "@/components/ui/section-heading";
 import { useCampaigns } from "@/hooks/use-catalog";
+
+/**
+ * Section header in the reference's rhythm: a small tinted eyebrow pill, a large heading, then
+ * one quiet line of explanation. Shared by both states so the slot keeps its shape whether or
+ * not a campaign is running.
+ */
+function ShowcaseHeading({
+  eyebrow,
+  title,
+  description,
+  href,
+  hrefLabel,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  href: string;
+  hrefLabel: string;
+}) {
+  return (
+    <div className="mx-auto mb-8 flex max-w-5xl flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
+        <span className="inline-flex items-center rounded-full bg-accent-soft px-3 py-1.5 text-[10px] font-bold tracking-[0.12em] text-accent uppercase">
+          {eyebrow}
+        </span>
+        <h2 className="mt-3 text-3xl font-bold tracking-tight text-balance sm:text-4xl">{title}</h2>
+        <p className="mt-2 max-w-xl text-sm text-muted">{description}</p>
+      </div>
+      <Link
+        href={href}
+        className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold hover:underline"
+      >
+        {hrefLabel}
+        <ArrowRight className="size-4" aria-hidden />
+      </Link>
+    </div>
+  );
+}
 
 /**
  * Shown when no campaign is scheduled.
  *
- * The promos row would otherwise vanish, leaving a hole in the homepage on a quiet week and
- * making the site look unfinished. This keeps the slot filled with something true — it points at
- * the deals that genuinely exist rather than inventing a campaign that does not.
+ * The slot would otherwise vanish, leaving a hole on a quiet week and making the site look
+ * unfinished. It keeps the same card proportions as a real campaign, and points at something
+ * true — the deals that genuinely exist — rather than inventing a campaign that does not.
  */
 function DefaultPromoCard() {
   return (
     <Link
       href="/deals"
-      className="press group grid h-full grid-cols-1 overflow-hidden rounded-3xl border border-line bg-surface transition-shadow hover:shadow-lg sm:grid-cols-2"
+      className="group mx-auto block max-w-5xl overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-sm transition-shadow duration-300 hover:shadow-xl"
     >
-      <div className="relative grid aspect-[4/3] place-items-center bg-accent-soft sm:aspect-auto sm:h-full">
-        <Sparkles className="size-12 text-accent" aria-hidden />
-        <span className="absolute top-3 left-3 inline-flex items-center rounded-full bg-surface/90 px-2.5 py-1 text-[10px] font-bold tracking-wide uppercase shadow-sm backdrop-blur-sm">
-          Always on
-        </span>
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]">
+        <div className="relative grid aspect-[4/3] place-items-center bg-accent-soft sm:aspect-[16/10] md:h-full md:min-h-[21rem] md:aspect-auto">
+          <Sparkles className="size-16 text-accent" aria-hidden />
+          <span className="absolute top-4 left-4 inline-flex items-center rounded-full bg-accent px-3 py-1.5 text-[10px] font-bold tracking-[0.1em] text-white uppercase shadow-sm">
+            Always on
+          </span>
+        </div>
 
-      <div className="flex min-w-0 flex-col p-5 sm:p-6">
-        <h3 className="text-lg font-bold tracking-tight sm:text-xl">Deals across ODOS</h3>
-        <p className="mt-1.5 text-sm leading-6 text-muted">
-          No campaign is running right now, but vendors are discounting every day. See what is reduced
-          today.
-        </p>
-        <span className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full bg-foreground px-4 py-2 pt-2 text-sm font-semibold text-background transition-opacity group-hover:opacity-85">
-          Browse today&apos;s deals
-          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-        </span>
+        <div className="flex min-w-0 flex-col gap-5 p-6 sm:p-8 lg:p-10">
+          <div>
+            <h3 className="text-2xl leading-tight font-bold tracking-tight sm:text-3xl">Deals across ODOS</h3>
+            <p className="mt-1.5 text-sm text-muted">Reduced by vendors, every day</p>
+          </div>
+          <p className="text-sm leading-6 text-muted">
+            No seasonal event is running right now, but vendors are discounting all the time. See
+            what is reduced today across every market on ODOS.
+          </p>
+          <span className="mt-auto inline-flex w-fit items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none">
+            Browse today&apos;s deals
+            <ArrowRight className="size-4" aria-hidden />
+          </span>
+        </div>
       </div>
     </Link>
   );
 }
 
 /**
- * Live campaigns as a manually-controlled row.
+ * The campaign slot: one large card at a time, browsed by hand.
  *
- * Never autoplays: a row that moves on its own shifts a link out from under the reader. Featured
- * campaigns come first; the backend already excludes anything expired or unpublished, so nothing
- * here re-implements those rules.
+ * The backend already excludes anything unpublished, expired or hidden, so nothing here
+ * re-implements those rules — featured campaigns simply come first.
  */
 export function FeaturedCampaigns() {
   const { data, isPending, isError } = useCampaigns();
@@ -56,26 +96,28 @@ export function FeaturedCampaigns() {
   if (isPending) {
     return (
       <Container>
-        <div className="h-7 w-44 animate-pulse rounded-full bg-surface-muted" aria-busy="true" />
-        <div className="mt-5 flex gap-4">
-          {[0, 1].map((i) => (
-            <div key={i} className="h-56 w-full max-w-md shrink-0 animate-pulse rounded-3xl bg-surface-muted" />
-          ))}
+        <div className="mx-auto mb-8 max-w-5xl">
+          <div className="h-6 w-32 animate-pulse rounded-full bg-surface-muted" aria-busy="true" />
+          <div className="mt-3 h-9 w-72 animate-pulse rounded-lg bg-surface-muted" />
         </div>
+        <div className="mx-auto h-[21rem] max-w-5xl animate-pulse rounded-[1.75rem] bg-surface-muted" />
       </Container>
     );
   }
 
   const campaigns = isError ? [] : (data ?? []);
 
-  // Nothing scheduled (or the feed failed) still shows the slot, with the standing deals card.
   if (campaigns.length === 0) {
     return (
       <Container>
-        <SectionHeading title="Promotions" description="What is discounted on ODOS right now." href="/deals" hrefLabel="All deals" />
-        <div className="mt-5 max-w-2xl">
-          <DefaultPromoCard />
-        </div>
+        <ShowcaseHeading
+          eyebrow="Promotions"
+          title="What is discounted right now"
+          description="Seasonal events and everyday reductions from vendors across ODOS."
+          href="/deals"
+          hrefLabel="All deals"
+        />
+        <DefaultPromoCard />
       </Container>
     );
   }
@@ -84,38 +126,16 @@ export function FeaturedCampaigns() {
     (a, b) => Number(b.isFeatured) - Number(a.isFeatured) || b.displayPriority - a.displayPriority,
   );
 
-  // One campaign does not need a carousel; two or more scroll.
-  if (ordered.length === 1) {
-    return (
-      <Container>
-        <SectionHeading
-          title="Shopping events"
-          description="Seasonal sales and collections running right now."
-          href="/campaigns"
-          hrefLabel="All campaigns"
-        />
-        <div className="mt-5 max-w-2xl">
-          <CampaignCard campaign={ordered[0]} />
-        </div>
-      </Container>
-    );
-  }
-
   return (
     <Container>
-      <SectionHeading
-        title="Shopping events"
-        description="Seasonal sales and collections running right now."
+      <ShowcaseHeading
+        eyebrow="Shopping events"
+        title="Choose the event that suits you"
+        description="Seasonal sales and curated collections running on ODOS right now."
         href="/campaigns"
         hrefLabel="All campaigns"
       />
-      <div className="mt-5">
-        <Carousel label="Shopping events" itemClassName="w-[20rem] sm:w-[26rem] lg:w-[30rem]">
-          {ordered.map((campaign) => (
-            <CampaignCard key={campaign.id} campaign={campaign} />
-          ))}
-        </Carousel>
-      </div>
+      <CampaignShowcase campaigns={ordered} />
     </Container>
   );
 }

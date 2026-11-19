@@ -45,7 +45,7 @@ MAP = {
     "VendorCustomerRead": "VendorCustomerRead", "VendorApplicationRead": "VendorApplicationRead",
     "VendorStoreRead": "VendorStoreRead", "DeliverySettingsRead": "VendorDeliverySettingsRead",
     "SectionRead": "VendorStoreSectionRead", "NominationRead": "VendorFlashSaleNominationRead",
-    "CampaignRead": "MerchandisingCampaignRead", "OptInRead": "AdminMerchandisingCampaignOptInRead",
+    "OptInRead": "AdminMerchandisingCampaignOptInRead",
     "VoucherRedemptionRead": "VendorVoucherRedemptionRead", "PromoOverviewRead": "PromoAnalyticsOverviewRead",
     "VendorVoucherRead": "VendorVoucherRead", "VendorReturnRead": "VendorReturnRequestRead",
     "VendorReviewRead": "VendorReviewRead", "VendorWalletRead": "VendorWalletRead",
@@ -56,6 +56,11 @@ MAP = {
     "StoreRead": "AssistantStoreRead", "MessageRead": "AssistantMessageRead",
     "StatusRead": "AssistantStatusResponse", "ChatRead": "AssistantChatResponse",
     "SessionRead": "AssistantSessionResponse",
+    # Campaign participation. These are what the vendor submission page reads, and getting one
+    # key wrong would silently blank a price or a deadline rather than fail loudly.
+    "CampaignBriefRead": "VendorCampaignBriefRead",
+    "CampaignSubmissionRead": "VendorCampaignSubmissionRead",
+    "CampaignSubmissionResultRead": "VendorCampaignSubmissionResult",
 }
 # Inline nested literals: TS parent type -> (wire key, backend model)
 NESTED = {

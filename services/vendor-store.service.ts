@@ -1,8 +1,11 @@
 import { VENDOR_ENDPOINTS } from "@/libs/api-endpoint";
 import { apiFetch } from "./http";
-import { toCampaign } from "./mappers";
-import type { Campaign } from "@/types/catalog";
-import type { MerchandisingCampaignRead } from "@/types/api";
+import type {
+  CampaignBrief,
+  CampaignSubmissionResult,
+  CampaignWorkspace,
+  VendorCampaignSubmission,
+} from "@/types/vendor";
 import type {
   BusinessHours,
   MerchandisingOptIn,
@@ -12,6 +15,97 @@ import type {
   VendorStoreSection,
   VendorStoreUpdate,
 } from "@/types/vendor";
+
+
+/* ---------- Campaign submission wire shapes ---------- */
+
+type CampaignBriefRead = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  banner_image_url?: string | null;
+  thumbnail_image_url?: string | null;
+  theme_color?: string | null;
+  status: string;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  submission_deadline?: string | null;
+  submission_closes_at?: string | null;
+  accepts_submissions?: boolean;
+  requires_proposed_price?: boolean;
+  min_discount_percent?: number | null;
+  max_products?: number | null;
+  product_count?: number;
+};
+
+type CampaignSubmissionRead = {
+  id: string;
+  campaign_id: string;
+  product_id: string;
+  product_title: string;
+  product_image_url?: string | null;
+  current_price?: number | null;
+  proposed_price?: number | null;
+  proposed_old_price?: number | null;
+  discount_percent?: number | null;
+  vendor_note?: string | null;
+  status: string;
+  review_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type CampaignWorkspaceRead = {
+  campaign: CampaignBriefRead;
+  submissions: CampaignSubmissionRead[];
+};
+
+type CampaignSubmissionResultRead = {
+  campaign_slug: string;
+  submitted: number;
+  rejected: number;
+  outcomes: { product_id: string; accepted: boolean; reason?: string | null; detail?: string | null }[];
+};
+
+const toCampaignBrief = (c: CampaignBriefRead): CampaignBrief => ({
+  id: c.id,
+  slug: c.slug,
+  title: c.title,
+  subtitle: c.subtitle ?? null,
+  description: c.description ?? null,
+  bannerImageUrl: c.banner_image_url ?? null,
+  thumbnailImageUrl: c.thumbnail_image_url ?? null,
+  themeColor: c.theme_color ?? null,
+  status: c.status,
+  startsAt: c.starts_at ?? null,
+  endsAt: c.ends_at ?? null,
+  submissionDeadline: c.submission_deadline ?? null,
+  submissionClosesAt: c.submission_closes_at ?? null,
+  acceptsSubmissions: Boolean(c.accepts_submissions),
+  requiresProposedPrice: Boolean(c.requires_proposed_price),
+  minDiscountPercent: c.min_discount_percent ?? null,
+  maxProducts: c.max_products ?? null,
+  productCount: c.product_count ?? 0,
+});
+
+const toCampaignSubmission = (s: CampaignSubmissionRead): VendorCampaignSubmission => ({
+  id: s.id,
+  campaignId: s.campaign_id,
+  productId: s.product_id,
+  productTitle: s.product_title,
+  productImageUrl: s.product_image_url ?? null,
+  currentPrice: s.current_price ?? null,
+  proposedPrice: s.proposed_price ?? null,
+  proposedOldPrice: s.proposed_old_price ?? null,
+  discountPercent: s.discount_percent ?? null,
+  vendorNote: s.vendor_note ?? null,
+  status: s.status,
+  reviewNotes: s.review_notes ?? null,
+  createdAt: s.created_at,
+  updatedAt: s.updated_at,
+});
 
 /* ---------- Wire shapes ---------- */
 
@@ -300,15 +394,14 @@ export const vendorStoreService = {
     }),
 
   /**
-   * `/vendor/merchandising-campaigns/open` returns the same `MerchandisingCampaignRead` the
-   * storefront reads, so it goes through the storefront mapper: the vendor sees the artwork,
-   * accent and product count that shoppers will see, not a stripped-down copy.
+   * Campaigns this vendor can nominate into right now — not the same set as the shopper-facing
+   * live list, because nominations are collected before a seasonal sale opens.
    */
-  async openCampaigns(): Promise<Campaign[]> {
-    const rows = await apiFetch<MerchandisingCampaignRead[]>(VENDOR_ENDPOINTS.openMerchandisingCampaigns, {
+  async openCampaigns(): Promise<CampaignBrief[]> {
+    const rows = await apiFetch<CampaignBriefRead[]>(VENDOR_ENDPOINTS.openMerchandisingCampaigns, {
       revalidate: false,
     });
-    return rows.map(toCampaign);
+    return rows.map(toCampaignBrief);
   },
 
   async campaignOptIns(): Promise<MerchandisingOptIn[]> {
@@ -328,6 +421,48 @@ export const vendorStoreService = {
       method: "POST",
       body: { campaign_id: campaignId, product_id: productId },
     }),
+
+  /* ---------- Campaign submission workspace ---------- */
+
+  async campaignWorkspace(slug: string): Promise<CampaignWorkspace> {
+    const row = await apiFetch<CampaignWorkspaceRead>(VENDOR_ENDPOINTS.campaignWorkspace(slug), {
+      revalidate: false,
+    });
+    return {
+      campaign: toCampaignBrief(row.campaign),
+      submissions: row.submissions.map(toCampaignSubmission),
+    };
+  },
+
+  async submitCampaignProducts(
+    slug: string,
+    items: { productId: string; proposedPrice?: number | null; vendorNote?: string | null }[],
+  ): Promise<CampaignSubmissionResult> {
+    const row = await apiFetch<CampaignSubmissionResultRead>(
+      VENDOR_ENDPOINTS.campaignSubmissions(slug),
+      {
+        method: "POST",
+        body: {
+          items: items.map((item) => ({
+            product_id: item.productId,
+            proposed_price: item.proposedPrice ?? null,
+            vendor_note: item.vendorNote ?? null,
+          })),
+        },
+      },
+    );
+    return {
+      campaignSlug: row.campaign_slug,
+      submitted: row.submitted,
+      rejected: row.rejected,
+      outcomes: row.outcomes.map((outcome) => ({
+        productId: outcome.product_id,
+        accepted: outcome.accepted,
+        reason: outcome.reason ?? null,
+        detail: outcome.detail ?? null,
+      })),
+    };
+  },
 };
 
 /* ---------- Promotion analytics ---------- */

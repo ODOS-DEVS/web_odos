@@ -109,6 +109,28 @@ export function useCampaignOptIns() {
   return useQuery({ queryKey: keys.optIns, queryFn: () => vendorStoreService.campaignOptIns(), enabled: useGate() });
 }
 
+export function useCampaignWorkspace(slug: string) {
+  return useQuery({
+    queryKey: [...keys.campaigns, "workspace", slug] as const,
+    queryFn: () => vendorStoreService.campaignWorkspace(slug),
+    enabled: useGate() && Boolean(slug),
+  });
+}
+
+export function useSubmitCampaignProducts(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (items: { productId: string; proposedPrice?: number | null; vendorNote?: string | null }[]) =>
+      vendorStoreService.submitCampaignProducts(slug, items),
+    onSuccess: () => {
+      // The workspace holds the submission history this page renders, and the opt-in list
+      // feeds the campaigns overview; both are stale the moment a nomination lands.
+      queryClient.invalidateQueries({ queryKey: [...keys.campaigns, "workspace", slug] });
+      queryClient.invalidateQueries({ queryKey: keys.optIns });
+    },
+  });
+}
+
 export function useOptInToCampaign() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -303,6 +303,9 @@ export const VENDOR_ENDPOINTS = {
   flashSaleNominations: "/vendor/flash-sale-nominations",
   openMerchandisingCampaigns: "/vendor/merchandising-campaigns/open",
   merchandisingOptIns: "/vendor/merchandising-campaign-opt-ins",
+  /** The campaign brief plus this vendor's own submissions. Scoped to the caller's token. */
+  campaignWorkspace: (slug: string) => `/vendor/merchandising-campaigns/${encodeURIComponent(slug)}/workspace`,
+  campaignSubmissions: (slug: string) => `/vendor/merchandising-campaigns/${encodeURIComponent(slug)}/submissions`,
   campaigns: "/vendor/campaigns",
   campaign: (campaignId: string) => `/vendor/campaigns/${enc(campaignId)}`,
   promoOverview: "/vendor/analytics/promotions/overview",
