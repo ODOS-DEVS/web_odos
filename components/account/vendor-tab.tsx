@@ -16,23 +16,27 @@ import { useMarkets } from "@/hooks/use-catalog";
 import { useApplyAsVendor } from "@/hooks/use-vendor-application";
 
 /**
- * Ghana Card numbers are `GHA-` then nine digits then a check digit. Validated loosely and only
- * when something was typed: the field is optional, and a format quibble must not block an
- * application whose number is simply spaced differently.
+ * A Ghana Card number is printed on the card as `GHA-123456789-0`: the fixed `GHA` prefix, nine
+ * digits, then a single check digit.
+ *
+ * The field formats as it is typed rather than validating after the fact, so the value in the box
+ * is always the format the card shows. Only the ten digits are ever taken from the input — the
+ * prefix and both hyphens are supplied here — which means a paste of `GHA-123456789-0`,
+ * `GHA 123456789 0` or a bare `1234567890` all land on the same stored value.
  */
-const GHANA_CARD_PATTERN = /^GHA-?\d{9}-?\d$/;
+const GHANA_CARD_DIGITS = 10;
 
-const normaliseGhanaCard = (value: string): string | null => {
-  const cleaned = value.trim().toUpperCase().replace(/\s+/g, "");
-  if (!cleaned) return null;
-  // Stored in the canonical dashed form so two vendors typing it differently match.
-  const digits = cleaned.replace(/[^0-9]/g, "");
-  if (digits.length === 10) return `GHA-${digits.slice(0, 9)}-${digits.slice(9)}`;
-  return cleaned;
+const ghanaCardDigits = (value: string) => value.replace(/[^0-9]/g, "").slice(0, GHANA_CARD_DIGITS);
+
+/** `""` until a digit is typed, so an untouched field shows its placeholder rather than a bare `GHA-`. */
+const formatGhanaCard = (value: string): string => {
+  const digits = ghanaCardDigits(value);
+  if (!digits) return "";
+  if (digits.length <= 9) return `GHA-${digits}`;
+  return `GHA-${digits.slice(0, 9)}-${digits.slice(9)}`;
 };
 
-const isPlausibleGhanaCard = (value: string) =>
-  GHANA_CARD_PATTERN.test(value.trim().toUpperCase().replace(/\s+/g, ""));
+const isCompleteGhanaCard = (value: string) => ghanaCardDigits(value).length === GHANA_CARD_DIGITS;
 
 const BUSINESS_CATEGORIES = [
   "Fashion & Accessories",
@@ -112,9 +116,7 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
   const [region, setRegion] = useState("Greater Accra");
   const [city, setCity] = useState("");
 
-  // Verification details. Both are optional: ODOS takes individual traders as well as
-  // registered companies, and the API accepts either as null.
-  const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState("");
+  // The one identity detail ODOS verifies a vendor against. Held in the printed format.
   const [ghanaCardNumber, setGhanaCardNumber] = useState("");
 
   const [locationInput, setLocationInput] = useState("");
@@ -139,6 +141,7 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
     storeName.trim() &&
     storeDescription.trim() &&
     city.trim() &&
+    isCompleteGhanaCard(ghanaCardNumber) &&
     locationInput.trim() &&
     preferredMarket;
 
@@ -157,8 +160,7 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
         storeDescription,
         storeLocation: locationInput,
         marketId: preferredMarket,
-        businessRegistrationNumber: businessRegistrationNumber.trim() || null,
-        ghanaCardNumber: normaliseGhanaCard(ghanaCardNumber),
+        ghanaCardNumber,
         logo: logo?.file ?? null,
         banner: banner?.file ?? null,
         shopPhoto: shopPhoto?.file ?? null,
@@ -285,28 +287,25 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
         <div>
           <h3 className="text-sm font-semibold">Verification</h3>
           <p className="mt-0.5 text-xs text-muted">
-            Optional, but it speeds up review. Only the ODOS verification team ever sees these — they are
-            never shown on your storefront.
+            Only the ODOS verification team sees this. It is never shown on your storefront, and we never
+            ask for a photo of your card.
           </p>
         </div>
         <Field
-          id="businessRegistrationNumber"
-          label="Business registration number"
-          placeholder="eg. CS123456789"
-          hint="Leave blank if you trade as an individual — plenty of ODOS vendors do."
-          value={businessRegistrationNumber}
-          onChange={(e) => setBusinessRegistrationNumber(e.target.value)}
-          maxLength={120}
-        />
-        <Field
           id="ghanaCardNumber"
-          label="Ghana Card number"
+          label="Ghana Card number *"
           placeholder="GHA-123456789-0"
-          hint="The number on the front of your card. Do not send a photo of the card to anyone."
+          hint={<span className="text-muted">as printed on your card</span>}
+          inputMode="numeric"
+          autoComplete="off"
+          required
           value={ghanaCardNumber}
-          onChange={(e) => setGhanaCardNumber(e.target.value.toUpperCase())}
-          maxLength={60}
-          error={ghanaCardNumber.trim() && !isPlausibleGhanaCard(ghanaCardNumber) ? "That doesn't look like a Ghana Card number. The format is GHA-123456789-0." : undefined}
+          onChange={(e) => setGhanaCardNumber(formatGhanaCard(e.target.value))}
+          error={
+            ghanaCardNumber && !isCompleteGhanaCard(ghanaCardNumber)
+              ? "A Ghana Card number has ten digits, like GHA-123456789-0."
+              : undefined
+          }
         />
       </div>
 
