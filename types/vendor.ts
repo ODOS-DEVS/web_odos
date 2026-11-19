@@ -498,16 +498,6 @@ export type VendorFlashNomination = {
   createdAt: string;
 };
 
-export type MerchandisingCampaign = {
-  id: string;
-  title: string;
-  slug: string;
-  description: string | null;
-  startsAt: string | null;
-  endsAt: string | null;
-  status: string;
-};
-
 export type MerchandisingOptIn = {
   id: string;
   campaignId: string;

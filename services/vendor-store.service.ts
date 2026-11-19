@@ -1,8 +1,10 @@
 import { VENDOR_ENDPOINTS } from "@/libs/api-endpoint";
 import { apiFetch } from "./http";
+import { toCampaign } from "./mappers";
+import type { Campaign } from "@/types/catalog";
+import type { MerchandisingCampaignRead } from "@/types/api";
 import type {
   BusinessHours,
-  MerchandisingCampaign,
   MerchandisingOptIn,
   VendorDeliverySettings,
   VendorFlashNomination,
@@ -79,15 +81,6 @@ type NominationRead = {
   created_at: string;
 };
 
-type CampaignRead = {
-  id: string;
-  slug: string;
-  title: string;
-  description?: string | null;
-  starts_at?: string | null;
-  ends_at?: string | null;
-  product_count?: number;
-};
 
 type OptInRead = {
   id: string;
@@ -306,17 +299,16 @@ export const vendorStoreService = {
       },
     }),
 
-  async openCampaigns(): Promise<MerchandisingCampaign[]> {
-    const rows = await apiFetch<CampaignRead[]>(VENDOR_ENDPOINTS.openMerchandisingCampaigns, { revalidate: false });
-    return rows.map((c) => ({
-      id: c.id,
-      title: c.title,
-      slug: c.slug,
-      description: c.description ?? null,
-      startsAt: c.starts_at ?? null,
-      endsAt: c.ends_at ?? null,
-      status: "open",
-    }));
+  /**
+   * `/vendor/merchandising-campaigns/open` returns the same `MerchandisingCampaignRead` the
+   * storefront reads, so it goes through the storefront mapper: the vendor sees the artwork,
+   * accent and product count that shoppers will see, not a stripped-down copy.
+   */
+  async openCampaigns(): Promise<Campaign[]> {
+    const rows = await apiFetch<MerchandisingCampaignRead[]>(VENDOR_ENDPOINTS.openMerchandisingCampaigns, {
+      revalidate: false,
+    });
+    return rows.map(toCampaign);
   },
 
   async campaignOptIns(): Promise<MerchandisingOptIn[]> {

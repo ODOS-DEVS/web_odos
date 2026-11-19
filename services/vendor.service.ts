@@ -295,6 +295,13 @@ export type VendorApplicationInput = {
   /** The market's id, not its name. */
   marketId: string | null;
   whatsappNumber?: string | null;
+  /**
+   * Verification details. Both optional — ODOS accepts individual traders as well as registered
+   * companies. Returned only to the applicant themselves (`/vendor/applications/me`) and to
+   * verification admins; no public or catalogue schema carries them.
+   */
+  businessRegistrationNumber?: string | null;
+  ghanaCardNumber?: string | null;
   logo?: File | null;
   banner?: File | null;
   shopPhoto?: File | null;
@@ -399,6 +406,10 @@ export const vendorService = {
     form.append("store_location", input.storeLocation.trim());
     if (input.marketId) form.append("market_id", input.marketId);
     if (input.whatsappNumber?.trim()) form.append("whatsapp_number", input.whatsappNumber.trim());
+    if (input.businessRegistrationNumber?.trim()) {
+      form.append("business_registration_number", input.businessRegistrationNumber.trim());
+    }
+    if (input.ghanaCardNumber?.trim()) form.append("ghana_card_number", input.ghanaCardNumber.trim());
     if (input.logo) form.append("logo_image", input.logo);
     if (input.banner) form.append("banner_image", input.banner);
     if (input.shopPhoto) form.append("shop_image", input.shopPhoto);

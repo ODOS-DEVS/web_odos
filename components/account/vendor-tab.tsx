@@ -15,6 +15,25 @@ import { cn } from "@/libs/cn";
 import { useMarkets } from "@/hooks/use-catalog";
 import { useApplyAsVendor } from "@/hooks/use-vendor-application";
 
+/**
+ * Ghana Card numbers are `GHA-` then nine digits then a check digit. Validated loosely and only
+ * when something was typed: the field is optional, and a format quibble must not block an
+ * application whose number is simply spaced differently.
+ */
+const GHANA_CARD_PATTERN = /^GHA-?\d{9}-?\d$/;
+
+const normaliseGhanaCard = (value: string): string | null => {
+  const cleaned = value.trim().toUpperCase().replace(/\s+/g, "");
+  if (!cleaned) return null;
+  // Stored in the canonical dashed form so two vendors typing it differently match.
+  const digits = cleaned.replace(/[^0-9]/g, "");
+  if (digits.length === 10) return `GHA-${digits.slice(0, 9)}-${digits.slice(9)}`;
+  return cleaned;
+};
+
+const isPlausibleGhanaCard = (value: string) =>
+  GHANA_CARD_PATTERN.test(value.trim().toUpperCase().replace(/\s+/g, ""));
+
 const BUSINESS_CATEGORIES = [
   "Fashion & Accessories",
   "Beauty & Personal Care",
@@ -93,6 +112,11 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
   const [region, setRegion] = useState("Greater Accra");
   const [city, setCity] = useState("");
 
+  // Verification details. Both are optional: ODOS takes individual traders as well as
+  // registered companies, and the API accepts either as null.
+  const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState("");
+  const [ghanaCardNumber, setGhanaCardNumber] = useState("");
+
   const [locationInput, setLocationInput] = useState("");
   const [preferredMarket, setPreferredMarket] = useState<string | null>(null);
 
@@ -133,6 +157,8 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
         storeDescription,
         storeLocation: locationInput,
         marketId: preferredMarket,
+        businessRegistrationNumber: businessRegistrationNumber.trim() || null,
+        ghanaCardNumber: normaliseGhanaCard(ghanaCardNumber),
         logo: logo?.file ?? null,
         banner: banner?.file ?? null,
         shopPhoto: shopPhoto?.file ?? null,
@@ -253,6 +279,35 @@ function VendorApplicationForm({ onClose, onSubmitted }: { onClose: () => void; 
             onCityChange={setCity}
           />
         </div>
+      </div>
+
+      <div className="mt-8 space-y-4 border-t border-line pt-6">
+        <div>
+          <h3 className="text-sm font-semibold">Verification</h3>
+          <p className="mt-0.5 text-xs text-muted">
+            Optional, but it speeds up review. Only the ODOS verification team ever sees these — they are
+            never shown on your storefront.
+          </p>
+        </div>
+        <Field
+          id="businessRegistrationNumber"
+          label="Business registration number"
+          placeholder="eg. CS123456789"
+          hint="Leave blank if you trade as an individual — plenty of ODOS vendors do."
+          value={businessRegistrationNumber}
+          onChange={(e) => setBusinessRegistrationNumber(e.target.value)}
+          maxLength={120}
+        />
+        <Field
+          id="ghanaCardNumber"
+          label="Ghana Card number"
+          placeholder="GHA-123456789-0"
+          hint="The number on the front of your card. Do not send a photo of the card to anyone."
+          value={ghanaCardNumber}
+          onChange={(e) => setGhanaCardNumber(e.target.value.toUpperCase())}
+          maxLength={60}
+          error={ghanaCardNumber.trim() && !isPlausibleGhanaCard(ghanaCardNumber) ? "That doesn't look like a Ghana Card number. The format is GHA-123456789-0." : undefined}
+        />
       </div>
 
       <div className="mt-8 space-y-4 border-t border-line pt-6">
