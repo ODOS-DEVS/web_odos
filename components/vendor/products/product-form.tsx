@@ -3,13 +3,14 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, EyeOff, ImagePlus, Trash2, X } from "lucide-react";
+import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/vendor/vendor-ui";
 import { inputClass } from "@/components/ui/field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/libs/cn";
+import { ImageManager, type GallerySlot } from "./image-manager";
 import { useCategories } from "@/hooks/use-catalog";
 import {
   useCreateVendorProduct,
@@ -161,8 +162,9 @@ export function ProductForm({ product }: { product?: VendorProduct }) {
   const editing = Boolean(product);
 
   const [draft, setDraft] = useState<Draft>(product ? toDraft(product) : EMPTY);
-  const [newImages, setNewImages] = useState<File[]>([]);
-  const [gallery, setGallery] = useState<string[]>(product?.imageUrls ?? []);
+  const [slots, setSlots] = useState<GallerySlot[]>(
+    () => (product?.imageUrls ?? []).map((url) => ({ kind: "saved", url }) as GallerySlot),
+  );
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -211,7 +213,15 @@ export function ProductForm({ product }: { product?: VendorProduct }) {
 
     if (product) {
       save.mutate(
-        { product, changes: { ...shared, imageUrls: gallery, newImages } },
+        {
+          product,
+          changes: {
+            ...shared,
+            // Order is the cover: the API sets image_url to the first entry.
+            imageUrls: slots.filter((s) => s.kind === "saved").map((s) => s.url),
+            newImages: slots.flatMap((s) => (s.kind === "new" ? [s.file] : [])),
+          },
+        },
         {
           onSuccess: () => {
             toast.success(`${draft.name} saved`);
@@ -224,7 +234,7 @@ export function ProductForm({ product }: { product?: VendorProduct }) {
     }
 
     create.mutate(
-      { ...shared, images: newImages },
+      { ...shared, images: slots.flatMap((s) => (s.kind === "new" ? [s.file] : [])) },
       {
         onSuccess: () => {
           toast.success(`${draft.name} added to your catalogue`);
@@ -294,62 +304,8 @@ export function ProductForm({ product }: { product?: VendorProduct }) {
 
           <Panel>
             <PanelHeader title="Photos" />
-            <div className="space-y-4 p-5">
-              {gallery.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs text-muted">Current photos — remove any you no longer want.</p>
-                  <ul className="flex flex-wrap gap-3">
-                    {gallery.map((url) => (
-                      <li key={url} className="relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- Remote product photos are not in the image allowlist. */}
-                        <img src={url} alt="" className="size-20 rounded-xl border border-line object-cover" />
-                        <button
-                          type="button"
-                          aria-label="Remove photo"
-                          onClick={() => setGallery((g) => g.filter((u) => u !== url))}
-                          className="press absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-foreground text-background"
-                        >
-                          <X className="size-3" aria-hidden />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {newImages.length > 0 && (
-                <ul className="flex flex-wrap gap-3">
-                  {newImages.map((file, i) => (
-                    <li key={`${file.name}-${i}`} className="relative">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- Local object URL preview. */}
-                      <img src={URL.createObjectURL(file)} alt="" className="size-20 rounded-xl border border-accent object-cover" />
-                      <button
-                        type="button"
-                        aria-label={`Remove ${file.name}`}
-                        onClick={() => setNewImages((f) => f.filter((_, index) => index !== i))}
-                        className="press absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-foreground text-background"
-                      >
-                        <X className="size-3" aria-hidden />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <label className="press flex h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line text-sm text-muted hover:border-foreground">
-                <ImagePlus className="size-5" aria-hidden />
-                {editing ? "Add more photos" : "Upload photos"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="sr-only"
-                  onChange={(e) => {
-                    setNewImages((existing) => [...existing, ...Array.from(e.target.files ?? [])]);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
+            <div className="p-5">
+              <ImageManager slots={slots} onChange={setSlots} disabled={pending} />
             </div>
           </Panel>
 
