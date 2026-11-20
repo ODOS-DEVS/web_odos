@@ -10,7 +10,6 @@ import { HowItWorks } from "@/components/home/how-it-works";
 import { MarketNearYou } from "@/components/home/market-near-you";
 import { PromoBanners } from "@/components/home/promo-banners";
 import { PromoCollage } from "@/components/home/promo-collage";
-import { WeeklyDealBanner } from "@/components/home/weekly-deal-banner";
 import { ProductGrid, ProductGridSkeleton } from "@/components/product/product-grid";
 import { StoreCard, StoreCardSkeleton } from "@/components/store/store-card";
 import { Badge } from "@/components/ui/badge";
@@ -137,10 +136,6 @@ export function HomeSections() {
           <ProductGrid products={newest} stores={storeMap} />
         )}
       </Container>
-
-      <div className="mt-20">
-        <WeeklyDealBanner />
-      </div>
 
       <Container className="mt-20">
         <MarketNearYou />
