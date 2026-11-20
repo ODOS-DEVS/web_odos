@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Bell,
+  Handshake,
   CalendarClock,
   CreditCard,
   LayoutDashboard,
@@ -76,6 +77,7 @@ export const VENDOR_NAV: VendorNavGroup[] = [
       { href: "/seller/customers", label: "Customers", icon: Users },
       { href: "/seller/chats", label: "Messages", icon: MessageSquare, count: "chats" },
       { href: "/seller/reviews", label: "Reviews", icon: Star },
+  { href: "/seller/negotiations", label: "Negotiations", icon: Handshake },
     ],
   },
   {

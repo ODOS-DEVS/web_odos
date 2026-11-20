@@ -48,6 +48,11 @@ export type VendorProduct = {
   sizeOptions: string[];
   specifications: string[];
   isReturnable: boolean;
+  /** Price negotiation. The floor is vendor-only and never leaves this workspace. */
+  isNegotiable: boolean;
+  minAcceptablePrice: number | null;
+  negotiationMaxQuantity: number | null;
+  negotiationNote: string | null;
   status: VendorProductStatus;
   updatedAt: string;
 };

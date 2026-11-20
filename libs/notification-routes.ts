@@ -37,6 +37,10 @@ export function notificationHref(notification: AppNotification): string | null {
       return "/seller/chats";
     case "vendor_product":
       return id ? `/seller/products/${id}` : "/seller/products";
+    case "negotiation":
+      // Both sides share one route_type; the shopper's page is the safe default and the
+      // seller workspace mirrors it, so a vendor landing here still sees their own view.
+      return id ? `/account/negotiations/${id}` : "/account/negotiations";
     case "vendor_campaign":
       return "/seller/campaigns";
     case "vendor_campaign_submit":
@@ -58,6 +62,7 @@ export function notificationHref(notification: AppNotification): string | null {
   if (kind === "account_ready" || kind.startsWith("vendor_application") || kind === "vendor_rejected") {
     return "/account?tab=vendor";
   }
+  if (kind.startsWith("negotiation")) return id ? `/account/negotiations/${id}` : "/account/negotiations";
   if (kind.startsWith("voucher")) return "/account?tab=vouchers";
   return null;
 }
@@ -71,6 +76,7 @@ export function notificationTone(notification: AppNotification): NotificationTon
     return "money";
   }
   if (k.includes("chat") || k.includes("message")) return "message";
+  if (k.includes("negotiation") || k.includes("offer")) return "promo";
   if (k.includes("voucher") || k.includes("campaign") || k.includes("flash")) return "promo";
   if (k.includes("stock") || k.includes("inventory")) return "stock";
   if (k.includes("order") || k.includes("booking") || k.includes("delivery")) return "order";

@@ -38,6 +38,10 @@ type VendorProductRead = {
   size_options?: string[] | null;
   specifications?: string[] | null;
   is_returnable: boolean;
+  is_negotiable?: boolean;
+  min_acceptable_price?: number | null;
+  negotiation_max_quantity?: number | null;
+  negotiation_note?: string | null;
   status: string;
   updated_at: string;
 };
@@ -197,6 +201,10 @@ function toVendorProduct(p: VendorProductRead): VendorProduct {
     sizeOptions: p.size_options ?? [],
     specifications: p.specifications ?? [],
     isReturnable: p.is_returnable,
+    isNegotiable: Boolean(p.is_negotiable),
+    minAcceptablePrice: p.min_acceptable_price ?? null,
+    negotiationMaxQuantity: p.negotiation_max_quantity ?? null,
+    negotiationNote: p.negotiation_note ?? null,
     status: toVendorProductStatus(p.status),
     updatedAt: p.updated_at,
   };
@@ -349,6 +357,11 @@ export type VendorProductUpdate = {
   sizeOptions?: string[];
   specifications?: string[];
   isReturnable?: boolean;
+  isNegotiable?: boolean;
+  /** Private floor. Sent to the API, never read back into any public surface. */
+  minAcceptablePrice?: number | null;
+  negotiationMaxQuantity?: number | null;
+  negotiationNote?: string | null;
   status?: VendorProductStatus;
   /** Files to append to the gallery. Existing photos are kept via `imageUrls`. */
   newImages?: File[];
@@ -369,6 +382,11 @@ export type VendorProductCreate = {
   sizeOptions?: string[];
   specifications?: string[];
   isReturnable?: boolean;
+  isNegotiable?: boolean;
+  /** Private floor. Sent to the API, never read back into any public surface. */
+  minAcceptablePrice?: number | null;
+  negotiationMaxQuantity?: number | null;
+  negotiationNote?: string | null;
   images?: File[];
 };
 
@@ -524,6 +542,16 @@ export const vendorService = {
     if (input.sizeOptions?.length) form.append("size_options", asList(input.sizeOptions));
     if (input.specifications?.length) form.append("specifications", asLines(input.specifications));
     if (typeof input.isReturnable === "boolean") form.append("is_returnable", String(input.isReturnable));
+    if (typeof input.isNegotiable === "boolean") form.append("is_negotiable", String(input.isNegotiable));
+    // Only sent when negotiation is on: the API treats an absent value as "leave alone", and
+    // turning negotiation off retires the floor there rather than here.
+    if (input.isNegotiable) {
+      if (input.minAcceptablePrice != null) form.append("min_acceptable_price", String(input.minAcceptablePrice));
+      if (input.negotiationMaxQuantity != null) {
+        form.append("negotiation_max_quantity", String(input.negotiationMaxQuantity));
+      }
+      if (input.negotiationNote != null) form.append("negotiation_note", input.negotiationNote);
+    }
     for (const file of input.images ?? []) form.append("images", file);
     return apiFetch<unknown>(VENDOR_ENDPOINTS.products, { method: "POST", body: form, revalidate: false });
   },
@@ -562,6 +590,16 @@ export const vendorService = {
     form.append("size_options", asList(next.sizeOptions));
     form.append("specifications", asLines(next.specifications));
     form.append("is_returnable", String(next.isReturnable));
+    form.append("is_negotiable", String(next.isNegotiable ?? false));
+    // Only sent while negotiation is on. Switching it off retires the floor server-side, so
+    // resending a stale minimum here would fight that.
+    if (next.isNegotiable) {
+      if (next.minAcceptablePrice != null) form.append("min_acceptable_price", String(next.minAcceptablePrice));
+      if (next.negotiationMaxQuantity != null) {
+        form.append("negotiation_max_quantity", String(next.negotiationMaxQuantity));
+      }
+      form.append("negotiation_note", next.negotiationNote ?? "");
+    }
     form.append("status", next.status);
     // Appended to the gallery by the API; `image_urls` above preserves what is already there.
     for (const file of changes.newImages ?? []) form.append("images", file);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useId, useState } from "react";
 import { Check, ChevronDown, ChevronRight, ListChecks, Star } from "lucide-react";
 import { ProductGallery } from "@/components/product/product-gallery";
+import { MakeOfferDialog } from "@/components/negotiation/make-offer-dialog";
 import { VerifiedBadge } from "@/components/store/verified-badge";
 import { ProductGrid } from "@/components/product/product-grid";
 import { ProductInfoGrid } from "@/components/product/product-info-grid";
@@ -126,9 +127,26 @@ export function ProductView({ id }: { id: string }) {
             {off > 0 && <Badge tone="accent">Save {off}%</Badge>}
             {p.tags.includes("new") && <Badge tone="success">New</Badge>}
             {p.tags.includes("flash") && <Badge tone="warning">Flash sale</Badge>}
+            {p.isNegotiable && <Badge tone="accent">Price negotiable</Badge>}
           </div>
 
           <Price value={p.price} compareAt={p.compareAtPrice ?? undefined} size="lg" className="mt-5" />
+
+          {/* Negotiation sits beside the price, not in place of the normal buy controls: a
+              shopper happy to pay the listed price should never have to think about it. */}
+          {p.isNegotiable && (
+            <div className="mt-4 rounded-2xl border border-accent/30 bg-accent-soft/40 p-4">
+              <p className="text-sm font-semibold">This seller accepts offers</p>
+              <p className="mt-1 text-sm text-muted">
+                Propose your own price. If the seller agrees you can check out at that price —
+                and only you can use it.
+              </p>
+              {p.negotiationNote && (
+                <p className="mt-2 text-xs text-muted">Seller says: {p.negotiationNote}</p>
+              )}
+              <MakeOfferDialog product={p} className="mt-3 w-full sm:w-auto" />
+            </div>
+          )}
 
           {p.description && <ProductDescription description={p.description} />}
 

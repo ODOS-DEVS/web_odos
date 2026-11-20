@@ -148,6 +148,8 @@ export type ProductRead = {
   flash_sale_units_remaining?: number | null;
   created_at: string;
   updated_at: string;
+  is_negotiable?: boolean;
+  negotiation_note?: string | null;
 };
 
 export type ProductReviewRead = {

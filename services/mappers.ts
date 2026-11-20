@@ -153,6 +153,8 @@ export function toProduct(p: ProductRead): Product {
           }
         : null,
     createdAt: p.created_at ?? "",
+    isNegotiable: Boolean(p.is_negotiable),
+    negotiationNote: p.negotiation_note ?? null,
   };
 }
 

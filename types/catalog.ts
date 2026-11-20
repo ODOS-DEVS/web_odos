@@ -141,6 +141,10 @@ export type Product = {
   tags: ProductTag[];
   flashSale: FlashSale | null;
   createdAt: string;
+  /** The vendor accepts offers on this product. The minimum they will take is never sent here. */
+  isNegotiable: boolean;
+  /** Public conditions the vendor wrote, e.g. "bulk orders only". */
+  negotiationNote: string | null;
 };
 
 export type Voucher = {

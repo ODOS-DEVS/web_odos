@@ -57,6 +57,10 @@ type Draft = {
   sizeOptions: string;
   specifications: string;
   isReturnable: boolean;
+  isNegotiable: boolean;
+  minAcceptablePrice: string;
+  negotiationMaxQuantity: string;
+  negotiationNote: string;
 };
 
 const EMPTY: Draft = {
@@ -72,6 +76,10 @@ const EMPTY: Draft = {
   sizeOptions: "",
   specifications: "",
   isReturnable: true,
+  isNegotiable: false,
+  minAcceptablePrice: "",
+  negotiationMaxQuantity: "",
+  negotiationNote: "",
 };
 
 function toDraft(p: VendorProduct): Draft {
@@ -88,6 +96,10 @@ function toDraft(p: VendorProduct): Draft {
     sizeOptions: p.sizeOptions.join(", "),
     specifications: p.specifications.join("\n"),
     isReturnable: p.isReturnable,
+    isNegotiable: p.isNegotiable,
+    minAcceptablePrice: p.minAcceptablePrice !== null ? String(p.minAcceptablePrice) : "",
+    negotiationMaxQuantity: p.negotiationMaxQuantity !== null ? String(p.negotiationMaxQuantity) : "",
+    negotiationNote: p.negotiationNote ?? "",
   };
 }
 
@@ -209,6 +221,10 @@ export function ProductForm({ product }: { product?: VendorProduct }) {
       sizeOptions: splitList(draft.sizeOptions),
       specifications: splitLines(draft.specifications),
       isReturnable: draft.isReturnable,
+      isNegotiable: draft.isNegotiable,
+      minAcceptablePrice: draft.minAcceptablePrice ? Number(draft.minAcceptablePrice) : null,
+      negotiationMaxQuantity: draft.negotiationMaxQuantity ? Number(draft.negotiationMaxQuantity) : null,
+      negotiationNote: draft.negotiationNote.trim() || null,
     };
 
     if (product) {
@@ -337,6 +353,62 @@ export function ProductForm({ product }: { product?: VendorProduct }) {
                 />
                 Customers can return this product
               </label>
+
+              <label className="flex items-center gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={draft.isNegotiable}
+                  onChange={(e) => set("isNegotiable", e.target.checked)}
+                  className="size-4 accent-[var(--accent)]"
+                />
+                Shoppers can make me an offer on this product
+              </label>
+
+              {/* Only shown once negotiation is on: a floor and a cap mean nothing on a
+                  product that accepts no offers. */}
+              {draft.isNegotiable && (
+                <div className="space-y-4 rounded-2xl border border-line p-4">
+                  <Labelled
+                    label="Lowest price you would accept"
+                    hint="Private — never shown to shoppers, and never mentioned when an offer is too low. Leave blank to judge every offer yourself."
+                  >
+                    <input
+                      className={inputClass}
+                      inputMode="numeric"
+                      placeholder="e.g. 400"
+                      value={draft.minAcceptablePrice}
+                      onChange={(e) => set("minAcceptablePrice", e.target.value.replace(/[^0-9]/g, ""))}
+                    />
+                  </Labelled>
+                  <Labelled
+                    label="Most units per agreement"
+                    hint="Blank means your stock decides."
+                  >
+                    <input
+                      className={inputClass}
+                      inputMode="numeric"
+                      placeholder="e.g. 3"
+                      value={draft.negotiationMaxQuantity}
+                      onChange={(e) => set("negotiationMaxQuantity", e.target.value.replace(/[^0-9]/g, ""))}
+                    />
+                  </Labelled>
+                  <Labelled label="Note to shoppers" hint="Shown publicly beside the offer button.">
+                    <input
+                      className={inputClass}
+                      maxLength={255}
+                      placeholder="e.g. Bulk orders welcome"
+                      value={draft.negotiationNote}
+                      onChange={(e) => set("negotiationNote", e.target.value)}
+                    />
+                  </Labelled>
+                  {draft.price && draft.minAcceptablePrice &&
+                    Number(draft.minAcceptablePrice) >= Number(draft.price) && (
+                      <p className="text-xs text-danger">
+                        Your minimum is at or above the listed price, so no offer could ever clear it.
+                      </p>
+                    )}
+                </div>
+              )}
             </div>
           </Panel>
         </div>

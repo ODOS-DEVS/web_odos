@@ -255,6 +255,16 @@ export const CHAT_ENDPOINTS = {
  *   never clear `old_price`, and reports failure as `{"success": false}` under HTTP 200. The
  *   `/vendor/products/*` routes below are the mainline ones.
  */
+export const NEGOTIATION_ENDPOINTS = {
+  list: "/negotiations",
+  counts: "/negotiations/counts",
+  one: (id: string) => `/negotiations/${enc(id)}`,
+  counter: (id: string) => `/negotiations/${enc(id)}/counter`,
+  accept: (id: string) => `/negotiations/${enc(id)}/accept`,
+  reject: (id: string) => `/negotiations/${enc(id)}/reject`,
+  withdraw: (id: string) => `/negotiations/${enc(id)}/withdraw`,
+} as const;
+
 export const SAVED_STORE_ENDPOINTS = {
   list: "/saved-stores",
   one: (storeId: string) => `/saved-stores/${enc(storeId)}`,
