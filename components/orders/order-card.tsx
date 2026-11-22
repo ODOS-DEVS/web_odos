@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import type { Order } from "@/types/order";
 import { formatDate, formatMoney } from "@/libs/format";
 import { Media } from "@/components/ui/media";
-import { StatusBadge } from "./status-badge";
+import { OrderStateBadge } from "./order-state-badge";
 
 export function OrderCard({ order }: { order: Order }) {
   const items = order.packages.flatMap((pkg) => pkg.items);
@@ -29,7 +29,7 @@ export function OrderCard({ order }: { order: Order }) {
             )}
           </p>
         </div>
-        <StatusBadge status={order.status} />
+        <OrderStateBadge order={order} />
       </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">

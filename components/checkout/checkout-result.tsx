@@ -205,19 +205,29 @@ export function CheckoutResult({ reference: referenceFromUrl }: { reference?: st
             pending={cancelOrder.isPending}
             onCancel={() => setAbandoning(false)}
             onConfirm={() =>
-              cancelOrder.mutate(orderId, {
-                onSuccess: () => {
-                  // Nothing left to come back to, so stop offering it.
-                  forgetPendingPayment();
-                  setAbandoning(false);
-                  toast.success("Order cancelled");
-                  router.push("/orders");
+              cancelOrder.mutate(
+                { id: orderId, reasonCode: "changed_my_mind" },
+                {
+                  onSuccess: (order) => {
+                    // Nothing left to come back to, so stop offering it.
+                    forgetPendingPayment();
+                    setAbandoning(false);
+                    // If the provider still has an open attempt the server
+                    // records the request and settles it on reconciliation, so
+                    // don't claim the order is gone when it isn't yet.
+                    toast.success(
+                      order.cancellationStatus === "requested"
+                        ? "We’ve noted it. Once the provider confirms the payment didn’t go through, we’ll cancel the order."
+                        : "Order cancelled",
+                    );
+                    router.push("/orders");
+                  },
+                  onError: (error) => {
+                    setAbandoning(false);
+                    toast.error(error instanceof Error ? error.message : "We couldn’t cancel that order.");
+                  },
                 },
-                onError: (error) => {
-                  setAbandoning(false);
-                  toast.error(error instanceof Error ? error.message : "We couldn’t cancel that order.");
-                },
-              })
+              )
             }
           />
         </>

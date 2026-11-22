@@ -54,6 +54,25 @@ export type OrderPackage = {
   rescheduleNote: string | null;
 };
 
+/** One attempt to return money, with the arithmetic that produced it. */
+export type OrderRefund = {
+  id: string;
+  reference: string;
+  amount: number;
+  currency: string;
+  status: string;
+  itemsAmount: number;
+  deliveryAmount: number;
+  discountWithheld: number;
+  gatewayFeeWithheld: number;
+  reasonNote: string | null;
+  /** Only present once the money has actually moved. */
+  providerReference: string | null;
+  failureReason: string | null;
+  confirmedAt: string | null;
+  createdAt: string;
+};
+
 export type Order = {
   id: string;
   number: string;
@@ -65,6 +84,12 @@ export type Order = {
    * the packages and says nothing about whether the order may be cancelled.
    */
   lifecycle: string;
+  /**
+   * The order-level vendor stage, raw. This is the exact field the API's own
+   * cancellation rule reads, so client-side gating mirrors the server instead
+   * of inferring intent from the `packages` rollup.
+   */
+  vendorStage: string;
   paymentStatus: string;
   paymentLabel: string;
   deliveryMethod: string;
@@ -79,6 +104,24 @@ export type Order = {
   deliveryProblem: string | null;
   rescheduleRequestedAt: string | null;
   rescheduleNote: string | null;
+  /**
+   * Cancellation and refund as their own dimensions, because they are separate
+   * facts: an order can be cancelled, paid for, and still awaiting its money back.
+   * "none" / "not_applicable" when nothing has happened.
+   */
+  cancellationStatus: "none" | "requested" | "completed" | "rejected";
+  cancellationRequestedAt: string | null;
+  cancellationReasonCode: string | null;
+  cancellationDecisionNote: string | null;
+  refundStatus:
+    | "not_applicable"
+    | "pending"
+    | "approved"
+    | "processing"
+    | "successful"
+    | "failed"
+    | "partially_refunded";
+  refunds: OrderRefund[];
   /** Return/exchange/refund requests the shopper has filed against this order. */
   returnRequests: ReturnRequest[];
   address: {

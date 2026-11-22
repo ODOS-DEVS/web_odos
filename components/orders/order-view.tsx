@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CreditCard, Info, MapPin, ReceiptText } from "lucide-react";
-import { toast } from "sonner";
 import { RequireLogin } from "@/components/auth/require-login";
 import { OrderSummary } from "@/components/cart/order-summary";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -12,17 +11,17 @@ import { QueryError } from "@/components/ui/query-error";
 import { formatDate, formatDateTime } from "@/libs/format";
 import { STATUS_LABEL } from "@/libs/orders";
 import { useStoreMap } from "@/hooks/use-catalog";
-import { useCancelOrder, useOrder } from "@/hooks/use-orders";
+import { useOrder } from "@/hooks/use-orders";
 import { ApiError } from "@/services/http";
+import { cancellability, paymentStateLabel } from "@/libs/order-state";
+import { CancelOrderDialog } from "./cancel-order-dialog";
 import { DeliveryActions } from "./delivery-actions";
+import { OrderStateBadge } from "./order-state-badge";
+import { OrderStateNotice } from "./order-state-notice";
 import { PackageCard } from "./package-card";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { cancelAbility } from "@/libs/order-cancel";
-import { StatusBadge } from "./status-badge";
 
 function OrderDetail({ id }: { id: string }) {
   const order = useOrder(id);
-  const cancel = useCancelOrder();
   const [confirming, setConfirming] = useState(false);
   const { map: stores } = useStoreMap();
 
@@ -37,10 +36,10 @@ function OrderDetail({ id }: { id: string }) {
   const o = order.data;
   const mixed = new Set(o.packages.map((p) => p.status)).size > 1;
   const laggard = o.packages.filter((p) => p.status === o.status).length;
-  // Decided from the order's own lifecycle, not the package rollup -- see
-  // libs/order-cancel. The old test offered the button on `confirmed` orders,
-  // which the API always refuses, and hid it on orders waiting to be paid.
-  const ability = cancelAbility(o);
+  // Mirrors the API's own cancellation rule (libs/order-state), so the button
+  // never appears on an order the server will refuse -- and its label says
+  // whether cancelling ends the order or only files a request.
+  const ability = cancellability(o);
 
   return (
     <>
@@ -57,38 +56,15 @@ function OrderDetail({ id }: { id: string }) {
             Receipt
           </ButtonLink>
           {ability.can && (
-            <Button variant="outline" size="sm" disabled={cancel.isPending} onClick={() => setConfirming(true)}>
-              {cancel.isPending ? "Cancelling…" : "Cancel order"}
+            <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>
+              {ability.requiresReview ? "Request cancellation" : "Cancel order"}
             </Button>
           )}
-          <StatusBadge status={o.status} className="px-3.5 py-2 text-sm" />
+          <OrderStateBadge order={o} className="px-3.5 py-2 text-sm" />
         </div>
       </header>
 
-      <ConfirmDialog
-        open={confirming}
-        title={`Cancel order ${o.number}?`}
-        description="This can't be undone, and the items go back on sale. You haven't been charged, so there's nothing to refund."
-        confirmLabel={cancel.isPending ? "Cancelling…" : "Cancel order"}
-        cancelLabel="Keep my order"
-        pending={cancel.isPending}
-        onCancel={() => setConfirming(false)}
-        onConfirm={() =>
-          cancel.mutate(o.id, {
-            onSuccess: () => {
-              setConfirming(false);
-              toast.success("Order cancelled");
-            },
-            onError: (e) => {
-              setConfirming(false);
-              toast.error(e instanceof ApiError ? e.message : "We couldn’t cancel this order.");
-              // Usually it was paid or picked up between this page loading and
-              // the click, so the order on screen is already out of date.
-              order.refetch();
-            },
-          })
-        }
-      />
+      <CancelOrderDialog order={o} open={confirming} onClose={() => setConfirming(false)} />
 
       {!ability.can && ability.reason && (
         <p className="mb-8 flex gap-3 rounded-2xl bg-surface-muted p-4 text-sm" role="note">
@@ -109,6 +85,8 @@ function OrderDetail({ id }: { id: string }) {
 
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="space-y-5">
+          <OrderStateNotice order={o} />
+
           {o.packages.map((pkg, index) => (
             <PackageCard key={pkg.id} pkg={pkg} store={pkg.storeId ? stores.get(pkg.storeId) : undefined} index={index} orderId={o.id} />
           ))}
@@ -138,7 +116,7 @@ function OrderDetail({ id }: { id: string }) {
               Payment
             </h2>
             <p className="mt-3 text-muted">
-              {o.paymentLabel} · <span className="capitalize">{o.paymentStatus.replace(/[_-]+/g, " ")}</span>
+              {o.paymentLabel} · {paymentStateLabel(o)}
             </p>
           </section>
 

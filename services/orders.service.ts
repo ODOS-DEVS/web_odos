@@ -40,8 +40,28 @@ export const ordersService = {
     return toOrder(await apiFetch<OrderRead>(ORDERS_ENDPOINTS.orders, { method: "POST", body: input }));
   },
 
-  async cancel(id: string): Promise<Order> {
-    return toOrder(await apiFetch<OrderRead>(ORDERS_ENDPOINTS.cancel(id), { method: "PATCH" }));
+  /**
+   * Ask to cancel. The server decides whether that completes now or waits for
+   * the seller, and says which through `cancellationStatus` — so the caller
+   * must read the response rather than assume success means cancelled.
+   */
+  async requestCancellation(id: string, reasonCode: string, note?: string | null): Promise<Order> {
+    return toOrder(
+      await apiFetch<OrderRead>(ORDERS_ENDPOINTS.cancellationRequest(id), {
+        method: "POST",
+        body: { reason_code: reasonCode, note: note ?? null },
+      }),
+    );
+  },
+
+  /** A vendor answering a held request on their own order. */
+  async decideCancellation(id: string, approve: boolean, note?: string | null): Promise<Order> {
+    return toOrder(
+      await apiFetch<OrderRead>(ORDERS_ENDPOINTS.cancellationDecision(id), {
+        method: "POST",
+        body: { approve, note: note ?? null },
+      }),
+    );
   },
 
   /**

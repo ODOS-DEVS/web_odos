@@ -17,6 +17,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { VendorCancelOrderDialog } from "./vendor-cancel-order-dialog";
+import { VendorCancellationRequests } from "./vendor-cancellation-requests";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
 import { QueryError } from "@/components/ui/query-error";
@@ -138,6 +140,9 @@ export function VendorOrderDetail({ orderId }: { orderId: string }) {
         <ArrowLeft className="size-4" aria-hidden />
         All orders
       </Link>
+
+      {/* Scoped to this order, so the decision sits with the order it concerns. */}
+      <VendorCancellationRequests orders={[order]} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -370,24 +375,10 @@ export function VendorOrderDetail({ orderId }: { orderId: string }) {
         </div>
       </div>
 
-      <ConfirmDialog
+      <VendorCancelOrderDialog
+        order={cancelling ? order : null}
         open={cancelling}
-        onCancel={() => setCancelling(false)}
-        title={`Cancel order ${order.number}?`}
-        description="The customer is told their order was cancelled and any payment is refunded. This cannot be undone."
-        confirmLabel="Cancel order"
-        cancelLabel="Keep order"
-        pending={advance.isPending}
-        onConfirm={() => {
-          advance.mutate(
-            { orderId: order.id, status: "cancelled" },
-            {
-              onSuccess: () => toast.success(`Order ${order.number} cancelled`),
-              onError: (e) => toast.error(e instanceof Error ? e.message : "We couldn't cancel this order."),
-              onSettled: () => setCancelling(false),
-            },
-          );
-        }}
+        onClose={() => setCancelling(false)}
       />
 
       <ConfirmDialog

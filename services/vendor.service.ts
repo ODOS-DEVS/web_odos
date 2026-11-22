@@ -1,10 +1,11 @@
-import { VENDOR_ENDPOINTS } from "@/libs/api-endpoint";
+import { ORDERS_ENDPOINTS, VENDOR_ENDPOINTS } from "@/libs/api-endpoint";
 import { toVendorOrderStatus, toVendorProductStatus } from "@/libs/vendor-orders";
 
 const humaniseStatus = (status: string) =>
   status.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 import type {
   SellerProfile,
+  VendorCancelReason,
   VendorAnalytics,
   VendorAnalyticsPeriod,
   VendorDashboard,
@@ -99,6 +100,12 @@ type VendorOrderRead = {
   placed_at?: string | null;
   paid_at?: string | null;
   created_at: string;
+  cancellation_status?: string;
+  cancellation_requested_at?: string | null;
+  cancellation_requested_role?: string | null;
+  cancellation_reason_code?: string | null;
+  cancellation_reason?: string | null;
+  refund_status?: string;
   items: VendorOrderItemRead[];
   timeline?: OrderStatusEventRead[];
 };
@@ -258,6 +265,11 @@ function toVendorOrder(o: VendorOrderRead): VendorOrder {
     departureNotifiedAt: o.departure_notified_at ?? null,
     rescheduleRequestedAt: o.reschedule_requested_at ?? null,
     rescheduleNote: o.reschedule_note ?? null,
+    cancellationStatus: (o.cancellation_status ?? "none") as VendorOrder["cancellationStatus"],
+    cancellationRequestedAt: o.cancellation_requested_at ?? null,
+    cancellationReasonCode: o.cancellation_reason_code ?? null,
+    cancellationReason: o.cancellation_reason ?? null,
+    refundStatus: o.refund_status ?? "not_applicable",
     timeline: (o.timeline ?? []).map((e) => ({
       id: e.id,
       status: e.status,
@@ -627,6 +639,35 @@ export const vendorService = {
 
   acknowledgeOrder: (orderId: string) =>
     apiFetch<unknown>(VENDOR_ENDPOINTS.orderAcknowledge(orderId), { method: "POST" }),
+
+  /**
+   * Withdraws this vendor's own package from an order, with a reason.
+   *
+   * Only this shop's items come out; the other vendors on a shared basket are
+   * untouched. Stock goes back and, where the shopper had paid, a refund is
+   * opened for exactly these lines plus this package's delivery.
+   */
+  cancelOrder: (orderId: string, reasonCode: VendorCancelReason, note?: string | null) =>
+    apiFetch<unknown>(VENDOR_ENDPOINTS.orderCancel(orderId), {
+      method: "POST",
+      body: { reason_code: reasonCode, note: note ?? null },
+    }),
+
+  /**
+   * Answers a cancellation the shopper asked for after this vendor had already
+   * accepted the order.
+   *
+   * Approving stops the order and opens a refund if money was taken; declining
+   * keeps it alive and tells the shopper why, so the note is worth filling in.
+   * Lives on the shared `/orders/*` route rather than `/vendor/*` because the
+   * request belongs to the order, not to one shop — the API checks this vendor
+   * is actually on the order and 404s otherwise.
+   */
+  decideCancellation: (orderId: string, approve: boolean, note?: string | null) =>
+    apiFetch<unknown>(ORDERS_ENDPOINTS.cancellationDecision(orderId), {
+      method: "POST",
+      body: { approve, note: note ?? null },
+    }),
 
   /** Proof-of-handover photo. The API stores it on the order and shows it to the customer. */
   uploadDispatchPhoto: (orderId: string, photo: File) => {

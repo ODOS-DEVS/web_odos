@@ -82,6 +82,26 @@ export type VendorOrderStatus =
   | "delivered"
   | "cancelled";
 
+/**
+ * Why a vendor is withdrawing their package. Mirrors `VENDOR_REASONS` in
+ * `app/controllers/order_cancellation_controller.py`; the API rejects anything
+ * outside this set with a 422.
+ */
+export type VendorCancelReason =
+  | "out_of_stock"
+  | "product_unavailable"
+  | "listing_error"
+  | "cannot_fulfil"
+  | "other";
+
+export const VENDOR_CANCEL_REASONS: { value: VendorCancelReason; label: string }[] = [
+  { value: "out_of_stock", label: "It's out of stock" },
+  { value: "product_unavailable", label: "This product is no longer available" },
+  { value: "listing_error", label: "The listing was wrong (price, size, photo)" },
+  { value: "cannot_fulfil", label: "I can't fulfil this order" },
+  { value: "other", label: "Something else" },
+];
+
 export type VendorOrderEvent = {
   id: string;
   status: string;
@@ -131,6 +151,17 @@ export type VendorOrder = {
   departureNotifiedAt: string | null;
   rescheduleRequestedAt: string | null;
   rescheduleNote: string | null;
+  /**
+   * A cancellation the shopper has asked for. Order-level, not per-package: the
+   * request is made against the whole order, so every vendor on it sees it.
+   * "requested" is the only value that needs the vendor to do anything.
+   */
+  cancellationStatus: "none" | "requested" | "completed" | "rejected";
+  cancellationRequestedAt: string | null;
+  cancellationReasonCode: string | null;
+  /** The shopper's own words, where they gave any. */
+  cancellationReason: string | null;
+  refundStatus: string;
   timeline: VendorOrderEvent[];
 };
 

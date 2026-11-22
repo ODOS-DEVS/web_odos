@@ -20,10 +20,16 @@ export function useOrder(id: string) {
   return useQuery({ ...orderQueries.detail(id), enabled: Boolean(session) });
 }
 
+/**
+ * Ask to cancel. The response says whether it completed or is waiting on the
+ * seller, so callers must read `cancellationStatus` rather than treating a
+ * resolved promise as "cancelled".
+ */
 export function useCancelOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => ordersService.cancel(id),
+    mutationFn: ({ id, reasonCode, note }: { id: string; reasonCode: string; note?: string | null }) =>
+      ordersService.requestCancellation(id, reasonCode, note),
     onSuccess: (order) => {
       queryClient.setQueryData(queryKeys.order(order.id), order);
       queryClient.invalidateQueries({ queryKey: queryKeys.orders });

@@ -311,7 +311,33 @@ export type OrderCreate = {
   payment_last4?: string | null;
 };
 
+export type OrderRefundRead = {
+  id: string;
+  reference: string;
+  amount: number;
+  currency: string;
+  status: string;
+  items_amount?: number;
+  delivery_amount?: number;
+  discount_withheld?: number;
+  gateway_fee_withheld?: number;
+  reason_code?: string | null;
+  reason_note?: string | null;
+  provider_reference?: string | null;
+  failure_reason?: string | null;
+  confirmed_at?: string | null;
+  created_at: string;
+};
+
 export type OrderRead = {
+  cancellation_status?: string;
+  cancellation_requested_at?: string | null;
+  cancellation_requested_role?: string | null;
+  cancellation_reason_code?: string | null;
+  cancellation_decided_at?: string | null;
+  cancellation_decision_note?: string | null;
+  refund_status?: string;
+  refunds?: OrderRefundRead[];
   id: string;
   order_number: string;
   source: string;

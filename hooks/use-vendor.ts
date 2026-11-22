@@ -6,6 +6,7 @@ import { queryKeys, vendorQueries } from "@/services/queries";
 import type { VendorStatus } from "@/types/api";
 import type {
   VendorAnalyticsPeriod,
+  VendorCancelReason,
   VendorOrderStatus,
   VendorProduct,
   VendorProductSelfServiceStatus,
@@ -172,6 +173,46 @@ export function useAcknowledgeVendorOrder() {
   return useMutation({
     mutationFn: (orderId: string) => vendorService.acknowledgeOrder(orderId),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * Withdraws this vendor's package from an order, with a reason.
+ *
+ * Separate from `useSetVendorOrderStatus`: this route carries the reason code
+ * the shopper is shown, and it is the one that opens the refund.
+ */
+export function useCancelVendorOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, reasonCode, note }: { orderId: string; reasonCode: VendorCancelReason; note?: string | null }) =>
+      vendorService.cancelOrder(orderId, reasonCode, note),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.vendorOrders });
+      queryClient.invalidateQueries({ queryKey: ["vendor", "analytics"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.vendorDashboard });
+      // Stock comes back on a cancel, so the product list is stale too.
+      queryClient.invalidateQueries({ queryKey: queryKeys.vendorProducts });
+    },
+  });
+}
+
+/**
+ * Answers a held cancellation request on one of this vendor's orders.
+ *
+ * Invalidates the same branches as a status change: approving it ends the order,
+ * which moves the dashboard counters and the earnings figures too.
+ */
+export function useDecideVendorCancellation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, approve, note }: { orderId: string; approve: boolean; note?: string | null }) =>
+      vendorService.decideCancellation(orderId, approve, note),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.vendorOrders });
+      queryClient.invalidateQueries({ queryKey: ["vendor", "analytics"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.vendorDashboard });
+    },
   });
 }
 

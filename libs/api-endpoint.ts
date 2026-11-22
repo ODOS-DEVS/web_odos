@@ -164,6 +164,9 @@ export const ORDERS_ENDPOINTS = {
   orders: "/orders",
   order: (orderId: string) => `/orders/${enc(orderId)}`,
   cancel: (orderId: string) => `/orders/${enc(orderId)}/cancel`,
+  /** Structured cancellation: carries a reason, and may be held for review. */
+  cancellationRequest: (orderId: string) => `/orders/${enc(orderId)}/cancellation-request`,
+  cancellationDecision: (orderId: string) => `/orders/${enc(orderId)}/cancellation-decision`,
   deliver: (orderId: string) => `/orders/${enc(orderId)}/deliver`,
   deliverPackage: (orderId: string, packageId: string) => `/orders/${enc(orderId)}/packages/${enc(packageId)}/deliver`,
   deliveryProblem: (orderId: string) => `/orders/${enc(orderId)}/delivery-problem`,
@@ -287,6 +290,12 @@ export const VENDOR_ENDPOINTS = {
   order: (orderId: string) => `/vendor/orders/${enc(orderId)}`,
   orderStatus: (orderId: string) => `/vendor/orders/${enc(orderId)}/status`,
   orderAcknowledge: (orderId: string) => `/vendor/orders/${enc(orderId)}/acknowledge`,
+  /**
+   * Withdraws this vendor's own package, with a reason the shopper is told.
+   * Preferred over `orderStatus` with "cancelled": that route carries no reason
+   * code, and on its own it never used to open a refund or put stock back.
+   */
+  orderCancel: (orderId: string) => `/vendor/orders/${enc(orderId)}/cancel`,
   orderDispatchPhoto: (orderId: string) => `/vendor/orders/${enc(orderId)}/dispatch-photo`,
   orderNotifyDeparture: (orderId: string) => `/vendor/orders/${enc(orderId)}/notify-departure`,
   /** Opt-in per order: asks ODOS to deliver with one of its own riders. */

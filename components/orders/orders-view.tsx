@@ -9,7 +9,7 @@ import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QueryError } from "@/components/ui/query-error";
 import { useOrders } from "@/hooks/use-orders";
-import { isActive } from "@/libs/orders";
+import { isOrderDelivered, isOrderLive } from "@/libs/order-state";
 import { OrderCard } from "./order-card";
 
 const TABS = [
@@ -35,7 +35,9 @@ function OrdersList({ status }: { status?: string }) {
   }
   if (orders.isError) return <div className="mt-6"><QueryError error={orders.error} onRetry={() => orders.refetch()} title="We couldn’t load your orders" /></div>;
 
-  const rows = (orders.data ?? []).filter((order) => (status === "active" ? isActive(order.status) : status === "delivered" ? order.status === "delivered" : true));
+  const rows = (orders.data ?? []).filter((order) =>
+    status === "active" ? isOrderLive(order) : status === "delivered" ? isOrderDelivered(order) : true,
+  );
   const pageCount = Math.ceil(rows.length / ORDERS_PER_PAGE);
   const currentPage = Math.min(page, Math.max(pageCount, 1));
   const visibleRows = rows.slice((currentPage - 1) * ORDERS_PER_PAGE, currentPage * ORDERS_PER_PAGE);

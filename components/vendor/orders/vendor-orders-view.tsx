@@ -10,7 +10,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Media } from "@/components/ui/media";
 import { Pagination } from "@/components/ui/pagination";
 import { QueryError } from "@/components/ui/query-error";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { VendorStatusBadge } from "@/components/vendor/vendor-status-badge";
 import { PageHeader, SearchInput, SegmentedControl, SkeletonRows } from "@/components/vendor/vendor-ui";
 import { formatDate, formatMoney } from "@/libs/format";
@@ -27,6 +26,8 @@ import {
   type VendorOrderQueue,
 } from "@/libs/vendor-orders";
 import { useAdvanceVendorOrder, useVendorOrders } from "@/hooks/use-vendor";
+import { VendorCancelOrderDialog } from "./vendor-cancel-order-dialog";
+import { VendorCancellationRequests } from "./vendor-cancellation-requests";
 import type { VendorOrder } from "@/types/vendor";
 
 const PAGE_SIZE = 10;
@@ -166,6 +167,8 @@ export function VendorOrdersView() {
         description="Confirm, prepare and dispatch the orders customers have placed with your store."
       />
 
+      <VendorCancellationRequests orders={orders} />
+
       <div className="flex flex-wrap items-center gap-3">
         <SegmentedControl
           label="Order queue"
@@ -220,19 +223,12 @@ export function VendorOrdersView() {
         />
       )}
 
-      <ConfirmDialog
+      <VendorCancelOrderDialog
+        order={cancelling}
         open={cancelling !== null}
-        onCancel={() => setCancelling(null)}
-        title={cancelling ? `Cancel order ${cancelling.number}?` : "Cancel order"}
-        description="The customer is told their order was cancelled and any payment is refunded. This cannot be undone."
-        confirmLabel="Cancel order"
-        cancelLabel="Keep order"
-        pending={cancelling ? busyId === cancelling.id : false}
-        onConfirm={() => {
-          if (cancelling) run(cancelling, "cancelled", `Order ${cancelling.number} cancelled`);
-          setCancelling(null);
-        }}
+        onClose={() => setCancelling(null)}
       />
+
     </div>
   );
 }
