@@ -1,16 +1,18 @@
 "use client";
 
+import { useMemo } from "react";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { buttonStyles } from "@/components/ui/button";
-import { useDealProducts } from "@/hooks/use-catalog";
+import { useDealProducts, useProducts } from "@/hooks/use-catalog";
+import { useRotatingWindow } from "@/hooks/use-rotating-window";
 import { cn } from "@/libs/cn";
 import { discountPercent, formatMoney } from "@/libs/format";
 import { TILE_BACKGROUNDS, type Tile } from "@/libs/home-editorial";
 import type { Product } from "@/types/catalog";
 
-/** Up to three discounted products: one hero plus two rows. */
+/** One hero plus two rows. The deals query returns up to 12, so this is a page of them. */
 const TILE_COUNT = 3;
 
 function toTile(product: Product, index: number): Tile {
@@ -18,7 +20,11 @@ function toTile(product: Product, index: number): Tile {
   return {
     id: product.id,
     href: `/products/${product.id}`,
-    eyebrow: off ? `${off}% OFF` : "TODAY'S BEST DEAL",
+    // Only a real markdown is called one. A full-price product topping the
+    // collage up says "NEW IN" instead -- labelling it a deal would be a
+    // discount the shopper cannot actually get.
+    eyebrow: off ? `${off}% OFF` : "NEW IN",
+    cta: off ? "Shop this deal" : "Shop now",
     title: product.name,
     price: formatMoney(product.price),
     originalPrice: product.compareAtPrice ? formatMoney(product.compareAtPrice) : "",
@@ -29,25 +35,96 @@ function toTile(product: Product, index: number): Tile {
 }
 
 /**
- * The collage used to be three hand-written tiles pointing at mock product ids
- * (`/products/prod-chinos`), every one of which 404s against the real catalogue. It is built from
- * actual discounted products now, and hides itself when there are none.
+ * The discounted-product collage on the home page.
+ *
+ * Two things were wrong with it on a desktop screen, both visible side by side
+ * with the mobile layout that was fine:
+ *
+ * - The hero's title was a flat 68px. A two-word product name fitted; "Classic
+ *   Men Sleeves" wrapped to two lines, pushed the price past the bottom of the
+ *   card and clipped it. The title is fluid now and capped at two lines, and
+ *   the card is a column where the image is the part that gives way — so the
+ *   price can never be the thing that gets pushed out.
+ * - The right column stretched whatever it held to the hero's full height, so
+ *   with only one row tile the page showed a 460px slab of flat colour. It now
+ *   asks for two row tiles and only falls back to one when the catalogue
+ *   genuinely has nothing else discounted.
+ *
+ * And it no longer shows the same three products forever: the query already
+ * returned twelve, of which nine were never rendered. It now pages through all
+ * of them, pausing whenever someone is actually looking at it.
  */
 export function PromoCollage() {
   const { data } = useDealProducts();
-  const tiles = (data ?? []).slice(0, TILE_COUNT).map(toTile);
+  const deals = useMemo(() => data ?? [], [data]);
+
+  // Only fetched when the markdowns alone cannot fill the collage, which is
+  // most of the time: the catalogue currently carries two discounted products,
+  // so the strip rendered one hero beside a single stretched tile and had
+  // nothing to rotate through.
+  const needsTopUp = deals.length > 0 && deals.length < TILE_COUNT * 2;
+  const { data: recent } = useProducts({ limit: 12, max_age_days: 45 });
+
+  const pool = useMemo(() => {
+    if (!needsTopUp) return deals;
+    const seen = new Set(deals.map((product) => product.id));
+    const extra = (recent ?? []).filter((product) => !seen.has(product.id));
+    return [...deals, ...extra];
+  }, [deals, recent, needsTopUp]);
+
+  const { page, pageIndex, pageCount, goTo, pauseHandlers } = useRotatingWindow(
+    pool,
+    TILE_COUNT,
+  );
+
+  // A final page with one item would rotate into a half-empty collage, so fall
+  // back to the top of the list to fill it.
+  const filled = page.length === TILE_COUNT ? page : pool.slice(0, TILE_COUNT);
+  const tiles = filled.map(toTile);
 
   if (tiles.length === 0) return null;
 
   const [hero, ...rest] = tiles;
+
   return (
-    <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
-      <PromoTileCard tile={hero} className="lg:min-h-115" />
-      <div className="grid grid-cols-1 gap-3 sm:gap-4">
-        {rest.map((tile) => (
-          <PromoTileCard key={tile.id} tile={tile} />
-        ))}
+    <div {...pauseHandlers}>
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+        <PromoTileCard tile={hero} className="lg:min-h-115" />
+        {rest.length > 0 && (
+          // auto-rows-fr so two tiles split the hero's height evenly; with one
+          // the row sizes to its content instead of stretching into a slab.
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-3 sm:gap-4",
+              rest.length > 1 && "lg:auto-rows-fr",
+            )}
+          >
+            {rest.map((tile) => (
+              <PromoTileCard key={tile.id} tile={tile} />
+            ))}
+          </div>
+        )}
       </div>
+
+      {pageCount > 1 && (
+        <div className="mt-3 flex items-center justify-center gap-2 sm:mt-4">
+          {Array.from({ length: pageCount }, (_, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => goTo(index)}
+              aria-label={`Show deals ${index + 1} of ${pageCount}`}
+              aria-current={index === pageIndex ? "true" : undefined}
+              className={cn(
+                "press h-1.5 rounded-full transition-all duration-300",
+                index === pageIndex
+                  ? "w-6 bg-accent"
+                  : "w-1.5 bg-line hover:bg-muted",
+              )}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -63,7 +140,9 @@ function PromoTileCard({ tile, className }: { tile: Tile; className?: string }) 
           className,
         )}
       >
-        <div className="relative aspect-square h-full min-h-0 w-full overflow-hidden rounded-xl sm:rounded-2xl lg:mb-5 lg:h-[60%] lg:min-h-60 lg:shrink-0 lg:aspect-auto">
+        {/* On desktop the image takes the slack (`flex-1 min-h-0`) so a long
+            title lengthens the card's text block rather than overflowing it. */}
+        <div className="relative aspect-square h-full min-h-0 w-full overflow-hidden rounded-xl sm:rounded-2xl lg:mb-5 lg:aspect-auto lg:h-auto lg:min-h-48 lg:flex-1">
           <Image
             src={tile.imageSrc}
             alt={tile.title}
@@ -73,7 +152,7 @@ function PromoTileCard({ tile, className }: { tile: Tile; className?: string }) 
           />
         </div>
 
-        <div className="flex min-w-0 flex-grow flex-col justify-center pr-1 lg:justify-end lg:px-2 lg:pb-2">
+        <div className="flex min-w-0 flex-grow flex-col justify-center pr-1 lg:flex-grow-0 lg:shrink-0 lg:justify-end lg:px-2 lg:pb-2">
           <div className="mb-1 flex items-center justify-between sm:mb-2 lg:mb-3">
             <p className="text-[9px] font-bold uppercase tracking-wider text-[#ea6734] min-[380px]:text-[10px] sm:text-xs lg:text-sm">
               {tile.eyebrow}
@@ -84,12 +163,14 @@ function PromoTileCard({ tile, className }: { tile: Tile; className?: string }) 
                 className: "hidden lg:flex w-fit gap-2 rounded-full border-none bg-white/10 text-white px-4 transition-colors group-hover:bg-white/20",
               })}
             >
-              Shop this deal
+              {tile.cta}
               <ArrowRight className="size-4 text-[#ea6734]" aria-hidden />
             </span>
           </div>
 
-          <h3 className="mb-1 text-lg font-extrabold uppercase leading-none tracking-tight text-white min-[380px]:text-2xl sm:text-3xl lg:mb-2 lg:text-[68px]">
+          {/* Fluid rather than a fixed 68px, and never more than two lines:
+              that combination is what used to push the price off the card. */}
+          <h3 className="mb-1 line-clamp-2 text-lg font-extrabold uppercase leading-[1.05] tracking-tight text-white min-[380px]:text-2xl sm:text-3xl lg:mb-2 lg:text-[clamp(2rem,3.4vw,3.75rem)]">
             {tile.title}
           </h3>
 
@@ -104,7 +185,7 @@ function PromoTileCard({ tile, className }: { tile: Tile; className?: string }) 
                 className: "flex h-8 w-fit gap-1.5 rounded-full border-none bg-white/10 px-3 text-[11px] text-white transition-colors sm:h-9 sm:px-4 sm:text-xs lg:hidden group-hover:bg-white/20",
               })}
             >
-              Shop this deal
+              {tile.cta}
               <ArrowRight className="size-3.5 text-[#ea6734] sm:size-4" aria-hidden />
             </span>
           </div>
@@ -136,7 +217,7 @@ function PromoTileCard({ tile, className }: { tile: Tile; className?: string }) 
         <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-[#ea6734] min-[380px]:text-[10px] sm:mb-1.5 sm:text-xs">
           {tile.eyebrow}
         </p>
-        <h3 className="mb-1 text-base font-extrabold uppercase leading-tight text-white min-[380px]:text-lg sm:mb-1.5 sm:text-xl lg:text-[28px]">
+        <h3 className="mb-1 line-clamp-2 text-base font-extrabold uppercase leading-tight text-white min-[380px]:text-lg sm:mb-1.5 sm:text-xl lg:text-[clamp(1.1rem,1.6vw,1.75rem)]">
           {tile.title}
         </h3>
         <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 sm:mb-4">
@@ -149,7 +230,7 @@ function PromoTileCard({ tile, className }: { tile: Tile; className?: string }) 
             className: "h-8 w-fit gap-1.5 rounded-full border-none bg-white/10 px-3 py-1.5 text-[11px] text-white transition-colors sm:h-9 sm:px-4 sm:text-xs group-hover:bg-white/20",
           })}
         >
-          Shop this deal
+          {tile.cta}
           <ArrowRight className="size-3.5 text-[#ea6734]" aria-hidden />
         </span>
       </div>

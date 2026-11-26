@@ -2,6 +2,8 @@ export type Tile = {
   id: string;
   href: string;
   eyebrow: string;
+  /** Call to action. Only a real markdown gets to say "deal". */
+  cta: string;
   title: string;
   price: string;
   originalPrice: string;
