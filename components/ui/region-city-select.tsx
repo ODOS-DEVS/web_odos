@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { inputClass } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,6 +18,7 @@ function SearchableSelect({
   emptyMessage,
   disabled = false,
   required = false,
+  allowCustom = false,
   onChange,
 }: {
   id: string;
@@ -29,10 +30,23 @@ function SearchableSelect({
   emptyMessage: string;
   disabled?: boolean;
   required?: boolean;
+  /**
+   * Offer whatever the person typed as a choice when nothing matches. Towns
+   * need this -- the dataset will never hold every community in Ghana, and a
+   * shopper in one that is missing has no way to say so otherwise. Regions do
+   * not: there are exactly sixteen, and a typed seventeenth is a typo that
+   * would quietly corrupt an address.
+   */
+  allowCustom?: boolean;
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const listId = `${id}-options`;
+
+  const typed = query.trim();
+  const alreadyListed = options.some((option) => option.toLowerCase() === typed.toLowerCase());
+  const offerCustom = allowCustom && typed.length > 1 && !alreadyListed;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -53,9 +67,24 @@ function SearchableSelect({
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)]">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={searchPlaceholder} value={query} onValueChange={setQuery} />
           <CommandList id={listId}>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            {offerCustom ? null : <CommandEmpty>{emptyMessage}</CommandEmpty>}
+            {offerCustom ? (
+              <CommandGroup>
+                <CommandItem
+                  value={typed}
+                  onSelect={() => {
+                    onChange(typed);
+                    setQuery("");
+                    setOpen(false);
+                  }}
+                >
+                  <Plus className="mr-2 size-4 shrink-0" aria-hidden />
+                  Use &ldquo;{typed}&rdquo;
+                </CommandItem>
+              </CommandGroup>
+            ) : null}
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
@@ -147,8 +176,12 @@ export function RegionCitySelect({
           disabled={towns.length === 0}
           options={towns}
           placeholder={towns.length === 0 ? "Pick a region first" : `Select a ${cityLabel.toLowerCase()}`}
-          searchPlaceholder={`Search ${cityLabel.toLowerCase()}...`}
+          searchPlaceholder={`Search or type a ${cityLabel.toLowerCase()}...`}
           emptyMessage={`No ${cityLabel.toLowerCase()} found.`}
+          // The towns dataset will never hold every community in Ghana. Someone
+          // in one that is missing could previously get no further than "No
+          // town found"; now typing it offers it as a choice.
+          allowCustom
           onChange={onCityChange}
         />
       </div>
