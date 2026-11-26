@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { QueryError } from "@/components/ui/query-error";
 import { RegionCitySelect } from "@/components/ui/region-city-select";
+import { StoreLocationFields } from "@/components/vendor/store/store-location-fields";
 import { PageHeader, Panel, PanelHeader } from "@/components/vendor/vendor-ui";
 import { cn } from "@/libs/cn";
 import { useCategories } from "@/hooks/use-catalog";
@@ -74,6 +75,16 @@ export function StoreProfileView() {
   const [hours, setHours] = useState<BusinessHours | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [banner, setBanner] = useState<File | null>(null);
+  /**
+   * Latitude, longitude and market are not strings, so they do not fit the
+   * generic `form` record above. Null means "not touched yet" and falls back
+   * to the stored value, matching how `value()` behaves for the text fields.
+   */
+  const [place, setPlace] = useState<{
+    latitude?: number | null;
+    longitude?: number | null;
+    marketId?: string | null;
+  }>({});
   const [error, setError] = useState<string | null>(null);
 
   if (query.isError) {
@@ -113,10 +124,9 @@ export function StoreProfileView() {
         category: value("category", store.category),
         region: value("region", store.region),
         city: value("city", store.city),
-        // Not editable on this screen, but the endpoint clears whatever it is not sent.
-        marketId: store.marketId,
-        latitude: store.latitude,
-        longitude: store.longitude,
+        marketId: place.marketId !== undefined ? place.marketId : store.marketId,
+        latitude: place.latitude !== undefined ? place.latitude : store.latitude,
+        longitude: place.longitude !== undefined ? place.longitude : store.longitude,
         audienceSlugs: store.audienceSlugs,
         location: value("location", store.location) || null,
         phone: value("phone", store.phone) || null,
@@ -212,9 +222,18 @@ export function StoreProfileView() {
                 }}
                 onCityChange={(next) => set("city", next)}
               />
-              <Labelled label="Street or landmark" hint="Shown on your storefront so customers can find you.">
-                <input className={inputClass} value={value("location", store.location)} onChange={(e) => set("location", e.target.value)} maxLength={255} />
-              </Labelled>
+              <StoreLocationFields
+                address={value("location", store.location)}
+                latitude={place.latitude !== undefined ? place.latitude : store.latitude}
+                longitude={place.longitude !== undefined ? place.longitude : store.longitude}
+                marketId={place.marketId !== undefined ? place.marketId : store.marketId}
+                onChange={({ address: nextAddress, ...rest }) => {
+                  // The address is a plain string and lives in `form`; the rest
+                  // are not, so they live in `place`.
+                  if (nextAddress !== undefined) set("location", nextAddress);
+                  if (Object.keys(rest).length) setPlace((current) => ({ ...current, ...rest }));
+                }}
+              />
             </div>
           </Panel>
 
