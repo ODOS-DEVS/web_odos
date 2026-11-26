@@ -8,7 +8,19 @@ import type { Product } from "@/types/catalog";
 import { MAX_LINE_QUANTITY, cartCount, cartSubtotal, lineKey } from "@/libs/cart";
 import { useMounted } from "./use-mounted";
 
-type AddInput = { product: Product; quantity?: number; size?: string | null; color?: string | null };
+type AddInput = {
+  product: Product;
+  quantity?: number;
+  size?: string | null;
+  color?: string | null;
+  /**
+   * Set when the shopper is adding something they negotiated. Display only —
+   * the server resolves the agreement from their session, so passing a number
+   * here cannot buy anything cheaper than the seller agreed to.
+   */
+  negotiatedUnitPrice?: number | null;
+  agreementReference?: string | null;
+};
 
 type CartState = {
   lines: CartLine[];
@@ -26,13 +38,33 @@ const useCartStore = create<CartState>()(
   persist(
     (set) => ({
       lines: [],
-      add: ({ product, quantity = 1, size = null, color = null }) =>
+      add: ({
+        product,
+        quantity = 1,
+        size = null,
+        color = null,
+        negotiatedUnitPrice = null,
+        agreementReference = null,
+      }) =>
         set((state) => {
           const key = lineKey(product.id, size, color);
           const cap = Math.min(product.stock || MAX_LINE_QUANTITY, MAX_LINE_QUANTITY);
           const existing = state.lines.find((l) => l.key === key);
           if (existing) {
-            return { lines: state.lines.map((l) => (l.key === key ? { ...l, quantity: clamp(l.quantity + quantity, cap) } : l)) };
+            return {
+              lines: state.lines.map((l) =>
+                l.key === key
+                  ? {
+                      ...l,
+                      quantity: clamp(l.quantity + quantity, cap),
+                      // Adding the same product again after striking a deal
+                      // should pick the agreed price up, not keep quoting list.
+                      negotiatedUnitPrice: negotiatedUnitPrice ?? l.negotiatedUnitPrice ?? null,
+                      agreementReference: agreementReference ?? l.agreementReference ?? null,
+                    }
+                  : l,
+              ),
+            };
           }
           const line: CartLine = {
             key,
@@ -45,6 +77,8 @@ const useCartStore = create<CartState>()(
             size,
             color,
             stock: product.stock,
+            negotiatedUnitPrice,
+            agreementReference,
           };
           return { lines: [...state.lines, line] };
         }),

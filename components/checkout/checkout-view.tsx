@@ -16,6 +16,7 @@ import { useCart } from "@/hooks/use-cart";
 import { rememberPendingPayment } from "@/libs/pending-payment";
 import { rememberPaymentWindow } from "@/libs/payment-window";
 import { RegionCitySelect } from "@/components/ui/region-city-select";
+import { lineUnitPrice } from "@/libs/cart";
 import { toOrderItems } from "@/libs/checkout";
 import { cn } from "@/libs/cn";
 import { formatMoney } from "@/libs/format";
@@ -88,7 +89,7 @@ function CheckoutForm() {
     subtotal,
     method,
     region: regionName,
-    items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.price })),
+    items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: lineUnitPrice(l) })),
   });
 
   if (!ready) return <div className="h-96 animate-pulse rounded-2xl bg-surface-muted" aria-busy="true" />;

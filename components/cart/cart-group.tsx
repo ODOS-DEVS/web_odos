@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import type { CartGroup as CartGroupData } from "@/types/cart";
 import type { PackageQuote } from "@/types/delivery";
 import { useCart } from "@/hooks/use-cart";
-import { maxQuantity } from "@/libs/cart";
+import { maxQuantity, lineUnitPrice } from "@/libs/cart";
 import { formatMoney, formatMoneyCompact } from "@/libs/format";
 import { Media } from "@/components/ui/media";
 import { Price } from "@/components/ui/price";
@@ -66,9 +66,27 @@ export function CartGroup({ group, pkg }: { group: CartGroupData; pkg?: PackageQ
                   {(line.size || line.color) && (
                     <p className="mt-0.5 text-xs text-muted">{[line.size && `Size ${line.size}`, line.color].filter(Boolean).join(" · ")}</p>
                   )}
-                  <Price value={line.price} className="mt-1 text-sm" />
+                  {line.negotiatedUnitPrice != null ? (
+                    // The shopper negotiated this one. Showing list here, as
+                    // the cart used to, quoted a price they were not going to
+                    // be charged -- and struck through it is also the proof
+                    // the agreement survived the trip to the basket.
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+                      <span className="font-semibold text-accent">
+                        {formatMoney(line.negotiatedUnitPrice)}
+                      </span>
+                      <span className="text-muted line-through">{formatMoney(line.price)}</span>
+                      <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">
+                        Your agreed price
+                      </span>
+                    </p>
+                  ) : (
+                    <Price value={line.price} className="mt-1 text-sm" />
+                  )}
                 </div>
-                <p className="order-first shrink-0 font-semibold tabular-nums min-[400px]:order-0">{formatMoney(line.price * line.quantity)}</p>
+                <p className="order-first shrink-0 font-semibold tabular-nums min-[400px]:order-0">
+                  {formatMoney(lineUnitPrice(line) * line.quantity)}
+                </p>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <QuantityStepper

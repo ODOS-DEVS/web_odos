@@ -5,7 +5,7 @@ import { ShoppingBag } from "lucide-react";
 import { useStoreMap } from "@/hooks/use-catalog";
 import { useCart } from "@/hooks/use-cart";
 import { useDeliveryQuote } from "@/hooks/use-delivery-quote";
-import { groupLines } from "@/libs/cart";
+import { groupLines, lineUnitPrice } from "@/libs/cart";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartGroup } from "./cart-group";
@@ -31,7 +31,7 @@ export function CartView() {
   const groups = useMemo(() => groupLines(lines, stores), [lines, stores]);
   const quote = useDeliveryQuote({
     subtotal,
-    items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.price })),
+    items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: lineUnitPrice(l) })),
   });
 
   if (!ready) return <CartSkeleton />;

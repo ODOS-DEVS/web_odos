@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Check, MessageCircle, ShoppingCart, X } from "lucide-react";
+import { ArrowLeft, Check, MessageCircle, X } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { inputClass } from "@/components/ui/field";
 import { Media } from "@/components/ui/media";
 import { QueryError } from "@/components/ui/query-error";
+import { BuyAtAgreedPrice } from "@/components/negotiation/buy-at-agreed-price";
 import { NegotiationOutcome, OfferCard } from "@/components/negotiation/offer-card";
 import { useAcceptOffer, useCounterOffer, useNegotiation, useRejectOffer, useWithdrawOffer } from "@/hooks/use-negotiations";
 import { cn } from "@/libs/cn";
@@ -145,10 +146,7 @@ export function NegotiationView({
               <p className="mt-3 text-sm">
                 Expires in <Countdown seconds={agreement.secondsRemaining} /> — only you can use this price.
               </p>
-              <ButtonLink href={`/products/${n.productId}`} variant="accent" className="mt-3 w-full sm:w-auto">
-                <ShoppingCart className="size-4" aria-hidden />
-                Buy at {formatMoney(agreement.agreedUnitPrice)}
-              </ButtonLink>
+              <BuyAtAgreedPrice productId={n.productId} agreement={agreement} />
             </>
           )}
           {live && viewerRole === "vendor" && (
