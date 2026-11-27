@@ -82,6 +82,18 @@ export function PromoCollage() {
   const filled = page.length === TILE_COUNT ? page : pool.slice(0, TILE_COUNT);
   const tiles = filled.map(toTile);
 
+  // The page after this one, rendered as hidden preloads. Without it every
+  // rotation starts with an empty frame while the next photo downloads, which
+  // is the one thing that makes an automatic carousel feel broken.
+  const upcoming = useMemo(() => {
+    if (pageCount < 2) return [];
+    const next = (pageIndex + 1) % pageCount;
+    return pool
+      .slice(next * TILE_COUNT, next * TILE_COUNT + TILE_COUNT)
+      .map((product) => product.images[0])
+      .filter(Boolean);
+  }, [pool, pageIndex, pageCount]);
+
   if (tiles.length === 0) return null;
 
   const [hero, ...rest] = tiles;
@@ -89,7 +101,11 @@ export function PromoCollage() {
   return (
     <div {...pauseHandlers}>
       <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
-        <PromoTileCard tile={hero} className="lg:min-h-115" />
+        {/* Keyed by product: without it React reuses the <img> across a
+            rotation and the browser keeps painting the old photo until the
+            new one decodes, so the hero showed a shirt captioned "Aqua Rich
+            Brightening Body Oil". */}
+        <PromoTileCard key={hero.id} tile={hero} className="lg:min-h-115" />
         {rest.length > 0 && (
           // auto-rows-fr so two tiles split the hero's height evenly; with one
           // the row sizes to its content instead of stretching into a slab.
@@ -105,6 +121,15 @@ export function PromoCollage() {
           </div>
         )}
       </div>
+
+      {upcoming.length > 0 && (
+        <div aria-hidden className="pointer-events-none absolute size-0 overflow-hidden">
+          {upcoming.map((src) => (
+            // eslint-disable-next-line @next/next/no-img-element -- a 1px warm-up, not a rendered image.
+            <img key={src} src={src} alt="" width={1} height={1} loading="eager" decoding="async" />
+          ))}
+        </div>
+      )}
 
       {pageCount > 1 && (
         <div className="mt-3 flex items-center justify-center gap-2 sm:mt-4">
@@ -141,13 +166,19 @@ function PromoTileCard({ tile, className }: { tile: Tile; className?: string }) 
         )}
       >
         {/* On desktop the image takes the slack (`flex-1 min-h-0`) so a long
-            title lengthens the card's text block rather than overflowing it. */}
-        <div className="relative aspect-square h-full min-h-0 w-full overflow-hidden rounded-xl sm:rounded-2xl lg:mb-5 lg:aspect-auto lg:h-auto lg:min-h-48 lg:flex-1">
+            title lengthens the card's text block rather than overflowing it.
+
+            `object-contain` rather than `cover`: vendors upload whatever shape
+            their camera gave them, and cropping to fill was cutting the tops
+            off garments and the ends off bottles. The pale backdrop is what
+            makes containing look deliberate instead of letterboxed, and it
+            stays legible whichever tile colour this card drew. */}
+        <div className="relative aspect-square h-full min-h-0 w-full overflow-hidden rounded-xl bg-white/[0.07] sm:rounded-2xl lg:mb-5 lg:aspect-auto lg:h-auto lg:min-h-48 lg:flex-1">
           <Image
             src={tile.imageSrc}
             alt={tile.title}
             fill
-            className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06] motion-reduce:transition-none"
+            className="object-contain object-center p-2 transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none sm:p-3"
             sizes="(min-width: 1280px) 43vw, (min-width: 1024px) 46vw, 38vw"
           />
         </div>
@@ -203,12 +234,15 @@ function PromoTileCard({ tile, className }: { tile: Tile; className?: string }) 
         className
       )}
     >
-      <div className="relative aspect-square w-full overflow-hidden rounded-xl sm:rounded-2xl lg:aspect-[5/4]">
+      {/* Square at every width. The 5/4 desktop crop meant the same product
+          was framed differently on a phone and a laptop, and tall bottles lost
+          their caps on one of them. */}
+      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/[0.07] sm:rounded-2xl">
         <Image
           src={tile.imageSrc}
           alt={tile.title}
           fill
-          className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06] motion-reduce:transition-none"
+          className="object-contain object-center p-2 transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none sm:p-3"
           sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 22vw, 38vw"
         />
       </div>
